@@ -19,6 +19,8 @@ const OrderSchema = new mongoose.Schema(
         "cancelled",
         "completed",
         "failed",
+        "returned",
+        "damaged",
         "success",
       ],
       default: "pending",

@@ -68,13 +68,14 @@ exports.createPhoto = async (req, res) => {
             console.log(err.message, "-error");
           });
 
+        let po = { content: objectName, type: image.mimetype };
+
         const p = new Post({
           title,
           desc,
           community: commId,
           sender: userId,
-          post: objectName,
-          contenttype: image.mimetype,
+          post: po,
           tags: tags,
         });
         const ne = await p.save();
@@ -125,14 +126,15 @@ exports.createVideo = async (req, res) => {
         size,
         mimetype
       );
+
+      let po = { content: objectName, type: mimetype, size: size };
+
       const v = new Post({
         title,
         desc,
         community: commId,
         sender: userId,
-        post: objectName,
-        size: size,
-        contenttype: mimetype,
+        post: po,
         tags: tags,
       });
       const ne = await v.save();
@@ -276,7 +278,8 @@ exports.fetchfeed = async (req, res) => {
 
     for (let k = 0; k < post.length; k++) {
       const coms = await Community.findById(post[k].community);
-      if (coms.members.includes(user._id)) {
+
+      if (coms?.members?.includes(user?._id)) {
         subs.push("subscribed");
       } else {
         subs.push("unsubscribed");
@@ -390,7 +393,7 @@ exports.fetchfeed = async (req, res) => {
         ) {
           const a = await generatePresignedUrl(
             "images",
-            post[i].community.members[j].profilepic.toString(),
+            post[i]?.community?.members[j]?.profilepic.toString(),
             60 * 60
           );
           current.push(a);
@@ -1095,5 +1098,348 @@ exports.updatesettings = async (req, res) => {
     }
   } catch (e) {
     res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//post anything
+exports.postanything = async (req, res) => {
+  const { userId, comId } = req.params;
+  try {
+    const { title, desc, tags } = req.body;
+
+    const user = await User.findById(userId);
+    const community = await Community.findById(comId);
+    const topic = await Topic.find({ community: community._id }).find({
+      title: "Posts",
+    });
+
+    if (user && community && topic && req.files.length > 0) {
+      let pos = [];
+
+      for (let i = 0; i < req?.files?.length; i++) {
+        const uuidString = uuid();
+        const bucketName = "posts";
+        const objectName = `${Date.now()}_${uuidString}_${
+          req.files[i].originalname
+        }`;
+        if (req.files[i].fieldname === "video") {
+          await minioClient.putObject(
+            bucketName,
+            objectName,
+            req.files[i].buffer,
+            req.files[i].size,
+            req.files[i].mimetype
+          );
+          pos.push({ content: objectName, type: req.files[i].mimetype });
+        } else {
+          await sharp(req.files[i].buffer)
+            .jpeg({ quality: 50 })
+            .toBuffer()
+            .then(async (data) => {
+              await minioClient.putObject(bucketName, objectName, data);
+            })
+            .catch((err) => {
+              console.log(err.message, "-error");
+            });
+
+          pos.push({ content: objectName, type: req.files[i].mimetype });
+        }
+      }
+      const post = new Post({
+        title,
+        desc,
+        community: comId,
+        sender: userId,
+        post: pos,
+        tags: tags,
+      });
+      const savedpost = await post.save();
+      await Community.updateOne(
+        { _id: comId },
+        { $push: { posts: savedpost._id }, $inc: { totalposts: 1 } }
+      );
+      await Topic.updateOne(
+        { _id: topic[0]._id },
+        { $push: { posts: savedpost._id }, $inc: { postcount: 1 } }
+      );
+      res.status(200).json({ savedpost, success: true });
+    } else {
+      res.status(404).json({
+        message: "User or Community not found or no files where there!",
+        success: false,
+      });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//fetch feed new according to user interest
+exports.newfetchfeed = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    const dps = [];
+    let current = [];
+    const memdps = [];
+    const subs = [];
+    const liked = [];
+    const ads = [];
+    const urls = [];
+    const content = [];
+    const addp = [];
+    //fetching post
+    const post = await Post.aggregate([
+      { $match: { tags: { $in: user.interest } } },
+      { $sample: { size: 50 } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "sender",
+          foreignField: "_id",
+          as: "sender",
+        },
+      },
+      {
+        $lookup: {
+          from: "communities",
+          localField: "community",
+          foreignField: "_id",
+          as: "community",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "community.members",
+          foreignField: "_id",
+          as: "members",
+        },
+      },
+      {
+        $addFields: {
+          sender: { $arrayElemAt: ["$sender", 0] },
+          community: { $arrayElemAt: ["$community", 0] },
+        },
+      },
+      {
+        $addFields: {
+          "community.members": {
+            $map: {
+              input: { $slice: ["$members", 0, 4] },
+              as: "member",
+              in: {
+                _id: "$$member._id",
+                fullname: "$$member.fullname",
+                profilepic: "$$member.profilepic",
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          createdAt: 1,
+          status: 1,
+          likedby: 1,
+          likes: 1,
+          dislike: 1,
+          comments: 1,
+          totalcomments: 1,
+          tags: 1,
+          view: 1,
+          desc: 1,
+          isverified: 1,
+          post: 1,
+          contenttype: 1,
+          date: 1,
+          sharescount: 1,
+          sender: {
+            _id: 1,
+            fullname: 1,
+            profilepic: 1,
+          },
+          community: {
+            _id: 1,
+            title: 1,
+            dp: 1,
+            members: 1,
+            memberscount: 1,
+            isverified: 1,
+          },
+        },
+      },
+    ]);
+
+    for (let i = 0; i < post.length; i++) {
+      if (
+        post[i].likedby?.some((id) => id.toString() === user._id.toString())
+      ) {
+        liked.push(true);
+      } else {
+        liked.push(false);
+      }
+    }
+
+    for (let k = 0; k < post.length; k++) {
+      const coms = await Community.findById(post[k].community);
+
+      if (coms?.members?.includes(user?._id)) {
+        subs.push("subscribed");
+      } else {
+        subs.push("unsubscribed");
+      }
+    }
+
+    if (!post) {
+      res.status(201).json({ message: "No post found", success: false });
+    } else {
+      //fetching ad
+      const birthdateString = user.DOB;
+      const [birthDay, birthMonth, birthYear] = birthdateString
+        .split("/")
+        .map(Number);
+
+      // Get the current date
+      const currentDate = new Date();
+
+      // Get the current day, month, and year
+      const currentDay = currentDate.getDate();
+      const currentMonth = currentDate.getMonth() + 1; // Month is zero-based
+      const currentYear = currentDate.getFullYear();
+
+      // Calculate the age
+      let age = currentYear - birthYear;
+      if (
+        currentMonth < birthMonth ||
+        (currentMonth === birthMonth && currentDay < birthDay)
+      ) {
+        age--; // Adjust age if birthday hasn't occurred yet this year
+      }
+
+      const ad = await Ads.aggregate([
+        {
+          $match: {
+            tags: { $in: user.interest },
+            // location: { $eq: user.location },
+            status: { $eq: "Active" },
+          },
+        },
+        {
+          $lookup: {
+            from: "users", // Assuming the collection name for users is "users"
+            localField: "creator", // Assuming the field storing the creator ObjectId is "creator"
+            foreignField: "_id",
+            as: "creator",
+          },
+        },
+        {
+          $addFields: {
+            creatorName: { $arrayElemAt: ["$creator.fullname", 0] },
+            creatorProfilePic: { $arrayElemAt: ["$creator.profilepic", 0] },
+            isverified: { $arrayElemAt: ["$creator.isverified", 0] },
+          },
+        },
+        {
+          $project: {
+            creator: 0, // Exclude the creator field if needed
+          },
+        },
+        { $sample: { size: 1 } },
+      ]);
+
+      for (let i = 0; i < ad.length; i++) {
+        if (ad[i].ageup > age && ad[i].agedown < age) {
+          ads.push(ad[i]);
+        }
+      }
+
+      for (let i = 0; i < ads.length; i++) {
+        const dp = await generatePresignedUrl(
+          "ads",
+          ads[i].content.toString(),
+          60 * 60
+        );
+        content.push(dp);
+      }
+
+      for (let i = 0; i < ads.length; i++) {
+        const dp = await generatePresignedUrl(
+          "images",
+          ads[i].creatorProfilePic.toString(),
+          60 * 60
+        );
+        addp.push(dp);
+      }
+
+      for (let i = 0; i < post.length; i++) {
+        const a = await generatePresignedUrl(
+          "images",
+          post[i].community.dp.toString(),
+          60 * 60
+        );
+        dps.push(a);
+      }
+
+      let ur = [];
+      for (let i = 0; i < post?.length; i++) {
+        for (let j = 0; j < post[i]?.post?.length; j++) {
+          const a = await generatePresignedUrl(
+            "posts",
+            post[i].post[j].content?.toString(),
+            60 * 60
+          );
+          console.log(post[i].post[j]?.type);
+          ur.push({ content: a, type: post[i].post[j]?.type });
+        }
+        urls.push(ur);
+        ur = [];
+      }
+
+      for (let i = 0; i < post.length; i++) {
+        for (
+          let j = 0;
+          j < Math.min(4, post[i].community.members.length);
+          j++
+        ) {
+          const a = await generatePresignedUrl(
+            "images",
+            post[i]?.community?.members[j]?.profilepic.toString(),
+            60 * 60
+          );
+          current.push(a);
+        }
+
+        memdps.push(current);
+        current = [];
+      }
+
+      const dpData = dps;
+      const memdpData = memdps;
+      const urlData = urls;
+      const postData = post;
+      const subData = subs;
+      const likeData = liked;
+
+      const mergedData = urlData.map((u, i) => ({
+        dps: dpData[i],
+        memdps: memdpData[i],
+        urls: u,
+        liked: likeData[i],
+        subs: subData[i],
+        posts: postData[i],
+      }));
+
+      res.status(200).json({
+        mergedData,
+
+        success: true,
+      });
+    }
+  } catch (err) {
+    res.status(500).json({ message: err, success: false });
   }
 };

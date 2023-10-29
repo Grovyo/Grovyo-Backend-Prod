@@ -15,14 +15,18 @@ const {
   test,
   updatesettings,
   fetchmore,
+  postanything,
+  newfetchfeed,
 } = require("../controllers/post");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 router.post("/createphoto/:userId/:commId", upload.any(), createPhoto);
+router.post("/postanything/:userId/:comId", upload.any(), postanything);
 router.post("/createvideo/:userId/:commId", upload.any(), createVideo);
 router.get("/getfeed/:userId", fetchfeed);
+router.get("/v1/getfeed/:userId", newfetchfeed);
 router.get("/fetchmore/:userId", fetchmore);
 router.get("/fetchonepost/:postId", fetchonepost);
 router.get("/getfollowingfeed/:userId", joinedcom);

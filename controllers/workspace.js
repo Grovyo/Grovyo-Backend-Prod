@@ -10,6 +10,7 @@ const uuid = require("uuid").v4;
 const fs = require("fs");
 const Product = require("../models/product");
 const Ads = require("../models/Ads");
+const Post = require("../models/post");
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.site",
@@ -75,6 +76,7 @@ exports.allcoms = async (req, res) => {
       "fullname"
     );
     const dps = [];
+    let avgeng = [];
     for (let i = 0; i < Co.length; i++) {
       const a = await generatePresignedUrl(
         "images",
@@ -84,8 +86,28 @@ exports.allcoms = async (req, res) => {
       dps.push(a);
     }
     const Com = Co.reverse();
+    for (let i = 0; i < Co.length; i++) {
+      const post = await Post.find({ community: Co[0]._id });
+
+      let totalLikes = 0;
+      let numberOfPosts = post.length;
+      let totalshares = 0;
+
+      for (let j = 0; j < post.length; j++) {
+        totalLikes += post[j].likes;
+        totalshares += post[j].sharescount;
+      }
+
+      const averageLikes =
+        numberOfPosts > 0 ? (totalLikes / numberOfPosts) * 100 : 0;
+      const averageshares =
+        numberOfPosts > 0 ? (totalshares / numberOfPosts) * 100 : 0;
+      avgeng.push(averageLikes + averageshares);
+    }
+
     dps.reverse();
-    res.status(200).json({ Com, dps, success: true });
+    avgeng.reverse();
+    res.status(200).json({ Com, avgeng, dps, success: true });
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });
   }
@@ -347,6 +369,7 @@ exports.fetchsingleprosite = async (req, res) => {
   }
 };
 
+//fetch product details
 exports.fetchaworkspaceproducts = async (req, res) => {
   const { id } = req.params;
   try {
@@ -362,11 +385,68 @@ exports.fetchaworkspaceproducts = async (req, res) => {
         );
         urls.push(a);
       }
-      res.status(200).json({ products, urls, success: true });
+      const pendingOrders = user.orders.filter(
+        (order) => order.status === "pending"
+      );
+      const completedOrders = user.orders.filter(
+        (order) => order.status === "completed"
+      );
+
+      res.status(200).json({
+        customers: user?.customers?.length,
+        orders: user?.orders?.length,
+        completedOrders: completedOrders?.length,
+        pendingOrders: pendingOrders?.length,
+        products,
+        urls,
+        success: true,
+      });
     } else {
       res.status(404).json({ message: "Not found...", success: false });
     }
   } catch (e) {
     res.status(500).json({ message: e.message, success: false });
+  }
+};
+
+//fetch orders
+exports.fetchallorders = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (user) {
+      const orders = await Order.find({ sellerId: user._id });
+      const pendingOrders = orders.filter(
+        (order) => order.currentStatus === "pending"
+      );
+      const completedOrders = orders.filter(
+        (order) => order.currentStatus === "completed"
+      );
+      const cancelled = orders.filter(
+        (order) => order.currentStatus === "cancelled"
+      );
+      const returned = orders.filter(
+        (order) => order.currentStatus === "returned"
+      );
+      const damaged = orders.filter(
+        (order) => order.currentStatus === "damaged"
+      );
+      const allorders = orders.length;
+      const customers = user?.customers?.length;
+      res.status(200).json({
+        pendingOrders,
+        completedOrders,
+        allorders,
+        cancelled,
+        returned,
+        damaged,
+        customers,
+        orders,
+      });
+    } else {
+      res.status(404).json({ message: "User not found", success: false });
+    }
+  } catch (e) {
+    res.status(400).json({ message: e.message, success: false });
   }
 };

@@ -91,6 +91,7 @@ const userSchema = new mongoose.Schema(
     orders: { type: Number, default: 0 },
     currentmoney: { type: Number, default: 0 },
     paymenthistory: [{ type: ObjectId, ref: "Payment" }],
+    moneyearned: { type: Number, default: 0 },
     revenue: { type: Number, default: 0 },
     cart: [{ type: ObjectId, ref: "Cart" }],
 
@@ -146,6 +147,19 @@ const userSchema = new mongoose.Schema(
       {
         type: String,
         timestamp: new Date(),
+      },
+    ],
+    orders: [
+      {
+        type: ObjectId,
+        ref: "Order",
+        status: { type: String },
+        timestamp: new Date(),
+      },
+    ],
+    customers: [
+      {
+        id: { type: String },
       },
     ],
   },

@@ -17,7 +17,13 @@ const PostSchema = new mongoose.Schema(
     sender: { type: ObjectId, ref: "User" },
     isverified: { type: Boolean, default: false },
     commpic: { type: ObjectId, ref: "Community" },
-    post: { type: [String] },
+    post: [
+      {
+        content: { type: String },
+        type: { type: String },
+        size: { type: String },
+      },
+    ],
     contenttype: { type: [String] },
     user: { type: String },
     date: { type: Date, default: Date.now() },

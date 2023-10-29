@@ -26,6 +26,9 @@ const communitySchema = new mongoose.Schema(
     },
     moderators: [{ type: ObjectId, ref: "User", required: true }],
     admins: [{ type: ObjectId, ref: "User", required: true }],
+    visitors: { type: Number, default: 0 },
+    newmemberscount: { type: Number, default: 0 },
+    newmembers: [{ type: ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );

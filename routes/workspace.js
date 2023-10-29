@@ -20,6 +20,7 @@ const {
   createprosite,
   fetchsingleprosite,
   fetchaworkspaceproducts,
+  fetchallorders,
 } = require("../controllers/workspace");
 
 router.post("/workspacelogin", login);
@@ -33,6 +34,7 @@ router.get("/fetchpayhistory/:id", fetchpayhistory);
 router.post("/updateorderstatus/:id", updateorderstatus);
 router.get("/fetchprositecollection/:id", fetchprositecollection);
 router.get("/fetchaworkspaceproducts/:id", fetchaworkspaceproducts);
+router.get("/fetchallorders/:id", fetchallorders);
 router.post("/createprosite/:id", upload.any(), createprosite);
 router.get("/fetchsingleprosite/:id/:prositeId", fetchsingleprosite);
 
