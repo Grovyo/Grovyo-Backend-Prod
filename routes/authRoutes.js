@@ -33,6 +33,7 @@ const {
   contactsuggestions,
   checkconversations,
   checkLastConvMessage,
+  checkconversationsnew,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -78,6 +79,7 @@ router.get("/fetchblocklist/:id", fetchblocklist);
 router.post("/blockpeople/:id", blockpeople);
 router.post("/contactsuggestions/:id", contactsuggestions);
 router.post("/checkconversations/:id", checkconversations);
+router.post("/v1/checkconversations/:id", checkconversationsnew);
 router.post("/checkLastConvMessage/:convId/:userId", checkLastConvMessage);
 
 router.param("userId", userbyId);

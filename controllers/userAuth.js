@@ -1326,6 +1326,148 @@ exports.checkconversations = async (req, res) => {
   }
 };
 
+//new check for latest conversations and fetch them in chats
+exports.checkconversationsnew = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { convlist } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      let conv = [];
+      let msgs = [];
+      let reqcount = user?.messagerequests?.length;
+      let blockedby = "";
+      let isblocked = false;
+
+      if (user?.conversations?.length > 0) {
+        function areArraysEqual(array1, array2) {
+          let isUpdated = true;
+          const mismatchedElements = [];
+
+          for (const element2 of array2) {
+            if (!array1.includes(element2)) {
+              isUpdated = false;
+              mismatchedElements.push(element2);
+            }
+          }
+
+          return { isUpdated, mismatchedElements };
+        }
+
+        const result = areArraysEqual(user.conversations, convlist);
+
+        //function gives out actuall convs or msgs
+        const getconvs = async ({ data, mismatch }) => {
+          for (let i = 0; i < user.conversations.length; i++) {
+            const convs = await Conversation.findById(
+              user.conversations[i]
+            ).populate(
+              "members",
+              "fullname username profilepic isverified blockedpeople"
+            );
+
+            if (data === user.conversations[i].toString()) {
+              if (!mismatch) {
+                const msg = await Message.find({ conversationId: convs?._id })
+                  .limit(1)
+                  .sort({ createdAt: -1 });
+                for (let j = 0; j < convs?.members?.length; j++) {
+                  if (id !== convs?.members[j]?._id?.toString()) {
+                    let pi = await generatePresignedUrl(
+                      "images",
+                      convs?.members[j]?.profilepic?.toString(),
+                      60 * 60
+                    );
+
+                    const blockedPeopleIds =
+                      user?.blockedpeople?.map((item) => item.id?.toString()) ||
+                      [];
+
+                    blockedPeopleIds.some((blockedId) => {
+                      return convs.members.some((member) => {
+                        if (blockedId === member?._id?.toString()) {
+                          blockedby = member?._id?.toString();
+                          isblocked = true;
+                        }
+                      });
+                    });
+
+                    let detail = {
+                      convid: convs?._id,
+                      id: convs?.members[j]?._id,
+                      fullname: convs?.members[j]?.fullname,
+                      username: convs?.members[j]?.username,
+                      isverified: convs?.members[j]?.isverified,
+                      pic: pi,
+                      msgs: msg,
+                      isblocked: isblocked,
+                      blockedby: blockedby,
+                    };
+
+                    conv.push(detail);
+                  }
+                }
+              } else {
+                const blockedPeopleIds =
+                  user?.blockedpeople?.map((item) => item.id?.toString()) || [];
+
+                const isBlocked = blockedPeopleIds.some((blockedId) => {
+                  return convs.members.some((member) => {
+                    if (blockedId === member._id?.toString()) {
+                      isblocked = true;
+                      blockedby = member._id?.toString();
+                    }
+                  });
+                });
+
+                const msg = await Message.find({ conversationId: convs?._id })
+                  .limit(1)
+                  .sort({ createdAt: -1 });
+
+                let detail = {
+                  convid: convs?._id,
+                  isblocked: isblocked,
+                  msgs: msg,
+                  blockedby: blockedby,
+                };
+
+                msgs.push(detail);
+              }
+            }
+          }
+          if (result?.isUpdated) {
+            res
+              .status(200)
+              .json({ msgs, reqcount, uptodate: true, success: true });
+          } else {
+            res
+              .status(200)
+              .json({ conv, reqcount, uptodate: false, success: true });
+          }
+        };
+
+        //checking if there are any mismatched elements
+        if (result?.mismatchedElements?.length > 0) {
+          result?.mismatchedElements?.forEach((e) => {
+            getconvs({ data: e, mismatch: result?.isUpdated });
+          });
+        } else {
+          convlist?.forEach((e) => {
+            getconvs({ data: e, mismatch: result?.isUpdated });
+          });
+        }
+      } else {
+        res.status(200).json({ reqcount, uptodate: true, success: true });
+      }
+    }
+  } catch (e) {
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
+
 //check for latest message of a user chats
 exports.checkLastConvMessage = async (req, res) => {
   const { convId, userId } = req.params;
