@@ -6,6 +6,23 @@ const multer = require("multer");
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
+// const {
+//   login,
+//   allcoms,
+//   getmembers,
+//   mycode,
+//   qrlogin,
+//   fetchmyid,
+//   addmoney,
+//   updateorderstatus,
+//   fetchpayhistory,
+//   fetchprositecollection,
+//   createprosite,
+//   fetchsingleprosite,
+//   fetchaworkspaceproducts,
+//   fetchallorders,
+// } = require("../controllers/workspace");
+
 const {
   login,
   allcoms,
@@ -14,6 +31,7 @@ const {
   qrlogin,
   fetchmyid,
   addmoney,
+  deleteproduct,
   updateorderstatus,
   fetchpayhistory,
   fetchprositecollection,
@@ -21,6 +39,16 @@ const {
   fetchsingleprosite,
   fetchaworkspaceproducts,
   fetchallorders,
+  deletecom,
+  // editCom,
+  create,
+  udpatecommunity,
+  updateproduct,
+  registerstore,
+  createCollection,
+  // colproduct,
+  fetchProduct,
+  collectiondelete,
 } = require("../controllers/workspace");
 
 router.post("/workspacelogin", login);
@@ -37,5 +65,31 @@ router.get("/fetchaworkspaceproducts/:id", fetchaworkspaceproducts);
 router.get("/fetchallorders/:id", fetchallorders);
 router.post("/createprosite/:id", upload.any(), createprosite);
 router.get("/fetchsingleprosite/:id/:prositeId", fetchsingleprosite);
+
+// AD code
+// community delete
+router.post("/delete/:id", deletecom);
+// community edit
+router.post(
+  "/updatecommunity/:comId/:userId",
+  upload.single("image"),
+  udpatecommunity
+);
+// add product
+router.post("/createproduct/:userId/:colid", upload.any(), create);
+// delete product
+router.delete("/deleteproduct/:userId/:colid/:productId", deleteproduct);
+// update product
+router.post("/updateaproduct/:userId/:colid/:productId", updateproduct);
+// register details for store
+router.post("/registerstore/:userId", registerstore);
+// create collection product
+router.post("/createCollection/:userId", createCollection);
+// add products on collection
+// router.post("/colproduct/:userId/:colid", colproduct)
+router.get("/fetchProducts/:userId", fetchProduct);
+
+// delete collection
+router.delete("/collectiondelete/:userId/:colid", collectiondelete);
 
 module.exports = router;

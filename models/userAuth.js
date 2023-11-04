@@ -162,6 +162,20 @@ const userSchema = new mongoose.Schema(
         id: { type: String },
       },
     ],
+    collectionss: [{ type: String }],
+    storeAddress: [
+      {
+        buildingno: { type: String },
+        city: { type: String },
+        state: { type: String },
+        postal: { type: Number },
+        landmark: { type: String },
+        gst: { type: Number },
+        businesscategory: { type: String },
+        documenttype: { type: String },
+        documentfile: { type: String },
+      },
+    ],
   },
   { timestamps: true }
 );

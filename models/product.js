@@ -62,6 +62,7 @@ const productSchema = new mongoose.Schema({
     enum: ["Unblock", "Block"],
   },
   sharescount: { type: Number, default: 0 },
+  collectionss: { type: ObjectId, ref: "Collectionss" },
 });
 
 module.exports = mongoose.model("Product", productSchema);

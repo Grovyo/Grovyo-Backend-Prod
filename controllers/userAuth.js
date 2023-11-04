@@ -1360,23 +1360,21 @@ exports.checkconversationsnew = async (req, res) => {
         const result = areArraysEqual(user.conversations, convlist);
 
         //function gives out actuall convs or msgs
-        const getconvs = async ({ data, mismatch }) => {
+        const getconvs = ({ data, mismatch }) => {
           for (let i = 0; i < user.conversations.length; i++) {
-            const convs = await Conversation.findById(
-              user.conversations[i]
-            ).populate(
+            const convs = Conversation.findById(user.conversations[i]).populate(
               "members",
               "fullname username profilepic isverified blockedpeople"
             );
 
             if (data === user.conversations[i].toString()) {
               if (!mismatch) {
-                const msg = await Message.find({ conversationId: convs?._id })
+                const msg = Message.find({ conversationId: convs?._id })
                   .limit(1)
                   .sort({ createdAt: -1 });
                 for (let j = 0; j < convs?.members?.length; j++) {
                   if (id !== convs?.members[j]?._id?.toString()) {
-                    let pi = await generatePresignedUrl(
+                    let pi = generatePresignedUrl(
                       "images",
                       convs?.members[j]?.profilepic?.toString(),
                       60 * 60
@@ -1423,7 +1421,7 @@ exports.checkconversationsnew = async (req, res) => {
                   });
                 });
 
-                const msg = await Message.find({ conversationId: convs?._id })
+                const msg = Message.find({ conversationId: convs?._id })
                   .limit(1)
                   .sort({ createdAt: -1 });
 

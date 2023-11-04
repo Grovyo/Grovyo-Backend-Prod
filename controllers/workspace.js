@@ -450,3 +450,410 @@ exports.fetchallorders = async (req, res) => {
     res.status(400).json({ message: e.message, success: false });
   }
 };
+
+// ad code
+
+// community delete
+exports.deletecom = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const find = await Community.findByIdAndDelete(id);
+
+    if (!find) {
+      res.status(404).json({ status: "not found" });
+    } else {
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    res.status(500).json({ message: e.message, success: false });
+  }
+};
+
+//update community
+exports.udpatecommunity = async (req, res) => {
+  const { comId, userId } = req.params;
+  const { category, title, desc, topicId, message, price, topicname, type } =
+    req.body;
+  const uuidString = uuid();
+  console.log(req.file, req.body, userId, comId);
+  try {
+    const user = await User.findById(userId);
+    const com = await Community.findById(comId);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else if (!com) {
+      res.status(404).json({ message: "Community not found", success: false });
+    } else {
+      if (req.file) {
+        const bucketName = "images";
+        const objectName = `${Date.now()}${uuidString}${req.file.originalname}`;
+        a1 = objectName;
+        a2 = req.file.mimetype;
+
+        await sharp(req.file.buffer)
+          .jpeg({ quality: 50 })
+          .toBuffer()
+          .then(async (data) => {
+            await minioClient.putObject(bucketName, objectName, data);
+          })
+          .catch((err) => {
+            console.log(err.message, "-error");
+          });
+        await Community.updateOne(
+          { _id: com._id },
+          {
+            $set: {
+              category: category,
+              title: title,
+              desc: desc,
+              dp: objectName,
+            },
+          }
+        );
+      }
+      await Community.updateOne(
+        { _id: com._id },
+        {
+          $set: { category: category, title: title, desc: desc },
+        }
+      );
+
+      if (topicname) {
+        await Topic.updateOne(
+          { _id: topicId },
+          {
+            $set: {
+              title: topicname,
+              message: message,
+              price: price,
+              type: type,
+            },
+          }
+        );
+      }
+
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+// add a product
+exports.create = async (req, res) => {
+  const { userId, colid } = req.params;
+  console.log(colid);
+  const {
+    name,
+    brandname,
+    desc,
+    quantity,
+    shippingcost,
+    price,
+    discountedprice,
+    sellername,
+    totalstars,
+    weight,
+    type,
+  } = req.body;
+  console.log(req.body);
+  const image1 = req.files[0];
+  const image2 = req.files[1];
+  const image3 = req.files[2];
+  const image4 = req.files[3];
+  console.log(req.files);
+
+  const user = await User.findById(userId);
+  if (!user) {
+    res.status(400).json({ message: "User not found", success: false });
+  } else {
+    if (!image1 && !image2 && !image3 && !image4) {
+      res.status(400).json({ message: "Must have one image" });
+    } else {
+      try {
+        const uuidString = uuid();
+        let a, b, c, d;
+        if (image1) {
+          const bucketName = "products";
+          const objectName = `${Date.now()}${uuidString}${image1.originalname}`;
+          a = objectName;
+          await minioClient.putObject(
+            bucketName,
+            objectName,
+            image1.buffer,
+            image1.buffer.length
+          );
+        }
+        if (image2) {
+          const bucketName = "products";
+          const objectName = `${Date.now()}${uuidString}${image2.originalname}`;
+          b = objectName;
+          await minioClient.putObject(
+            bucketName,
+            objectName,
+            image2.buffer,
+            image2.buffer.length
+          );
+        }
+        if (image3) {
+          const bucketName = "products";
+          const objectName = `${Date.now()}${uuidString}${image3.originalname}`;
+          c = objectName;
+          await minioClient.putObject(
+            bucketName,
+            objectName,
+            image3.buffer,
+            image3.buffer.length
+          );
+        }
+        if (image4) {
+          const bucketName = "products";
+          const objectName = `${Date.now()}${uuidString}${image4.originalname}`;
+          d = objectName;
+          await minioClient.putObject(
+            bucketName,
+            objectName,
+            image4.buffer,
+            image4.buffer.length
+          );
+        }
+        const p = new Product({
+          name,
+          brandname,
+          desc,
+          creator: userId,
+          quantity,
+          shippingcost,
+          price,
+          discountedprice,
+          sellername,
+          totalstars,
+          images: [a, b, c, d],
+          weight,
+          type,
+        });
+        const data = await p.save();
+
+        const collection = await Collection.findById(colid);
+
+        if (!collection) {
+          return res
+            .status(404)
+            .json({ message: "Collection not found", success: false });
+        }
+
+        collection.products.push(data);
+        const actualdata = await collection.save();
+
+        res.status(200).json(actualdata);
+      } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: e.message });
+      }
+    }
+  }
+};
+
+// register store
+exports.registerstore = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const {
+      buildingno,
+      postal,
+      landmark,
+      gst,
+      businesscategory,
+      documenttype,
+      documentfile,
+      state,
+      city,
+    } = req.body;
+
+    const findStore = await User.findById(userId);
+    const finaladdress = {
+      buildingno: buildingno,
+      city: city,
+      state: state,
+      postal: postal,
+      landmark: landmark,
+      gst: gst,
+      businesscategory: businesscategory,
+      documenttype: documenttype,
+      documentfile: documentfile,
+    };
+    console.log(finaladdress, "finaladdress");
+    if (findStore) {
+      await User.updateOne(
+        { _id: userId },
+        { $set: { storeAddress: finaladdress } }
+      );
+
+      res.status(200).json({ status: "success" });
+    } else {
+      res.status(404).json({ status: "User Not Found" });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+// create collection product
+exports.createCollection = async (req, res) => {
+  try {
+    const { name, category, verfication } = req.body;
+    const { userId } = req.params;
+
+    const data = {
+      name: name,
+      category: category,
+      verfication: verfication,
+      creator: userId,
+    };
+    const col = await Collection.findById(userId);
+
+    if (!col) {
+      const newCol = new Collection(data);
+      await newCol.save();
+      await User.updateOne(
+        { _id: userId },
+        { $push: { collectionss: newCol._id } }
+      );
+      res.status(200).json({ status: "success" });
+    } else {
+      res.status(201).json({ status: "Collection already exists" });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+exports.fetchProduct = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const coll = [];
+    const user = await User.findById(userId);
+    if (user) {
+      for (let i = 0; i < user.collectionss.length; i++) {
+        const call = await Collection.findById(user.collectionss[i]);
+
+        for (let j = 0; j < call.products.length; j++) {
+          const product = await Product.findById(call.products[j]);
+
+          const data = {
+            collection: call,
+            product: product,
+          };
+          coll.push(data);
+
+          console.log(coll);
+        }
+      }
+      coll.reverse();
+      res.status(200).json({ coll, success: true });
+    }
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+//delete a product
+exports.deleteproduct = async (req, res) => {
+  const { userId, colid, productId } = req.params;
+  try {
+    const collection = await Collection.findById(colid);
+
+    if (!collection) {
+      return res.status(404).json({ message: "Collection not found" });
+    }
+
+    if (collection.creator.toString() !== userId) {
+      return res
+        .status(403)
+        .json({ message: "You can't delete products in this collection" });
+    }
+
+    const product = collection.products.find(
+      (p) => p._id.toString() === productId
+    );
+
+    if (!product) {
+      return res
+        .status(404)
+        .json({ message: "Product not found in this collection" });
+    }
+
+    await Product.findByIdAndDelete(productId);
+
+    collection.products = collection.products.filter(
+      (p) => p._id.toString() !== productId
+    );
+    await collection.save();
+
+    res.status(200).json({ success: true });
+  } catch (e) {
+    res.status(400).json(e.message);
+  }
+};
+
+// update product
+exports.updateproduct = async (req, res) => {
+  try {
+    const { userId, colid, productId } = req.params;
+
+    const collection = await Collection.findById(colid);
+
+    if (!collection) {
+      return res.status(404).json({ message: "Collection not found" });
+    }
+
+    if (collection.creator.toString() !== userId) {
+      return res
+        .status(403)
+        .json({ message: "You can't update products in this collection" });
+    }
+
+    const product = collection.products.find(
+      (p) => p._id.toString() === productId
+    );
+
+    if (!product) {
+      res.status(404).json({ message: "Product not found", success: false });
+    } else {
+      await Product.updateOne({ _id: productId }, { $set: req.body });
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+// // delete collection
+exports.collectiondelete = async (req, res) => {
+  try {
+    const { userId, colid } = req.params;
+    const collection = await Collection.findById(colid);
+    const user = await User.findById(userId);
+    if (!collection) {
+      return res.status(404).json({ message: "Collection not found" });
+    } else {
+      console.log(collection._id, user.collectionss);
+      if (collection.creator.toString() !== userId) {
+        return res
+          .status(403)
+          .json({ message: "You can't delete collections of other users" });
+      } else {
+        await User.updateOne(
+          { _id: userId },
+          { $pull: { collectionss: collection._id } }
+        );
+        res.status(200).json({ success: true });
+      }
+    }
+  } catch (e) {
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
