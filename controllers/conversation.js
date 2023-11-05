@@ -143,6 +143,7 @@ exports.createmessagereqs = async (req, res) => {
               },
             }
           );
+
           //message for notification
           let date = moment(new Date()).format("hh:mm");
           const msg = {

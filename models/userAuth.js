@@ -176,6 +176,7 @@ const userSchema = new mongoose.Schema(
         documentfile: { type: String },
       },
     ],
+    mesIds: [{ type: Number }],
   },
   { timestamps: true }
 );

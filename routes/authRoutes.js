@@ -34,6 +34,8 @@ const {
   checkconversations,
   checkLastConvMessage,
   checkconversationsnew,
+  updatenotification,
+  checkLastConvMessagenew,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -81,6 +83,11 @@ router.post("/contactsuggestions/:id", contactsuggestions);
 router.post("/checkconversations/:id", checkconversations);
 router.post("/v1/checkconversations/:id", checkconversationsnew);
 router.post("/checkLastConvMessage/:convId/:userId", checkLastConvMessage);
+router.post(
+  "/v1/checkLastConvMessage/:convId/:userId",
+  checkLastConvMessagenew
+);
+router.post("/updatenotification/:userId", updatenotification);
 
 router.param("userId", userbyId);
 

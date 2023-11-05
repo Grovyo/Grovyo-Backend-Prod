@@ -1336,58 +1336,61 @@ exports.checkconversationsnew = async (req, res) => {
     if (!user) {
       res.status(404).json({ message: "User not found", success: false });
     } else {
-      let conv = [];
-      let msgs = [];
       let reqcount = user?.messagerequests?.length;
-      let blockedby = "";
-      let isblocked = false;
 
-      if (user?.conversations?.length > 0) {
-        function areArraysEqual(array1, array2) {
-          let isUpdated = true;
-          const mismatchedElements = [];
+      if (convlist.length > 0) {
+        if (user?.conversations?.length > 0) {
+          function areArraysEqual(array1, array2) {
+            let isUpdated = true;
+            const mismatchedElements = [];
 
-          for (const element2 of array2) {
-            if (!array1.includes(element2)) {
-              isUpdated = false;
-              mismatchedElements.push(element2);
+            for (const element2 of array1) {
+              if (!array2.includes(element2)) {
+                console.log(element2, array1);
+                isUpdated = false;
+                mismatchedElements.push(element2);
+              }
             }
+
+            return { isUpdated, mismatchedElements };
           }
 
-          return { isUpdated, mismatchedElements };
-        }
+          const result = areArraysEqual(user.conversations, convlist);
 
-        const result = areArraysEqual(user.conversations, convlist);
+          //function gives out actual convs or msgs
+          const newgetconv = async ({ mismatch }) => {
+            if (!mismatch) {
+              async function processConversation(convId) {
+                const convs = await Conversation.findById(convId).populate(
+                  "members",
+                  "fullname username profilepic isverified blockedpeople"
+                );
 
-        //function gives out actuall convs or msgs
-        const getconvs = ({ data, mismatch }) => {
-          for (let i = 0; i < user.conversations.length; i++) {
-            const convs = Conversation.findById(user.conversations[i]).populate(
-              "members",
-              "fullname username profilepic isverified blockedpeople"
-            );
+                if (!convs) return null;
 
-            if (data === user.conversations[i].toString()) {
-              if (!mismatch) {
-                const msg = Message.find({ conversationId: convs?._id })
+                const msg = await Message.find({ conversationId: convs?._id })
                   .limit(1)
                   .sort({ createdAt: -1 });
+
+                const blockedPeopleIds =
+                  user?.blockedpeople?.map((item) => item.id?.toString()) || [];
+                const results = [];
+
                 for (let j = 0; j < convs?.members?.length; j++) {
                   if (id !== convs?.members[j]?._id?.toString()) {
-                    let pi = generatePresignedUrl(
+                    let isblocked = false;
+                    let blockedby;
+
+                    let pi = await generatePresignedUrl(
                       "images",
                       convs?.members[j]?.profilepic?.toString(),
                       60 * 60
                     );
 
-                    const blockedPeopleIds =
-                      user?.blockedpeople?.map((item) => item.id?.toString()) ||
-                      [];
-
                     blockedPeopleIds.some((blockedId) => {
                       return convs.members.some((member) => {
-                        if (blockedId === member?._id?.toString()) {
-                          blockedby = member?._id?.toString();
+                        if (blockedId === member._id?.toString()) {
+                          blockedby = member._id?.toString();
                           isblocked = true;
                         }
                       });
@@ -1405,60 +1408,227 @@ exports.checkconversationsnew = async (req, res) => {
                       blockedby: blockedby,
                     };
 
-                    conv.push(detail);
+                    results.push(detail);
                   }
                 }
-              } else {
-                const blockedPeopleIds =
-                  user?.blockedpeople?.map((item) => item.id?.toString()) || [];
 
-                const isBlocked = blockedPeopleIds.some((blockedId) => {
-                  return convs.members.some((member) => {
-                    if (blockedId === member._id?.toString()) {
-                      isblocked = true;
-                      blockedby = member._id?.toString();
-                    }
-                  });
-                });
+                return results;
+              }
 
-                const msg = Message.find({ conversationId: convs?._id })
+              async function handleResult(result) {
+                const promises = [];
+
+                if (result?.mismatchedElements?.length > 0) {
+                  for (const e of result?.mismatchedElements) {
+                    promises.push(processConversation(e, result?.isUpdated));
+                  }
+                } else {
+                  for (const e of convlist) {
+                    promises.push(processConversation(e, result?.isUpdated));
+                  }
+                }
+
+                const results = await Promise.all(promises);
+                const conv = results.flat();
+                const response = {
+                  conv,
+                  reqcount,
+                  uptodate: false,
+                  success: true,
+                };
+
+                res.status(200).json(response);
+              }
+
+              handleResult(result);
+            } else {
+              async function processConversation(convId) {
+                const convs = await Conversation.findById(convId).populate(
+                  "members",
+                  "fullname username profilepic isverified blockedpeople"
+                );
+
+                if (!convs) return null;
+
+                const msg = await Message.find({ conversationId: convs?._id })
                   .limit(1)
                   .sort({ createdAt: -1 });
 
-                let detail = {
-                  convid: convs?._id,
-                  isblocked: isblocked,
-                  msgs: msg,
-                  blockedby: blockedby,
-                };
+                const blockedPeopleIds =
+                  user?.blockedpeople?.map((item) => item.id?.toString()) || [];
+                const results = [];
 
-                msgs.push(detail);
+                for (let j = 0; j < convs?.members?.length; j++) {
+                  if (id !== convs?.members[j]?._id?.toString()) {
+                    let isblocked = false;
+                    let blockedby;
+
+                    let pi = await generatePresignedUrl(
+                      "images",
+                      convs?.members[j]?.profilepic?.toString(),
+                      60 * 60
+                    );
+
+                    blockedPeopleIds.some((blockedId) => {
+                      return convs.members.some((member) => {
+                        if (blockedId === member?._id?.toString()) {
+                          blockedby = member?._id?.toString();
+                          isblocked = true;
+                        }
+                      });
+                    });
+
+                    let detail = {
+                      convid: convs?._id,
+                      id: convs?.members[j]?._id,
+                      fullname: convs?.members[j]?._fullname,
+                      username: convs?.members[j]?.username,
+                      isverified: convs?.members[j]?.isverified,
+                      pic: pi,
+                      msgs: msg,
+                      isblocked: isblocked,
+                      blockedby: blockedby,
+                    };
+
+                    results.push(detail);
+                  }
+                }
+
+                return results;
               }
-            }
-          }
-          if (result?.isUpdated) {
-            res
-              .status(200)
-              .json({ msgs, reqcount, uptodate: true, success: true });
-          } else {
-            res
-              .status(200)
-              .json({ conv, reqcount, uptodate: false, success: true });
-          }
-        };
 
-        //checking if there are any mismatched elements
-        if (result?.mismatchedElements?.length > 0) {
-          result?.mismatchedElements?.forEach((e) => {
-            getconvs({ data: e, mismatch: result?.isUpdated });
-          });
+              async function handleResult(result) {
+                const msgs = [];
+                const convPromises = [];
+
+                if (result?.mismatchedElements?.length > 0) {
+                  for (const e of result?.mismatchedElements) {
+                    for (let i = 0; i < user.conversations.length; i++) {
+                      if (e === user.conversations[i].toString()) {
+                        convPromises.push(
+                          processConversation(user.conversations[i])
+                        );
+                      }
+                    }
+                  }
+                } else {
+                  for (const e of convlist) {
+                    for (let i = 0; i < user.conversations.length; i++) {
+                      if (e === user.conversations[i].toString()) {
+                        convPromises.push(
+                          processConversation(user.conversations[i])
+                        );
+                      }
+                    }
+                  }
+                }
+
+                const convResults = await Promise.all(convPromises);
+
+                for (const convResult of convResults) {
+                  if (convResult) {
+                    msgs.push(...convResult);
+                  }
+                }
+
+                res
+                  .status(200)
+                  .json({ msgs, reqcount, uptodate: true, success: true });
+              }
+
+              handleResult(result);
+            }
+          };
+
+          //checking if there are any mismatched elements
+          if (result?.mismatchedElements?.length > 0) {
+            newgetconv({ mismatch: result?.isUpdated });
+          } else {
+            newgetconv({ mismatch: result?.isUpdated });
+          }
         } else {
-          convlist?.forEach((e) => {
-            getconvs({ data: e, mismatch: result?.isUpdated });
-          });
+          res.status(200).json({ reqcount, uptodate: true, success: true });
         }
       } else {
-        res.status(200).json({ reqcount, uptodate: true, success: true });
+        //function gives out actual convs or msgs
+
+        async function processConversation(convId) {
+          const convs = await Conversation.findById(convId).populate(
+            "members",
+            "fullname username profilepic isverified blockedpeople"
+          );
+
+          if (!convs) return null;
+
+          const msg = await Message.find({ conversationId: convs?._id })
+            .limit(1)
+            .sort({ createdAt: -1 });
+
+          const blockedPeopleIds =
+            user?.blockedpeople?.map((item) => item.id?.toString()) || [];
+          const results = [];
+
+          for (let j = 0; j < convs?.members?.length; j++) {
+            if (id !== convs?.members[j]?._id?.toString()) {
+              let isblocked = false;
+              let blockedby;
+
+              let pi = await generatePresignedUrl(
+                "images",
+                convs?.members[j]?.profilepic?.toString(),
+                60 * 60
+              );
+
+              blockedPeopleIds.some((blockedId) => {
+                return convs.members.some((member) => {
+                  if (blockedId === member._id?.toString()) {
+                    blockedby = member._id?.toString();
+                    isblocked = true;
+                  }
+                });
+              });
+
+              let detail = {
+                convid: convs?._id,
+                id: convs?.members[j]?._id,
+                fullname: convs?.members[j]?.fullname,
+                username: convs?.members[j]?.username,
+                isverified: convs?.members[j]?.isverified,
+                pic: pi,
+                msgs: msg,
+                isblocked: isblocked,
+                blockedby: blockedby,
+              };
+
+              results.push(detail);
+            }
+          }
+
+          return results;
+        }
+
+        async function handleResult() {
+          const promises = [];
+
+          if (user?.conversations?.length > 0) {
+            for (const e of user?.conversations) {
+              promises.push(processConversation(e));
+            }
+          }
+
+          const results = await Promise.all(promises);
+          const conv = results.flat();
+          const response = {
+            conv,
+            reqcount,
+            uptodate: false,
+            success: true,
+          };
+
+          res.status(200).json(response);
+        }
+
+        handleResult();
       }
     }
   } catch (e) {
@@ -1519,6 +1689,87 @@ exports.checkLastConvMessage = async (req, res) => {
       }
     } else {
       res.status(200).json({ success: true, nodata: true });
+    }
+  } catch (e) {
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+//check for latest message of a user chats
+exports.checkLastConvMessagenew = async (req, res) => {
+  const { convId, userId } = req.params;
+  const { timestamp, mesId } = req.body;
+
+  try {
+    const user = await User.findById(userId);
+    const conv = await Conversation.findById(convId);
+
+    const messages = await Message.find({
+      conversationId: { $eq: conv?._id },
+      createdAt: { $gt: timestamp },
+      mesId: { $ne: mesId },
+    })
+      .sort({ createdAt: -1 })
+      .populate("sender", "profilepic fullname isverified");
+
+    const reversed = messages.reverse();
+    const dps = [];
+
+    if (reversed?.length > 0) {
+      for (let i = 0; i < reversed.length; i++) {
+        if (reversed[i].sender === null) {
+          reversed[i].remove();
+        }
+
+        const a = await generatePresignedUrl(
+          "images",
+          reversed[i].sender.profilepic.toString(),
+          60 * 60
+        );
+        dps.push(a);
+      }
+      if (!conv) {
+        res.status(404).json({
+          message: "No conversation found",
+          success: false,
+          nodata: true,
+        });
+      } else if (!user) {
+        res
+          .status(404)
+          .json({ message: "No User found", success: false, nodata: true });
+      } else {
+        res.status(200).json({
+          success: true,
+          reversed,
+          dps,
+          nodata: false,
+        });
+      }
+    } else {
+      res.status(200).json({ success: true, nodata: true });
+    }
+  } catch (e) {
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+//update notification token
+exports.updatenotification = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { token } = req.body;
+    const user = await User.findById(userId);
+    if (user) {
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $set: { notificationtoken: token },
+        }
+      );
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ message: "User not found", success: false });
     }
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });
