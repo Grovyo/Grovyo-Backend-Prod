@@ -118,9 +118,10 @@ exports.fetchproducts = async (req, res) => {
         for (let j = 0; j < product[i].images.length; j++) {
           const a = await generatePresignedUrl(
             "products",
-            product[i].images[j].toString(),
+            product[i].images[j].content.toString(),
             60 * 60
           );
+
           ur.push({ content: a, type: product[i].images[j].type });
         }
         urls.push(ur);

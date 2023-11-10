@@ -172,16 +172,26 @@ exports.fetchcart = async (req, res) => {
 //add to cart
 exports.addtocart = async (req, res) => {
   const { userId, productId } = req.params;
-  const { quantity } = req.body;
+  const { quantity, cartId, action } = req.body;
   try {
     const user = await User.findById(userId);
     if (!user) {
       res.status(404).json({ message: "No user found", success: false });
     } else {
-      const c = new Cart({ product: productId, quantity: quantity });
-      await c.save();
-      await User.updateOne({ _id: userId }, { $push: { cart: c._id } });
-      res.status(200).json({ success: true });
+      const cart = await Cart.findById(cartId);
+      if (!cart) {
+        const c = new Cart({ product: productId, quantity: quantity });
+        await c.save();
+        await User.updateOne({ _id: userId }, { $push: { cart: c._id } });
+        res.status(200).json({ c, success: true });
+      } else {
+        if (action === "inc") {
+          await Cart.updateOne({ _id: cart._id }, { $inc: { quantity: 1 } });
+        } else {
+          await Cart.updateOne({ _id: cart._id }, { $inc: { quantity: -1 } });
+        }
+        res.status(200).json({ success: true });
+      }
     }
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });
@@ -199,6 +209,7 @@ exports.updatequantity = async (req, res) => {
       res.status(404).json({ message: "Not found", success: false });
     } else {
       await Cart.updateOne({ _id: cartId }, { $set: { quantity: quantity } });
+
       res.status(200).json({ success: true });
     }
   } catch (e) {
