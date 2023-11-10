@@ -106,7 +106,8 @@ exports.fetchproducts = async (req, res) => {
     "creator",
     "fullname isverified"
   );
-  const user = await User.findById(userId);
+
+  const user = await User.findById(userId).populate("cart", "product");
   try {
     if (!product) {
       res.status(404).json({ message: "No products found", success: false });
@@ -130,14 +131,16 @@ exports.fetchproducts = async (req, res) => {
       }
 
       const cId = [];
-      for (let i = 0; i < user?.cartproducts?.length; i++) {
-        const check = user?.cartproducts?.includes(product[i]?._id);
-        console.log(check);
-        if (check) {
-          cId.push(user?.cart[i]?._id);
-        } else {
-          cId.push(null);
-        }
+      for (let i = 0; i < user?.cart?.length; i++) {
+        user.cart.forEach((cartItem) => {
+          const userProductId = cartItem?.product;
+
+          const matchingProduct = product.some(
+            (p) => p?._id?.toString() === userProductId.toString()
+          );
+
+          cId.push(matchingProduct ? cartItem._id : false);
+        });
       }
 
       const urlData = urls;
