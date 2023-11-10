@@ -106,6 +106,7 @@ exports.fetchproducts = async (req, res) => {
     "creator",
     "fullname isverified"
   );
+  const user = await User.findById(userId);
   try {
     if (!product) {
       res.status(404).json({ message: "No products found", success: false });
@@ -127,12 +128,24 @@ exports.fetchproducts = async (req, res) => {
         urls.push(ur);
         ur = [];
       }
+
+      const cId = [];
+      for (let i = 0; i < user?.cartproducts?.length; i++) {
+        const check = user?.cartproducts?.includes(product[i]?._id);
+        console.log(check);
+        if (check) {
+          cId.push(user?.cart[i]?._id);
+        } else {
+          cId.push(null);
+        }
+      }
+
       const urlData = urls;
       const productData = product;
-
+      const cartId = cId;
       const mergedData = urlData.map((u, i) => ({
+        cartId: cartId[i],
         product: productData[i],
-
         urls: u,
       }));
       res.status(200).json({ mergedData, success: true });

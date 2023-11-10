@@ -139,6 +139,7 @@ exports.fetchcart = async (req, res) => {
           image.push(a);
         }
       }
+
       const total = [];
       let count = 0;
       for (let i = 0; i < user.cart.length; i++) {
@@ -183,12 +184,28 @@ exports.addtocart = async (req, res) => {
         const c = new Cart({ product: productId, quantity: quantity });
         await c.save();
         await User.updateOne({ _id: userId }, { $push: { cart: c._id } });
+        await User.updateOne(
+          { _id: userId },
+          { $push: { cartproducts: productId } }
+        );
         res.status(200).json({ c, success: true });
       } else {
         if (action === "inc") {
           await Cart.updateOne({ _id: cart._id }, { $inc: { quantity: 1 } });
         } else {
-          await Cart.updateOne({ _id: cart._id }, { $inc: { quantity: -1 } });
+          if (action === "dec") {
+            await Cart.updateOne({ _id: cart._id }, { $inc: { quantity: -1 } });
+          } else {
+            await Cart.deleteOne({ _id: cart._id });
+            await User.updateOne(
+              { _id: userId },
+              { $pull: { cart: cart._id } }
+            );
+            await User.updateOne(
+              { _id: userId },
+              { $pull: { cartproducts: productId } }
+            );
+          }
         }
         res.status(200).json({ success: true });
       }

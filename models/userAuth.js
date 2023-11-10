@@ -94,7 +94,7 @@ const userSchema = new mongoose.Schema(
     moneyearned: { type: Number, default: 0 },
     revenue: { type: Number, default: 0 },
     cart: [{ type: ObjectId, ref: "Cart" }],
-
+    cartproducts: [{ type: ObjectId, ref: "Product" }],
     web: { type: String },
     prositeid: { type: ObjectId, ref: "Prosite" },
     lastlogin: { type: [String] },
