@@ -111,6 +111,9 @@ exports.fetchproducts = async (req, res) => {
       res.status(404).json({ message: "No products found", success: false });
     } else {
       const urls = [];
+
+      let ur = [];
+
       for (let i = 0; i < product.length; i++) {
         for (let j = 0; j < product[i].images.length; j++) {
           const a = await generatePresignedUrl(
@@ -118,10 +121,20 @@ exports.fetchproducts = async (req, res) => {
             product[i].images[j].toString(),
             60 * 60
           );
-          urls.push(a);
+          ur.push({ content: a, type: product[i].images[j].type });
         }
+        urls.push(ur);
+        ur = [];
       }
-      res.status(200).json({ data: { product, urls }, success: true });
+      const urlData = urls;
+      const productData = product;
+
+      const mergedData = urlData.map((u, i) => ({
+        product: productData[i],
+
+        urls: u,
+      }));
+      res.status(200).json({ mergedData, success: true });
     }
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });

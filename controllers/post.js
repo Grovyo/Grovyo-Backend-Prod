@@ -1392,7 +1392,6 @@ exports.newfetchfeed = async (req, res) => {
             post[i].post[j].content?.toString(),
             60 * 60
           );
-          console.log(post[i].post[j]?.type);
           ur.push({ content: a, type: post[i].post[j]?.type });
         }
         urls.push(ur);
