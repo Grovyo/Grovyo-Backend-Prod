@@ -131,6 +131,7 @@ exports.fetchproducts = async (req, res) => {
       }
 
       const cId = [];
+      const qty = [];
       for (let i = 0; i < user?.cart?.length; i++) {
         user.cart.forEach((cartItem) => {
           const userProductId = cartItem?.product;
@@ -148,6 +149,7 @@ exports.fetchproducts = async (req, res) => {
       const cartId = cId;
       const mergedData = urlData.map((u, i) => ({
         cartId: cartId[i],
+        quantity: qty[i],
         product: productData[i],
         urls: u,
       }));

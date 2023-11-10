@@ -282,11 +282,12 @@ exports.getaproduct = async (req, res) => {
       res.status(404).json({ message: "Product not found", success: false });
     } else {
       const urls = [];
+
       for (let i = 0; i < product.images.length; i++) {
         if (product.images[i] !== null) {
           const a = await generatePresignedUrl(
             "products",
-            product.images[i].toString(),
+            product.images[i].content.toString(),
             60 * 60
           );
           urls.push(a);
