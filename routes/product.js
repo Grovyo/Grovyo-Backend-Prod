@@ -13,12 +13,14 @@ const {
   buyproduct,
   newprodorder,
   updateproduct,
+  createnew,
 } = require("../controllers/product");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 router.post("/createproduct/:userId", upload.any(), create);
+router.post("/v1/createproduct/:userId", upload.any(), createnew);
 router.get("/fetchallproducts/:userId", fetchallproducts);
 router.get("/getaproduct/:productId", getaproduct);
 router.post("/updateaproduct/:productId", updateproduct);

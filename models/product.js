@@ -40,7 +40,14 @@ const productSchema = new mongoose.Schema({
   },
   discountedprice: { type: Number },
   sellername: { type: String },
-  images: { type: [String] },
+  images: [
+    {
+      content: { type: String },
+      type: { type: String },
+      size: { type: String },
+      thumbnail: { type: String },
+    },
+  ],
 
   totalstars: {
     type: Number,

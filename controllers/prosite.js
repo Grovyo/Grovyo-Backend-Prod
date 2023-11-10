@@ -112,12 +112,14 @@ exports.fetchproducts = async (req, res) => {
     } else {
       const urls = [];
       for (let i = 0; i < product.length; i++) {
-        const a = await generatePresignedUrl(
-          "products",
-          product[i].images[0].toString(),
-          60 * 60
-        );
-        urls.push(a);
+        for (let j = 0; j < product[i].images.length; j++) {
+          const a = await generatePresignedUrl(
+            "products",
+            product[i].images[j].toString(),
+            60 * 60
+          );
+          urls.push(a);
+        }
       }
       res.status(200).json({ data: { product, urls }, success: true });
     }

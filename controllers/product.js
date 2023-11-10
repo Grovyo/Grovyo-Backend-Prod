@@ -3,6 +3,7 @@ const uuid = require("uuid").v4;
 const Minio = require("minio");
 const User = require("../models/userAuth");
 const Order = require("../models/orders");
+const sharp = require("sharp");
 const stripe = require("stripe")(
   "sk_test_51NAGrZSEXlKwVDBNhya5wiyCmbRILf14f1Bk2uro1IMurrItZFsnmn7WNA0I5Q3RMnCVui1ox5v9ynOg3CGrFkHu00hLvIqqS1"
 );
@@ -126,6 +127,87 @@ exports.create = async (req, res) => {
           sellername,
           totalstars,
           images: [a, b, c, d],
+          weight,
+          type,
+        });
+        await p.save();
+        res.status(200).json(p);
+      } catch (e) {
+        res.status(500).json({ message: e.message });
+      }
+    }
+  }
+};
+
+//add new product
+exports.createnew = async (req, res) => {
+  const { userId } = req.params;
+  const {
+    name,
+    brandname,
+    desc,
+    quantity,
+    shippingcost,
+    price,
+    discountedprice,
+    sellername,
+    totalstars,
+    weight,
+    type,
+  } = req.body;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    res.status(400).json({ message: "User not found", success: false });
+  } else {
+    if (req.files.length < 1) {
+      res.status(400).json({ message: "Must have one image" });
+    } else {
+      try {
+        let pos = [];
+
+        for (let i = 0; i < req?.files?.length; i++) {
+          const uuidString = uuid();
+          const bucketName = "products";
+          const objectName = `${Date.now()}_${uuidString}_${
+            req.files[i].originalname
+          }`;
+          if (req.files[i].fieldname === "video") {
+            await minioClient.putObject(
+              bucketName,
+              objectName,
+              req.files[i].buffer,
+              req.files[i].size,
+              req.files[i].mimetype
+            );
+            pos.push({ content: objectName, type: req.files[i].mimetype });
+          } else {
+            await sharp(req.files[i].buffer)
+              .jpeg({ quality: 50 })
+              .toBuffer()
+              .then(async (data) => {
+                await minioClient.putObject(bucketName, objectName, data);
+              })
+              .catch((err) => {
+                console.log(err.message, "-error");
+              });
+
+            pos.push({ content: objectName, type: req.files[i].mimetype });
+          }
+        }
+        console.log(pos);
+        const p = new Product({
+          name,
+          brandname,
+          desc,
+          creator: userId,
+          quantity,
+          shippingcost,
+          price,
+          discountedprice,
+          sellername,
+          totalstars,
+          images: pos,
           weight,
           type,
         });
