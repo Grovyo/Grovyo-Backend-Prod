@@ -10,11 +10,17 @@ const Cart = require("../models/Cart");
 const Subscription = require("../models/Subscriptions");
 const serviceKey = require("../grovyo-89dc2-firebase-adminsdk-pwqju-41deeae515.json");
 const admin = require("firebase-admin");
+const moment = require("moment");
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceKey),
-  databaseURL: "https://grovyo-89dc2.firebaseio.com",
-});
+try {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceKey),
+    databaseURL: "https://grovyo-89dc2.firebaseio.com",
+  });
+  console.log("Firebase Admin initialized successfully!");
+} catch (error) {
+  console.error("Firebase Admin initialization error:", error);
+}
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.site",
