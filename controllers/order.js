@@ -8,19 +8,7 @@ const stripe = require("stripe")(
 );
 const Cart = require("../models/Cart");
 const Subscription = require("../models/Subscriptions");
-const serviceKey = require("../grovyo-89dc2-firebase-adminsdk-pwqju-41deeae515.json");
-const admin = require("firebase-admin");
-const moment = require("moment");
-
-try {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceKey),
-    databaseURL: "https://grovyo-89dc2.firebaseio.com",
-  });
-  console.log("Firebase Admin initialized successfully!");
-} catch (error) {
-  console.error("Firebase Admin initialization error:", error);
-}
+const admin = require("../fireb");
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.site",
@@ -208,12 +196,11 @@ exports.createcartorder = async (req, res) => {
       let date = moment(new Date()).format("hh:mm");
       const msg = {
         notification: {
-          title: `A new Order has arrived`,
-          body: `From ${user?.fullname} - total ₹${total}`,
+          title: "A new Order has arrived.",
+          body: `From ${user?.fullname} total ₹${total}`,
         },
         data: {},
-        token:
-          "fXp6Ee6MTYyMI-TPf2cXCk:APA91bFvpGRAcA2EsOeiN3lrXIpqfrp9V127tKAxpe6Fha7WuNK-TtaiZ5E67N7puQ0PfVMIoiAV6suMPCy3HrvIIBMJGoiUqv4gQpqN1s6Hw25QwqTv_wBHU9ZkhuQh9Kg9uYJ9e4mh",
+        token: user?.notificationtoken,
       };
 
       await admin
@@ -225,7 +212,6 @@ exports.createcartorder = async (req, res) => {
         .catch((error) => {
           console.log("Error sending message:", error);
         });
-
       res.status(200).json({ orderId: order._id, success: true });
     }
   } catch (e) {
