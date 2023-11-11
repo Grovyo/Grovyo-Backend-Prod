@@ -133,7 +133,7 @@ exports.fetchcart = async (req, res) => {
         for (let j = 0; j < user.cart.length; j++) {
           const a = await generatePresignedUrl(
             "products",
-            user.cart[j].product.images[0].toString(),
+            user.cart[j].product.images[0].content.toString(),
             60 * 60
           );
           image.push(a);
@@ -143,7 +143,9 @@ exports.fetchcart = async (req, res) => {
       const total = [];
       let count = 0;
       for (let i = 0; i < user.cart.length; i++) {
-        const t = user.cart[i].product.price;
+        console.log(user.cart[i].product.price, user?.cart[i].quantity);
+
+        const t = user.cart[i].product.price * user?.cart[i].quantity;
         count += t;
       }
       total.push(count);
