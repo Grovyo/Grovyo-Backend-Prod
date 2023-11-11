@@ -169,7 +169,7 @@ exports.details = async (req, res) => {
 exports.createcartorder = async (req, res) => {
   const { userId } = req.params;
   const { quantity, deliverycharges, productId, total } = req.body;
-  console.log(req.body);
+
   try {
     const user = await User.findById(userId);
     if (!user) {
@@ -181,7 +181,8 @@ exports.createcartorder = async (req, res) => {
         quantity: quantity,
         total: total,
         orderId: Math.floor(Math.random() * 9000000) + 1000000,
-
+        paymentMode: "Cash",
+        currentStatus: "success",
         deliverycharges: deliverycharges,
       });
       await order.save();
@@ -190,6 +191,7 @@ exports.createcartorder = async (req, res) => {
         { _id: userId },
         { $push: { puchase_history: order._id } }
       );
+      await User.updateOne({ _id: user._id }, { $unset: { cart: [] } });
       res.status(200).json({ orderId: order._id, success: true });
     }
   } catch (e) {
