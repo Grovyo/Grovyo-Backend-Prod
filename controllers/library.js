@@ -141,14 +141,17 @@ exports.fetchcart = async (req, res) => {
       }
 
       const total = [];
+      const discountedTotal = [];
       let count = 0;
+      let countdis = 0;
       for (let i = 0; i < user.cart.length; i++) {
-        console.log(user.cart[i].product.price, user?.cart[i].quantity);
-
-        const t = user.cart[i].product.discountedprice * user?.cart[i].quantity;
+        const t = user.cart[i].product.price * user?.cart[i].quantity;
         count += t;
+        const d = user.cart[i].product.discountedprice * user?.cart[i].quantity;
+        countdis += d;
       }
       total.push(count);
+      discountedTotal.push(countdis);
       const discount = [];
       let dis = 0;
       for (let i = 0; i < user.cart.length; i++) {
@@ -159,6 +162,7 @@ exports.fetchcart = async (req, res) => {
 
       res.status(200).json({
         total: total,
+        discountedtotal: discountedTotal,
         cart: user.cart,
         discount: discount,
         address: user.address,
