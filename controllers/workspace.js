@@ -760,7 +760,6 @@ exports.fetchProduct = async (req, res) => {
       taxes: 5,
       discountamount: 56,
       finalprice: 456,
-      paymentId: "ertyui",
       topicId: "3gh4567890",
     });
 
@@ -782,6 +781,7 @@ exports.fetchProduct = async (req, res) => {
           // Generate URLs for each product
           const urls = [];
           for (let j = 0; j < products.length; j++) {
+            console.log(products[i]);
             const a = await generatePresignedUrl(
               "products",
               products[j].images[0].content.toString(),
