@@ -211,14 +211,7 @@ exports.createcartorder = async (req, res) => {
           title: `A new Order has arrived`,
           body: `From ${user?.fullname} - total ₹${total}`,
         },
-        data: {
-          screen: "Requests",
-          sender_fullname: `${sendingperson?.fullname}`,
-          sender_id: `${sendingperson?._id}`,
-          text: "A new request has arrived!!",
-          isverified: `${sendingperson?.isverified}`,
-          createdAt: `${date}`,
-        },
+        data: {},
         token:
           "fXp6Ee6MTYyMI-TPf2cXCk:APA91bFvpGRAcA2EsOeiN3lrXIpqfrp9V127tKAxpe6Fha7WuNK-TtaiZ5E67N7puQ0PfVMIoiAV6suMPCy3HrvIIBMJGoiUqv4gQpqN1s6Hw25QwqTv_wBHU9ZkhuQh9Kg9uYJ9e4mh",
       };
