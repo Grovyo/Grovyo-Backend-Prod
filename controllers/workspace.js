@@ -734,29 +734,107 @@ exports.createCollection = async (req, res) => {
 exports.fetchProduct = async (req, res) => {
   try {
     const { userId } = req.params;
-    const coll = [];
+    const orderId = uuid();
+    const collectionsWithProducts = [];
     const user = await User.findById(userId);
+
+    const existingOrder = await Order.findOne({ orderId: orderId });
+    if (existingOrder) {
+      // An order with the same orderId already exists, handle the duplicate case here
+      res
+        .status(400)
+        .json({ message: "Order with the same orderId already exists" });
+      return; // Exit the function early
+    }
+
+    const o = new Order({
+      buyerId: userId,
+      productId: userId,
+      sellerId: userId,
+      delivered: false,
+      quantity: 7,
+      total: 45,
+      currentStatus: "pending",
+      orderId: orderId,
+      deliverycharges: 10,
+      taxes: 5,
+      discountamount: 56,
+      finalprice: 456,
+      paymentId: "ertyui",
+      topicId: "3gh4567890",
+    });
+
+    await o.save();
+
+    // let d = {
+    //   id
+    // }
     if (user) {
       for (let i = 0; i < user.collectionss.length; i++) {
         const call = await Collection.findById(user.collectionss[i]);
+        if (call) {
+          // Fetch full product details based on the product IDs in the collection
+          const productPromises = call.products.map((productId) =>
+            Product.findById(productId)
+          );
+          const products = await Promise.all(productPromises);
 
-        for (let j = 0; j < call.products.length; j++) {
-          const product = await Product.findById(call.products[j]);
-
-          const data = {
+          // Generate URLs for each product
+          const urls = [];
+          for (let j = 0; j < products.length; j++) {
+            const a = await generatePresignedUrl(
+              "products",
+              products[j].images[0].toString(),
+              60 * 60
+            );
+            urls.push(a);
+          }
+          collectionsWithProducts.push({
             collection: call,
-            product: product,
-          };
-          coll.push(data);
-
-          console.log(coll);
+            products: products.map((product, index) => ({
+              ...product.toObject(), // Convert Mongoose document to plain object
+              urls: [urls[index]], // Add the URL to the product
+            })),
+          });
+        } else {
+          console.log(`Collection with id ${user.collectionss[i]} not found.`);
         }
       }
-      coll.reverse();
-      res.status(200).json({ coll, success: true });
+      const productsGet = await Product.find({ creator: userId });
+      const urls = [];
+      for (let i = 0; i < productsGet.length; i++) {
+        const a = await generatePresignedUrl(
+          "products",
+          productsGet[i].images[0].toString(),
+          60 * 60
+        );
+        urls.push(a);
+      }
+
+      const pendingOrders = user.orders.filter(
+        (order) => order.status === "pending"
+      );
+      const completedOrders = user.orders.filter(
+        (order) => order.status === "completed"
+      );
+
+      const detailsToSend = {
+        customers: user?.customers?.length,
+        orders: user?.orders?.length,
+        completedOrders: completedOrders?.length,
+        pendingOrders: pendingOrders?.length,
+        earnings: user.moneyearned,
+      };
+
+      res
+        .status(200)
+        .json({ collectionsWithProducts, detailsToSend, success: true });
+    } else {
+      res.status(404).json({ message: "User not found" });
     }
   } catch (err) {
     console.log(err);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -846,10 +924,12 @@ exports.collectiondelete = async (req, res) => {
           .status(403)
           .json({ message: "You can't delete collections of other users" });
       } else {
+        await Product.deleteMany({ _id: { $in: collection.products } });
         await User.updateOne(
           { _id: userId },
           { $pull: { collectionss: collection._id } }
         );
+        await collection.deleteOne();
         res.status(200).json({ success: true });
       }
     }

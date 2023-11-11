@@ -9,6 +9,7 @@ const OrderSchema = new mongoose.Schema(
     delivered: { type: Boolean, default: false },
     quantity: { type: Number, min: 1 },
     total: { type: Number, min: 0 },
+    customername: { type: String },
     currentStatus: {
       type: String,
       enum: [
