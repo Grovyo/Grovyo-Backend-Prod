@@ -145,7 +145,7 @@ exports.fetchcart = async (req, res) => {
       for (let i = 0; i < user.cart.length; i++) {
         console.log(user.cart[i].product.price, user?.cart[i].quantity);
 
-        const t = user.cart[i].product.price * user?.cart[i].quantity;
+        const t = user.cart[i].product.discountedprice * user?.cart[i].quantity;
         count += t;
       }
       total.push(count);
