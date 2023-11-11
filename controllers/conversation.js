@@ -3,8 +3,14 @@ const Message = require("../models/message");
 const uuid = require("uuid").v4;
 const Minio = require("minio");
 const User = require("../models/userAuth");
+const serviceKey = require("../grovyo-89dc2-firebase-adminsdk-pwqju-41deeae515.json");
+const admin = require("firebase-admin");
 const moment = require("moment");
-const admin = require("../../Grovyo-Backend-Prod/fireb");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceKey),
+  databaseURL: "https://grovyo-89dc2.firebaseio.com",
+});
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.site",
