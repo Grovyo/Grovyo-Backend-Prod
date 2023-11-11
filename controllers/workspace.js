@@ -381,7 +381,7 @@ exports.fetchaworkspaceproducts = async (req, res) => {
       for (let i = 0; i < products.length; i++) {
         const a = await generatePresignedUrl(
           "products",
-          products[i].images[0].toString(),
+          products[i].images[0].content.toString(),
           60 * 60
         );
         urls.push(a);
@@ -558,12 +558,11 @@ exports.create = async (req, res) => {
     weight,
     type,
   } = req.body;
-  console.log(req.body);
+
   const image1 = req.files[0];
   const image2 = req.files[1];
   const image3 = req.files[2];
   const image4 = req.files[3];
-  console.log(req.files);
 
   const user = await User.findById(userId);
   if (!user) {
