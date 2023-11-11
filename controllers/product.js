@@ -305,6 +305,36 @@ exports.getaproduct = async (req, res) => {
   }
 };
 
+//add a review
+exports.addareview = async (req, res) => {
+  try {
+    const { id, productId } = req.params;
+    const { amount } = req.body;
+    const user = await User.findById(id);
+    const product = await Product.findById(productId);
+
+    if (product && user) {
+      await Product.updateOne(
+        { _id: product?._id },
+        {
+          $push: { reviewed: user?._id },
+          $inc: { reviews: 1 },
+          $set: { totalstars: amount },
+        },
+        { new: true }
+      );
+
+      res.status(200).json({ success: true });
+    } else {
+      res
+        .status(404)
+        .json({ message: "Something went wrong...", success: false });
+    }
+  } catch (e) {
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
+
 //delete a product
 exports.deleteproduct = async (req, res) => {
   const { userId, productId } = req.params;

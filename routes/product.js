@@ -14,6 +14,7 @@ const {
   newprodorder,
   updateproduct,
   createnew,
+  addareview,
 } = require("../controllers/product");
 
 const storage = multer.memoryStorage();
@@ -23,6 +24,7 @@ router.post("/createproduct/:userId", upload.any(), create);
 router.post("/v1/createproduct/:userId", upload.any(), createnew);
 router.get("/fetchallproducts/:userId", fetchallproducts);
 router.get("/getaproduct/:id/:productId", getaproduct);
+router.post("/addareview/:id/:productId", addareview);
 router.post("/updateaproduct/:productId", updateproduct);
 router.delete("/deleteproduct/:userId/:productId", deleteproduct);
 router.post("/addhightlights/:userId/:prodId", highlight);
