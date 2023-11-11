@@ -193,7 +193,7 @@ exports.createcartorder = async (req, res) => {
         { $push: { puchase_history: order._id } }
       );
       await User.updateOne({ _id: user._id }, { $unset: { cart: [] } });
-      let date = moment(new Date()).format("hh:mm");
+
       const msg = {
         notification: {
           title: "A new Order has arrived.",
