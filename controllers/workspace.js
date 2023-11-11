@@ -11,6 +11,7 @@ const fs = require("fs");
 const Product = require("../models/product");
 const Ads = require("../models/Ads");
 const Post = require("../models/post");
+const Collection = require("../models/Collectionss");
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.site",
