@@ -200,7 +200,8 @@ exports.createcartorder = async (req, res) => {
           body: `From ${user?.fullname} total ₹${total}`,
         },
         data: {},
-        token: user?.notificationtoken,
+        token:
+          "fXp6Ee6MTYyMI-TPf2cXCk:APA91bFvpGRAcA2EsOeiN3lrXIpqfrp9V127tKAxpe6Fha7WuNK-TtaiZ5E67N7puQ0PfVMIoiAV6suMPCy3HrvIIBMJGoiUqv4gQpqN1s6Hw25QwqTv_wBHU9ZkhuQh9Kg9uYJ9e4mh",
       };
 
       await admin
