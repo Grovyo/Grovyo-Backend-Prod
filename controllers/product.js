@@ -275,14 +275,17 @@ exports.highlight = async (req, res) => {
 //get a single product
 exports.getaproduct = async (req, res) => {
   const { id, productId } = req.params;
-
+  const user = await User.findById(id);
   const product = await Product.findById(productId);
   try {
     if (!product) {
       res.status(404).json({ message: "Product not found", success: false });
     } else {
       const urls = [];
-
+      let isreviewed = false;
+      if (product.reviewed.includes(user?._id)) {
+        isreviewed = true;
+      }
       for (let i = 0; i < product.images.length; i++) {
         if (product.images[i] !== null) {
           const a = await generatePresignedUrl(
@@ -293,7 +296,9 @@ exports.getaproduct = async (req, res) => {
           urls.push(a);
         }
       }
-      res.status(200).json({ data: { product, urls, success: true } });
+      res
+        .status(200)
+        .json({ data: { reviewed: isreviewed, product, urls, success: true } });
     }
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });

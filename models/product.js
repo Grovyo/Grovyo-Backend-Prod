@@ -48,7 +48,7 @@ const productSchema = new mongoose.Schema({
       thumbnail: { type: String },
     },
   ],
-
+  reviewed: [{ type: ObjectId, ref: "User" }],
   totalstars: {
     type: Number,
     default: 0,
