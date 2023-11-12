@@ -167,7 +167,7 @@ exports.details = async (req, res) => {
   }
 };
 
-//cart order new
+//cart order
 exports.createcartorder = async (req, res) => {
   const { userId } = req.params;
   const { quantity, deliverycharges, productId, total } = req.body;
