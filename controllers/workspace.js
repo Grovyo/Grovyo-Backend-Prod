@@ -471,7 +471,7 @@ exports.deletecom = async (req, res) => {
 };
 
 //update community
-exports.udpatecommunity = async (req, res) => {
+exports.updatecommunity = async (req, res) => {
   const { comId, userId } = req.params;
   const { category, title, desc, topicId, message, price, topicname, type } =
     req.body;
