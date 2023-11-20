@@ -731,110 +731,151 @@ exports.createCollection = async (req, res) => {
   }
 };
 
+// exports.fetchProduct = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+//     const orderId = uuid();
+//     const collectionsWithProducts = [];
+//     const user = await User.findById(userId);
+
+//     const existingOrder = await Order.findOne({ orderId: orderId });
+//     if (existingOrder) {
+//       // An order with the same orderId already exists, handle the duplicate case here
+//       res
+//         .status(400)
+//         .json({ message: "Order with the same orderId already exists" });
+//       return; // Exit the function early
+//     }
+
+//     const o = new Order({
+//       buyerId: userId,
+//       productId: userId,
+//       sellerId: userId,
+//       delivered: false,
+//       quantity: 7,
+//       total: 45,
+//       currentStatus: "pending",
+//       orderId: orderId,
+//       deliverycharges: 10,
+//       taxes: 5,
+//       discountamount: 56,
+//       finalprice: 456,
+//       topicId: "3gh4567890",
+//     });
+
+//     await o.save();
+
+//     // let d = {
+//     //   id
+//     // }
+//     if (user) {
+//       for (let i = 0; i < user.collectionss.length; i++) {
+//         const call = await Collection.findById(user.collectionss[i]);
+//         if (call) {
+//           // Fetch full product details based on the product IDs in the collection
+//           const productPromises = call.products.map((productId) =>
+//             Product.findById(productId)
+//           );
+//           const products = await Promise.all(productPromises);
+
+//           // Generate URLs for each product
+//           const urls = [];
+//           for (let j = 0; j < products.length; j++) {
+//             console.log(products[i]);
+//             const a = await generatePresignedUrl(
+//               "products",
+//               products[j].images[0].content.toString(),
+//               60 * 60
+//             );
+//             urls.push(a);
+//           }
+//           collectionsWithProducts.push({
+//             collection: call,
+//             products: products.map((product, index) => ({
+//               ...product.toObject(), // Convert Mongoose document to plain object
+//               urls: [urls[index]], // Add the URL to the product
+//             })),
+//           });
+//         } else {
+//           console.log(`Collection with id ${user.collectionss[i]} not found.`);
+//         }
+//       }
+//       const productsGet = await Product.find({ creator: userId });
+//       const urls = [];
+//       for (let i = 0; i < productsGet.length; i++) {
+//         const a = await generatePresignedUrl(
+//           "products",
+//           productsGet[i].images[0].content.toString(),
+//           60 * 60
+//         );
+//         urls.push(a);
+//       }
+
+//       const pendingOrders = user.orders.filter(
+//         (order) => order.status === "pending"
+//       );
+//       const completedOrders = user.orders.filter(
+//         (order) => order.status === "completed"
+//       );
+
+//       const detailsToSend = {
+//         customers: user?.customers?.length,
+//         orders: user?.orders?.length,
+//         completedOrders: completedOrders?.length,
+//         pendingOrders: pendingOrders?.length,
+//         earnings: user.moneyearned,
+//       };
+
+//       res
+//         .status(200)
+//         .json({ collectionsWithProducts, detailsToSend, success: true });
+//     } else {
+//       res.status(404).json({ message: "User not found" });
+//     }
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// };
+
 exports.fetchProduct = async (req, res) => {
   try {
     const { userId } = req.params;
-    const orderId = uuid();
-    const collectionsWithProducts = [];
     const user = await User.findById(userId);
 
-    const existingOrder = await Order.findOne({ orderId: orderId });
-    if (existingOrder) {
-      // An order with the same orderId already exists, handle the duplicate case here
-      res
-        .status(400)
-        .json({ message: "Order with the same orderId already exists" });
-      return; // Exit the function early
-    }
-
-    const o = new Order({
-      buyerId: userId,
-      productId: userId,
-      sellerId: userId,
-      delivered: false,
-      quantity: 7,
-      total: 45,
-      currentStatus: "pending",
-      orderId: orderId,
-      deliverycharges: 10,
-      taxes: 5,
-      discountamount: 56,
-      finalprice: 456,
-      topicId: "3gh4567890",
-    });
-
-    await o.save();
-
-    // let d = {
-    //   id
-    // }
     if (user) {
-      for (let i = 0; i < user.collectionss.length; i++) {
-        const call = await Collection.findById(user.collectionss[i]);
-        if (call) {
-          // Fetch full product details based on the product IDs in the collection
-          const productPromises = call.products.map((productId) =>
-            Product.findById(productId)
-          );
-          const products = await Promise.all(productPromises);
+      const collectionsToSend = [];
 
-          // Generate URLs for each product
-          const urls = [];
-          for (let j = 0; j < products.length; j++) {
-            console.log(products[i]);
-            const a = await generatePresignedUrl(
-              "products",
-              products[j].images[0].content.toString(),
-              60 * 60
-            );
-            urls.push(a);
-          }
-          collectionsWithProducts.push({
-            collection: call,
-            products: products.map((product, index) => ({
-              ...product.toObject(), // Convert Mongoose document to plain object
-              urls: [urls[index]], // Add the URL to the product
-            })),
-          });
-        } else {
-          console.log(`Collection with id ${user.collectionss[i]} not found.`);
-        }
-      }
-      const productsGet = await Product.find({ creator: userId });
-      const urls = [];
-      for (let i = 0; i < productsGet.length; i++) {
-        const a = await generatePresignedUrl(
-          "products",
-          productsGet[i].images[0].content.toString(),
-          60 * 60
+      for (const collectionId of user.collectionss) {
+        const find = await Collection.findById(
+          collectionId.toString()
+        ).populate("products");
+        const dps = await Promise.all(
+          find.products.map(async (product) => {
+            const imageUrl = product.images[0].toString();
+            return await generatePresignedUrl("products", imageUrl, 60 * 60);
+          })
         );
-        urls.push(a);
+
+        const productsWithDps = find.products.map((product, index) => {
+          return {
+            ...product.toObject(),
+            dp: dps[index],
+          };
+        });
+        collectionsToSend.push({
+          ...find.toObject(),
+          products: productsWithDps,
+        });
       }
 
-      const pendingOrders = user.orders.filter(
-        (order) => order.status === "pending"
-      );
-      const completedOrders = user.orders.filter(
-        (order) => order.status === "completed"
-      );
-
-      const detailsToSend = {
-        customers: user?.customers?.length,
-        orders: user?.orders?.length,
-        completedOrders: completedOrders?.length,
-        pendingOrders: pendingOrders?.length,
-        earnings: user.moneyearned,
-      };
-
-      res
-        .status(200)
-        .json({ collectionsWithProducts, detailsToSend, success: true });
+      res.json({ collections: collectionsToSend, success: true });
     } else {
-      res.status(404).json({ message: "User not found" });
+      res.json({ message: "User Not Found" });
     }
   } catch (err) {
+    res.status(404).json({ message: err.message, success: false });
     console.log(err);
-    res.status(500).json({ error: "Internal server error" });
   }
 };
 

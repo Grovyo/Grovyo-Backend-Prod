@@ -265,8 +265,36 @@ exports.removecart = async (req, res) => {
 //udpate address
 exports.updateaddress = async (req, res) => {
   const { userId } = req.params;
-  const { address } = req.body;
+  const {
+    streetaddress,
+    state,
+    city,
+    landmark,
+    pincode,
+    latitude,
+    longitude,
+    altitude,
+    provider,
+    accuracy,
+    bearing,
+  } = req.body;
+
   try {
+    const address = {
+      streetaddress: streetaddress,
+      state: state,
+      city: city,
+      landmark: landmark,
+      pincode: pincode,
+      coordinates: {
+        latitude: latitude,
+        longitude: longitude,
+        altitude: altitude,
+        provider: provider,
+        accuracy: accuracy,
+        bearing: bearing,
+      },
+    };
     const user = await User.findById(userId);
     if (!user) {
       res.status(404).json({ message: "No user found", success: false });

@@ -9,6 +9,9 @@ const stripe = require("stripe")(
 const Cart = require("../models/Cart");
 const Subscription = require("../models/Subscriptions");
 const admin = require("../fireb");
+const geolib = require("geolib");
+const Locations = require("../models/locations");
+const natural = require("natural");
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.site",
@@ -31,6 +34,24 @@ async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
     console.error(err);
     throw new Error("Failed to generate presigned URL");
   }
+}
+
+//string matching function
+function findBestMatch(inputString, stringArray) {
+  let bestMatch = null;
+  let bestScore = -1;
+
+  stringArray.forEach((str) => {
+    const distance = natural.LevenshteinDistance(inputString, str);
+    const similarity = 1 - distance / Math.max(inputString.length, str.length);
+
+    if (similarity > bestScore) {
+      bestScore = similarity;
+      bestMatch = str;
+    }
+  });
+
+  return { bestMatch, bestScore };
 }
 
 exports.create = async (req, res) => {
@@ -166,6 +187,46 @@ exports.details = async (req, res) => {
     res.status(400).json(e.message);
   }
 };
+const geta = async () => {
+  //taking customers current location
+  const cuslat = "2";
+  const cuslong = "5";
+
+  const locs = await Locations.find();
+  const custcity = "kanpur";
+  let result;
+
+  for (let i = 0; i < locs.length; i++) {
+    const titleArray = Array.isArray(locs[i]?.title)
+      ? locs[i]?.title
+      : [locs[i]?.title];
+    result = findBestMatch(
+      custcity.toLowerCase().trim() || custcity.toLowerCase(),
+      titleArray
+    );
+  }
+
+  const getb = async () => {
+    let storedlocs = [];
+    const cityofcust = await Locations.findOne({ title: result?.bestMatch });
+    for (let i = 0; i < cityofcust.stores.length; i++) {
+      storedlocs.push({
+        latitude: cityofcust.stores[i].address.coordinates.latitude,
+        longitude: cityofcust.stores[i].address.coordinates.longitude,
+        storeid: cityofcust.stores[i].storeid,
+      });
+    }
+
+    const a = geolib.findNearest(
+      { latitude: cuslat, longitude: cuslong },
+      storedlocs
+    );
+
+    console.log(a);
+  };
+  getb();
+};
+geta();
 
 //cart order
 exports.createcartorder = async (req, res) => {
@@ -177,6 +238,7 @@ exports.createcartorder = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     } else {
+      //a new order is created
       const order = new Order({
         buyerId: userId,
         productId: productId,
@@ -188,12 +250,50 @@ exports.createcartorder = async (req, res) => {
         deliverycharges: deliverycharges,
       });
       await order.save();
-
+      //upating order in customers purchase history
       await User.updateOne(
         { _id: userId },
         { $push: { puchase_history: order._id } }
       );
       await User.updateOne({ _id: user._id }, { $unset: { cart: [] } });
+
+      //taking customers current location
+      const cuslat = user.address.coordinates.latitude;
+      const cuslong = user.address.coordinates.longitude;
+
+      const locs = await Locations.find();
+      const custcity = user.address.city;
+      let result;
+
+      for (let i = 0; i < locs.length; i++) {
+        const titleArray = Array.isArray(locs[i]?.title)
+          ? locs[i]?.title
+          : [locs[i]?.title];
+        result = findBestMatch(
+          custcity.toLowerCase().trim() || custcity.toLowerCase(),
+          titleArray
+        );
+      }
+
+      let storedlocs = [];
+      const cityofcust = await Locations.findOne({ title: result?.bestMatch });
+      for (let i = 0; i < cityofcust.stores.length; i++) {
+        storedlocs.push({
+          locs: {
+            latitude: cityofcust.stores[i].address.coordinates.latitude,
+            longitude: cityofcust.stores[i].address.coordinates.longitude,
+          },
+          storeid: cityofcust.stores[i].storeid,
+        });
+      }
+
+      const a = geolib.findNearest(
+        { latitude: cuslat, longitude: cuslong },
+        storedlocs?.locs
+      );
+      const b = geolib.convertDistance(a, "km");
+
+      console.log(b);
 
       const msg = {
         notification: {

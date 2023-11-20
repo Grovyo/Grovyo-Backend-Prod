@@ -77,8 +77,6 @@ const userSchema = new mongoose.Schema(
     notifications: [{ type: ObjectId, ref: "Notification" }],
     notificationscount: { type: Number, default: 0 },
     purchasestotal: { type: Number, default: 0 },
-    storeAddress: { type: String, default: null },
-    address: { type: String, default: null },
     gender: {
       type: "String",
     },
@@ -163,6 +161,21 @@ const userSchema = new mongoose.Schema(
       },
     ],
     collectionss: [{ type: String }],
+    address: {
+      streetaddress: { type: String },
+      state: { type: String },
+      city: { type: String },
+      landmark: { type: String },
+      pincode: { type: Number },
+      country: { type: String },
+      coordinates: {
+        latitude: { type: Number },
+        longitude: { type: Number },
+        altitude: { type: Number },
+        provider: { type: Number },
+        accuracy: { type: Number },
+      },
+    },
     storeAddress: [
       {
         buildingno: { type: String },
@@ -174,6 +187,13 @@ const userSchema = new mongoose.Schema(
         businesscategory: { type: String },
         documenttype: { type: String },
         documentfile: { type: String },
+        coordinates: {
+          latitude: { type: Number },
+          longitude: { type: Number },
+          altitude: { type: Number },
+          provider: { type: Number },
+          accuracy: { type: Number },
+        },
       },
     ],
     mesIds: [{ type: Number }],

@@ -42,61 +42,61 @@ const generateRandomId = () => {
 };
 
 //create a new topic
-exports.create = async (req, res) => {
-  const { title, message, type, price } = req.body;
-  const { userId, comId } = req.params;
-  try {
-    const topic = new Topic({
-      title,
-      creator: userId,
-      community: comId,
-      message: message,
-      type: type,
-      price: price,
-    });
-    await topic.save();
-    await Topic.updateOne(
-      { _id: topic._id },
-      { $push: { members: userId }, $inc: { memberscount: 1 } }
-    );
-    await Community.updateOne(
-      { _id: comId },
-      {
-        $push: { topics: topic._id },
-        $inc: { totaltopics: 1 },
-      }
-    );
-    await User.updateOne(
-      { _id: userId },
-      { $push: { topicsjoined: topic._id }, $inc: { totaltopics: 1 } }
-    );
+// exports.create = async (req, res) => {
+//   const { title, message, type, price } = req.body;
+//   const { userId, comId } = req.params;
+//   try {
+//     const topic = new Topic({
+//       title,
+//       creator: userId,
+//       community: comId,
+//       message: message,
+//       type: type,
+//       price: price,
+//     });
+//     await topic.save();
+//     await Topic.updateOne(
+//       { _id: topic._id },
+//       { $push: { members: userId }, $inc: { memberscount: 1 } }
+//     );
+//     await Community.updateOne(
+//       { _id: comId },
+//       {
+//         $push: { topics: topic._id },
+//         $inc: { totaltopics: 1 },
+//       }
+//     );
+//     await User.updateOne(
+//       { _id: userId },
+//       { $push: { topicsjoined: topic._id }, $inc: { totaltopics: 1 } }
+//     );
 
-    res.status(200).json({ topic, success: true });
-  } catch (e) {
-    res.status(400).json({ message: e.message, success: false });
-  }
-};
+//     res.status(200).json({ topic, success: true });
+//   } catch (e) {
+//     res.status(400).json({ message: e.message, success: false });
+//   }
+// };
 
 //Delete Topic
-exports.deletetopic = async (req, res) => {
-  const { topicId } = req.params;
-  const topic = await Topic.findById(topicId);
-  try {
-    if (!topicId) {
-      res.status(400).json({ message: "No topic found", success: false });
-    } else if (topic.creator.toString() != topicId) {
-      res
-        .status(400)
-        .json({ message: "Not Authorized - You can't delete others topic" });
-    } else {
-      await Topic.findByIdAndDelete(topicId);
+// exports.deletetopic = async (req, res) => {
+//   const { topicId } = req.params;
+//   const topic = await Topic.findById(topicId);
+//   try {
+//     if (!topicId) {
+//       res.status(400).json({ message: "No topic found", success: false });
+//     } else if (topic.creator.toString() != topicId) {
+//       res
+//         .status(400)
+//         .json({ message: "Not Authorized - You can't delete others topic" });
+//     } else {
+//       await Topic.findByIdAndDelete(topicId);
 
-      res.status(200).json({ success: true });
-    }
-  } catch (e) {
-    res.status(400).json({ message: e.message });
-  }
-};
+//       res.status(200).json({ success: true });
+//     }
+//   } catch (e) {
+//     res.status(400).json({ message: e.message });
+//   }
+// };
 
 //get all messages of a topic
 exports.getmessages = async (req, res) => {
@@ -445,5 +445,123 @@ exports.checkLastMessage = async (req, res) => {
     }
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+exports.create = async (req, res) => {
+  const { title, message, type, price, comid } = req.body;
+  const { userId } = req.params;
+  console.log(comid);
+  console.log(req.body);
+  try {
+    const topic = new Topic({
+      title: title,
+      creator: userId,
+      // community: comId,
+      message: message,
+      type: type,
+      price: price,
+    });
+
+    await topic.save();
+
+    await Topic.updateOne(
+      { _id: topic._id },
+      { $push: { members: userId }, $inc: { memberscount: 1 } }
+    );
+    // await Community.updateOne(
+    //   { _id: comId },
+    //   {
+    //     $push: { topics: topic._id },
+    //     $inc: { totaltopics: 1 },
+    //   }
+    // );
+    await User.updateOne(
+      { _id: userId },
+      { $push: { topicsjoined: topic._id }, $inc: { totaltopics: 1 } }
+    );
+
+    if (comid) {
+      await Community.findByIdAndUpdate(
+        { _id: comid },
+        { $push: { topics: topic._id } }
+      );
+    }
+    res.status(200).json({ topic, success: true });
+  } catch (e) {
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+// fetchTopic
+exports.fetchtopic = async (req, res) => {
+  try {
+    const { id, comId } = req.params;
+    console.log(id, comId);
+    const user = await User.findById(id);
+    const community = await Community.findById(comId).populate("topics");
+    if (!community) {
+      res.json({ message: "Community Not Found" });
+    } else {
+      console.log(community.topics);
+      res.json({ topics: community.topics, success: true });
+    }
+  } catch (err) {
+    res.status(400).json({ message: err.message, success: false });
+    console.log(err);
+  }
+};
+
+//Delete Topic
+exports.deletetopic = async (req, res) => {
+  const { topicId, userId } = req.params;
+  const { idtosend } = req.body;
+  const topic = await Topic.findById(topicId);
+  try {
+    if (!topicId) {
+      res.status(400).json({ message: "No topic found", success: false });
+    } else if (topic.creator.toString() != userId) {
+      res
+        .status(400)
+        .json({ message: "Not Authorized - You can't delete others topic" });
+    } else {
+      await Topic.findByIdAndDelete(topicId);
+      if (idtosend) {
+        await Community.findByIdAndUpdate(
+          { _id: idtosend },
+          { $pull: { topics: topicId } }
+        );
+      }
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    res.status(400).json({ message: e.message });
+  }
+};
+
+// edit topic
+// changed
+exports.edittopic = async (req, res) => {
+  try {
+    const { id, topicid } = req.params;
+    const topic = await Topic.findById(topicid);
+    if (!topic) {
+      res.status(400).json({ message: "No topic found", success: false });
+    } else if (topic.creator.toString() != id) {
+      res
+        .status(400)
+        .json({ message: "Not Authorized - You can't edit others topic" });
+    } else {
+      const updatedTopic = await Topic.findOneAndUpdate(
+        { _id: topicid },
+        req.body,
+        { new: true }
+      );
+
+      res.status(200).json({ updatedTopic, success: true });
+    }
+  } catch (err) {
+    res.status(500).json({ message: "Internal Server Error", success: false });
+    console.log(err);
   }
 };

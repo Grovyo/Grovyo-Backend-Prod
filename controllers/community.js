@@ -420,24 +420,38 @@ exports.udpatecommunity = async (req, res) => {
     } else if (!com) {
       res.status(404).json({ message: "Community not found", success: false });
     } else {
-      const bucketName = "images";
-      const objectName = `${Date.now()}_${uuidString}_${req.file.originalname}`;
-      a1 = objectName;
-      a2 = req.file.mimetype;
+      if (req.file) {
+        const bucketName = "images";
+        const objectName = `${Date.now()}${uuidString}${req.file.originalname}`;
+        a1 = objectName;
+        a2 = req.file.mimetype;
 
-      await sharp(req.file.buffer)
-        .jpeg({ quality: 50 })
-        .toBuffer()
-        .then(async (data) => {
-          await minioClient.putObject(bucketName, objectName, data);
-        })
-        .catch((err) => {
-          console.log(err.message, "-error");
-        });
+        await sharp(req.file.buffer)
+          .jpeg({ quality: 50 })
+          .toBuffer()
+          .then(async (data) => {
+            await minioClient.putObject(bucketName, objectName, data);
+          })
+          .catch((err) => {
+            console.log(err.message, "-error");
+          });
+        await Community.updateOne(
+          { _id: com._id },
+          {
+            $set: {
+              category: category,
+              title: name,
+              desc: desc,
+              dp: objectName,
+            },
+          }
+        );
+      }
+
       await Community.updateOne(
         { _id: com._id },
         {
-          $set: { category: category, title: name, desc: desc, dp: objectName },
+          $set: { category: category, title: name, desc: desc },
         }
       );
       await Topic.updateOne(
@@ -454,6 +468,7 @@ exports.udpatecommunity = async (req, res) => {
       res.status(200).json({ success: true });
     }
   } catch (e) {
+    console.log(e);
     res.status(400).json({ message: e.message, success: false });
   }
 };

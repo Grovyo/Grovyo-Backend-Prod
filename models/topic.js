@@ -5,7 +5,11 @@ const topicSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     creator: { type: ObjectId, ref: "User", required: true },
-    community: { type: ObjectId, ref: "Community", required: true },
+    community: {
+      type: ObjectId,
+      ref: "Community",
+      // , required: true
+    },
     type: { type: String, default: "public" },
     members: [{ type: ObjectId, ref: "User" }],
     memberscount: { type: Number, default: 0 },
@@ -13,6 +17,7 @@ const topicSchema = new mongoose.Schema(
     postcount: { type: Number, default: 0 },
     price: { type: Number, default: 0 },
     message: { type: String },
+
     notifications: [
       {
         type: ObjectId,

@@ -37,12 +37,12 @@ const {
   fetchprositecollection,
   createprosite,
   fetchsingleprosite,
-  fetchaworkspaceproducts,
+  // fetchaworkspaceproducts,
   fetchallorders,
   deletecom,
   // editCom,
   create,
-  udpatecommunity,
+  updatecommunity,
   updateproduct,
   registerstore,
   createCollection,
@@ -61,7 +61,7 @@ router.post("/addmoney/:id", addmoney);
 router.get("/fetchpayhistory/:id", fetchpayhistory);
 router.post("/updateorderstatus/:id", updateorderstatus);
 router.get("/fetchprositecollection/:id", fetchprositecollection);
-router.get("/fetchaworkspaceproducts/:id", fetchaworkspaceproducts);
+// router.get("/fetchaworkspaceproducts/:id", fetchaworkspaceproducts);
 router.get("/fetchallorders/:id", fetchallorders);
 router.post("/createprosite/:id", upload.any(), createprosite);
 router.get("/fetchsingleprosite/:id/:prositeId", fetchsingleprosite);
@@ -71,9 +71,9 @@ router.get("/fetchsingleprosite/:id/:prositeId", fetchsingleprosite);
 router.post("/delete/:id", deletecom);
 // community edit
 router.post(
-  "/updatecommunity/:comId/:userId",
+  "/updatecommunity/:userId/:comId",
   upload.single("image"),
-  udpatecommunity
+  updatecommunity
 );
 // add product
 router.post("/createproduct/:userId/:colid", upload.any(), create);
@@ -86,7 +86,6 @@ router.post("/registerstore/:userId", registerstore);
 // create collection product
 router.post("/createCollection/:userId", createCollection);
 // add products on collection
-// router.post("/colproduct/:userId/:colid", colproduct)
 router.get("/fetchProducts/:userId", fetchProduct);
 
 // delete collection

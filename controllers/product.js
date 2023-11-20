@@ -195,7 +195,7 @@ exports.createnew = async (req, res) => {
             pos.push({ content: objectName, type: req.files[i].mimetype });
           }
         }
-        console.log(pos);
+
         const p = new Product({
           name,
           brandname,

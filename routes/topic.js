@@ -3,18 +3,23 @@ const router = express.Router();
 
 const {
   create,
+  fetchtopic,
   deletetopic,
   getmessages,
   newmessage,
   hiddenmes,
+  edittopic,
   initiatetopic,
   jointopic,
   checkLastMessage,
 } = require("../controllers/topic");
 
-router.post("/createtopic/:userId/:comId", create);
+// router.post("/createtopic/:userId/:comId", create);
+router.post("/createtopic/:userId", create);
 
-router.delete("/deletetopic/:topicId", deletetopic);
+router.post("/deletetopic/:userId/:topicId", deletetopic);
+
+router.post("/edittopic/:id/:topicid", edittopic);
 
 router.get("/getmessages/:topicId/:userId", getmessages);
 
@@ -27,5 +32,8 @@ router.post("/newmessage/:topicId", newmessage);
 router.post("/initiatetopic/:topicId", initiatetopic);
 
 router.post("/jointopic/:topicId/:id/:comId/:orderId", jointopic);
+
+// ad code
+router.get("/fetchtopic/:id/:comId", fetchtopic);
 
 module.exports = router;

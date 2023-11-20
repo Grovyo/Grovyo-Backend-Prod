@@ -4,13 +4,24 @@ const { ObjectId } = mongoose.Schema;
 const communitySchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
-
     creator: { type: ObjectId, ref: "User", required: true },
     category: { type: String, required: true },
     dp: { type: String, required: true },
-    members: [{ type: ObjectId, ref: "User", required: true }],
+    members: [
+      {
+        type: ObjectId,
+        ref: "User",
+        //  required: true
+      },
+    ],
     memberscount: { type: Number, default: 0 },
-    posts: [{ type: ObjectId, ref: "Post", required: true }],
+    posts: [
+      {
+        type: ObjectId,
+        ref: "Post",
+        //  required: true
+      },
+    ],
     totalposts: { type: Number, default: 0 },
     tags: { type: [String] },
     desc: { type: String },
@@ -24,8 +35,20 @@ const communitySchema = new mongoose.Schema(
       default: "Unblock",
       enum: ["Unblock", "Block"],
     },
-    moderators: [{ type: ObjectId, ref: "User", required: true }],
-    admins: [{ type: ObjectId, ref: "User", required: true }],
+    moderators: [
+      {
+        type: ObjectId,
+        ref: "User",
+        // required: true
+      },
+    ],
+    admins: [
+      {
+        type: ObjectId,
+        ref: "User",
+        //  required: true
+      },
+    ],
     visitors: { type: Number, default: 0 },
     newmemberscount: { type: Number, default: 0 },
     newmembers: [{ type: ObjectId, ref: "User" }],
