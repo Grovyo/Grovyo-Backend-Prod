@@ -169,9 +169,9 @@ exports.fetchcart = async (req, res) => {
         ", " +
         user.address.landmark +
         ", " +
-        user.address.pincode +
-        ", " +
         user.address.city +
+        ", " +
+        user.address.pincode +
         ", " +
         user.address.state;
       res.status(200).json({
