@@ -122,9 +122,9 @@ exports.createVideo = async (req, res) => {
       await minioClient.putObject(
         bucketName,
         objectName,
-        buffer,
-        size,
-        mimetype
+        buffer
+        // size,
+        // mimetype
       );
 
       let po = { content: objectName, type: mimetype, size: size };
@@ -1122,14 +1122,16 @@ exports.postanything = async (req, res) => {
         const objectName = `${Date.now()}_${uuidString}_${
           req.files[i].originalname
         }`;
+
         if (req.files[i].fieldname === "video") {
           await minioClient.putObject(
             bucketName,
             objectName,
-            req.files[i].buffer,
-            req.files[i].size,
-            req.files[i].mimetype
+            req.files[i].buffer
+            // req.files[i].size,
+            // req.files[i].mimetype
           );
+
           pos.push({ content: objectName, type: req.files[i].mimetype });
         } else {
           await sharp(req.files[i].buffer)

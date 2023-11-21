@@ -168,7 +168,7 @@ exports.fetchcart = async (req, res) => {
         user.address.streetaddress +
         user.address.landmark +
         user.address.pincode +
-        user.address.pincode;
+        user.address.state;
       res.status(200).json({
         totalqty: totalqty,
         total: total,
