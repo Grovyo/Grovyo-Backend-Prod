@@ -18,7 +18,7 @@ const deliveries = new mongoose.Schema({
       latitude: { type: Number },
       longitude: { type: Number },
       altitude: { type: Number },
-      provider: { type: Number },
+      provider: { type: String },
       accuracy: { type: Number },
       speed: { type: Number },
       bearing: { type: Number },
