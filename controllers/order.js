@@ -396,18 +396,35 @@ exports.createcartorder = async (req, res) => {
           if (nearestpartner) {
             const driver = await Deluser?.findById(nearestpartner?.id);
 
+            let address = {
+              streetaddress: user?.address?.streetaddress,
+              landmark: user?.address?.landmark,
+              city: user?.address?.city,
+              pincode: user?.address?.pincode,
+              state: user?.address?.state,
+              country: user?.address?.country,
+              coordinates: {
+                latitude: user?.address?.coordinates?.latitude,
+                longitude: user?.address?.coordinates?.longitude,
+                accuracy: user?.address?.coordinates?.accuracy,
+                provider: user?.address?.coordinates?.provider,
+                bearing: user?.address?.coordinates?.bearing,
+                altitude: user?.address?.coordinates?.altitude,
+              },
+            };
+
             const newDeliveries = new Delivery({
               title: product?.name,
               amount: total,
               orderId: oi,
-              address: user?.address,
+              address: address,
               partner: driver?._id,
             });
             await newDeliveries.save();
 
             const data = {
               name: user?.name,
-              address: user?.address,
+              address: address,
               amount: total,
               id: newDeliveries?._id,
             };
