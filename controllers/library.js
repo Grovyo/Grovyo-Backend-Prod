@@ -164,14 +164,18 @@ exports.fetchcart = async (req, res) => {
         dis += t;
       }
       discount.push(dis);
-
+      let completeaddress =
+        user.address.streetaddress +
+        user.address.landmark +
+        user.address.pincode +
+        user.address.pincode;
       res.status(200).json({
         totalqty: totalqty,
         total: total,
         discountedtotal: discountedTotal,
         cart: user.cart,
         discount: discount,
-        address: user.address,
+        address: completeaddress,
         image,
         success: true,
         ids,

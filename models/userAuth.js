@@ -197,6 +197,12 @@ const userSchema = new mongoose.Schema(
       },
     ],
     mesIds: [{ type: Number }],
+    deliverypartners: [
+      {
+        time: { type: String, default: Date.now().toString() },
+        id: { type: ObjectId, ref: "User" },
+      },
+    ],
   },
   { timestamps: true }
 );
