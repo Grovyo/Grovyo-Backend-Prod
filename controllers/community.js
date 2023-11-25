@@ -4,6 +4,8 @@ const uuid = require("uuid").v4;
 const Minio = require("minio");
 const Topic = require("../models/topic");
 const sharp = require("sharp");
+const Post = require("../models/post");
+const Comment = require("../models/comment");
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.site",
@@ -28,6 +30,7 @@ async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
   }
 }
 
+//creating a community
 exports.create = async (req, res) => {
   const { title, desc, topic, type, price, category } = req.body;
   const { userId } = req.params;
@@ -470,5 +473,143 @@ exports.udpatecommunity = async (req, res) => {
   } catch (e) {
     console.log(e);
     res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+//new community post feed
+exports.compostfeed = async (req, res) => {
+  try {
+    const { id, comId, postId } = req.params;
+    const user = await User.findById(id);
+    const community = await Community.findById(comId).populate(
+      "topics",
+      "title type price"
+    );
+    if (user && community) {
+      //community data
+      const subs =
+        community.admins.includes(user._id) ||
+        community.moderators.includes(user._id) ||
+        community.members.includes(user._id);
+      const canedit =
+        community.admins.includes(user._id) ||
+        community.moderators.includes(user._id);
+
+      const dp = await generatePresignedUrl(
+        "images",
+        community.dp.toString(),
+        60 * 60
+      );
+
+      //post data
+      const posts = await Post.find({ community: community._id }).populate(
+        "sender",
+        "fullname profilepic username isverified"
+      );
+      let index = -1;
+
+      //index of post that appears first
+      for (let i = 0; i < posts.length; i++) {
+        if (posts[i]._id.toString() === postId) {
+          index = i;
+          break;
+        }
+      }
+
+      //comments
+      const comments = [];
+      for (let i = 0; i < posts.length; i++) {
+        const comment = await Comment.find({ postId: posts[i]._id.toString() })
+          .limit(1)
+          .sort({ createdAt: -1 });
+
+        if (comment.length > 0) {
+          comments.push(comment);
+        } else {
+          comments.push("no comment");
+        }
+      }
+
+      const liked = [];
+      const dps = [];
+      const tc = [];
+      let urls = [];
+
+      //total comments of each post
+      for (let i = 0; i < posts.length; i++) {
+        const totalcomments = await Comment.find({ postId: posts[i]._id });
+        tc.push(totalcomments.length);
+      }
+
+      //likes
+      for (let i = 0; i < posts.length; i++) {
+        if (
+          posts[i].likedby?.some((id) => id.toString() === user._id.toString())
+        ) {
+          liked.push(true);
+        } else {
+          liked.push(false);
+        }
+      }
+
+      //post content
+      let ur = [];
+      for (let i = 0; i < posts?.length; i++) {
+        for (let j = 0; j < posts[i]?.post?.length; j++) {
+          const a = await generatePresignedUrl(
+            "posts",
+            posts[i].post[j].content?.toString(),
+            60 * 60
+          );
+          ur.push({ content: a, type: posts[i].post[j]?.type });
+        }
+        urls.push(ur);
+        ur = [];
+      }
+
+      //dp of the sender
+      for (let i = 0; i < posts.length; i++) {
+        const a = await generatePresignedUrl(
+          "images",
+          posts[i].sender.profilepic.toString(),
+          60 * 60
+        );
+        dps.push(a);
+      }
+
+      //mergeing all the data
+      const urlData = urls;
+      const postData = posts;
+      const likeData = liked;
+      const dpsdata = dps;
+      const commentscount = tc;
+      const commentdata = comments;
+
+      const mergedData = urlData.map((u, i) => ({
+        dpdata: dpsdata[i],
+        urls: u,
+        liked: likeData[i],
+        posts: postData[i],
+        totalcomments: commentscount[i],
+        comments: commentdata[i],
+      }));
+
+      res.status(200).json({
+        mergedData,
+        index,
+        dp,
+        community,
+        subs,
+        canedit,
+        success: true,
+      });
+    } else {
+      res.status(404).json({ message: "User or Community not found" });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
   }
 };

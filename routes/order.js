@@ -9,6 +9,8 @@ const {
   updateorder,
   createcartorder,
   updatecartorder,
+  scannedqr,
+  enterotp,
 } = require("../controllers/order");
 
 router.post("/neworder/:userId/:productId", create);
@@ -18,5 +20,7 @@ router.post("/createcartorder/:userId", createcartorder);
 router.post("/updatecartorder/:userId/:orderId", updatecartorder);
 router.patch("/orderstatus/:userId/:productId/:orderId", status);
 router.get("/orderdetails/:userId/:orderId", details);
+router.post("/scannedqr/:id/:delid", scannedqr);
+router.post("/enterotp/:id/:deliveryid", enterotp);
 
 module.exports = router;

@@ -9,6 +9,7 @@ const {
   getcommunity,
   addTopic,
   udpatecommunity,
+  compostfeed,
 } = require("../controllers/community");
 
 const storage = multer.memoryStorage();
@@ -24,5 +25,7 @@ router.post(
   upload.single("image"),
   udpatecommunity
 );
+//community posts and data
+router.get("/v1/compostfeed/:id/:comId/:postId", compostfeed);
 
 module.exports = router;

@@ -38,6 +38,7 @@ const OrderSchema = new mongoose.Schema(
     finalprice: { type: Number, min: 0 },
     paymentId: { type: String },
     topicId: { type: String },
+    timing: { type: String },
   },
   { timestamps: true }
 );

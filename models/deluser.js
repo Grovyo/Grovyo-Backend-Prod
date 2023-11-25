@@ -46,19 +46,62 @@ const deluser = new mongoose.Schema({
     },
   ],
   notificationtoken: { type: String },
+  //for amount that driver earns
   earnings: [
     {
-      time: { type: String, default: Date.now().toString() },
+      timing: { type: String, default: Date.now().toString() },
       amount: { type: String },
+      mode: { type: String },
       type: ObjectId,
       ref: "Earnings",
     },
   ],
+  currentotp: {
+    otp: { type: Number },
+    timing: { type: Number, default: Date.now().toString() },
+  },
   deliveries: [
     {
       time: { type: String, default: Date.now().toString() },
       amount: { type: String },
-      address: { type: String },
+      status: { type: String },
+      timing: { type: String },
+      phonenumber: { type: Number },
+      type: { type: String },
+      pickupaddress: {
+        streetaddress: { type: String },
+        state: { type: String },
+        city: { type: String },
+        landmark: { type: String },
+        pincode: { type: Number },
+        country: { type: String },
+        coordinates: {
+          latitude: { type: Number },
+          longitude: { type: Number },
+          altitude: { type: Number },
+          provider: { type: String },
+          accuracy: { type: Number },
+          speed: { type: Number },
+          bearing: { type: Number },
+        },
+      },
+      droppingaddress: {
+        streetaddress: { type: String },
+        state: { type: String },
+        city: { type: String },
+        landmark: { type: String },
+        pincode: { type: Number },
+        country: { type: String },
+        coordinates: {
+          latitude: { type: Number },
+          longitude: { type: Number },
+          altitude: { type: Number },
+          provider: { type: String },
+          accuracy: { type: Number },
+          speed: { type: Number },
+          bearing: { type: Number },
+        },
+      },
       name: { type: String },
       id: {
         type: ObjectId,
@@ -86,6 +129,26 @@ const deluser = new mongoose.Schema({
     latitude: { type: Number },
     longitude: { type: Number },
   },
+  bank: {
+    accno: { type: String },
+    ifsccode: { type: String },
+  },
+  reports: [
+    {
+      text: { type: String },
+      timing: { type: Number },
+      status: { type: String, default: "pending" },
+      id: { type: String },
+    },
+  ],
+  //for amount that driver collects
+  balance: {
+    amount: { type: Number },
+    time: { type: Number },
+    delid: { type: ObjectId, ref: "Delivery" },
+    mode: { type: String, default: "Cash" },
+  },
+  totalbalance: { type: Number, default: 0 },
 });
 
 deluser.index({ phone: "Number" });

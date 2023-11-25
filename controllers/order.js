@@ -14,10 +14,11 @@ const Locations = require("../models/locations");
 const natural = require("natural");
 const Deluser = require("../models/deluser");
 const Delivery = require("../models/deliveries");
+const Conversation = require("../models/conversation");
+const Message = require("../models/message");
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.site",
-
   useSSL: true,
   accessKey: "shreyansh379",
   secretKey: "shreyansh379",
@@ -298,14 +299,19 @@ exports.details = async (req, res) => {
 
 //cart order
 
+//creating a new order
 exports.createcartorder = async (req, res) => {
   const { userId } = req.params;
   const { quantity, deliverycharges, productId, total } = req.body;
 
   try {
     const user = await User.findById(userId);
-    const product = await Product.findById(productId);
+    const product = await Product.findById(productId).populate(
+      "creator",
+      "storeAddress"
+    );
     let oi = Math.floor(Math.random() * 9000000) + 1000000;
+
     if (!user && !product) {
       return res.status(404).json({ message: "User or Product not found" });
     } else {
@@ -319,6 +325,7 @@ exports.createcartorder = async (req, res) => {
         paymentMode: "Cash",
         currentStatus: "success",
         deliverycharges: deliverycharges,
+        timing: "Tommorow, by 7:00 pm",
       });
       await order.save();
       //upating order in customers purchase history
@@ -332,138 +339,364 @@ exports.createcartorder = async (req, res) => {
       const cuslat = user.address.coordinates.latitude;
       const cuslong = user.address.coordinates.longitude;
 
+      //business address
+      const businessaddress = product?.creator;
+
       const locs = await Locations.find();
       const custcity = user.address.city;
-      let result;
 
-      for (let i = 0; i < locs.length; i++) {
-        const titleArray = Array.isArray(locs[i]?.title)
-          ? locs[i]?.title
-          : [locs[i]?.title];
-        result = findBestMatch(
-          custcity.toLowerCase().trim() || custcity.toLowerCase(),
-          titleArray
-        );
-      }
-
-      const assigntodriver = async () => {
-        let storedlocs = [];
-        const cityofcust = await Locations.findOne({
-          title: result?.bestMatch,
-        });
-        for (let i = 0; i < cityofcust.stores.length; i++) {
-          storedlocs.push({
-            latitude: cityofcust.stores[i].address.coordinates.latitude,
-            longitude: cityofcust.stores[i].address.coordinates.longitude,
-            storeid: cityofcust.stores[i].storeid,
-          });
-        }
-
-        const neareststore = geolib.findNearest(
+      let checkeddistance;
+      //checking distance btw customer and business
+      const checkdistance = async () => {
+        const businesslatlong = product?.creator?.storeAddress?.coordinates;
+        const ispointinrange = geolib.isPointWithinRadius(
           { latitude: cuslat, longitude: cuslong },
-          storedlocs
+          businesslatlong,
+          10000
         );
 
-        const storeuser = await Deluser.findById(neareststore?.storeid);
-        let eligibledriver = [];
+        checkeddistance = ispointinrange;
+      };
+      checkdistance();
 
-        for (let i = 0; i < storeuser?.deliverypartners?.length; i++) {
-          const deliverypartner = await Deluser.findById(
-            storeuser?.deliverypartners[i]?.id
+      // if business and custmer location are near each other i.e. within range of 10km to be exact
+      if (checkeddistance) {
+        let firstresult;
+        for (let i = 0; i < locs.length; i++) {
+          const titleArray = Array.isArray(locs[i]?.title)
+            ? locs[i]?.title
+            : [locs[i]?.title];
+          firstresult = findBestMatch(
+            businessaddress?.storeAddress?.city.toLowerCase().trim() ||
+              businessaddress?.storeAddress?.city.toLowerCase(),
+            titleArray
           );
-
-          if (
-            deliverypartner &&
-            deliverypartner.accstatus !== "blocked" &&
-            deliverypartner.accstatus !== "review" &&
-            deliverypartner.deliveries?.length < 21
-          ) {
-            let driverloc = {
-              latitude: deliverypartner.currentlocation?.latitude,
-              longitude: deliverypartner.currentlocation?.longitude,
-              id: deliverypartner?._id,
-            };
-            eligibledriver.push(driverloc);
-          }
         }
+        const assigntodriver = async () => {
+          let storedlocs = [];
+          const cityofbusiness = await Locations.findOne({
+            title: firstresult?.bestMatch,
+          });
+          for (let i = 0; i < cityofbusiness.stores.length; i++) {
+            storedlocs.push({
+              latitude: cityofbusiness.stores[i].address.coordinates.latitude,
+              longitude: cityofbusiness.stores[i].address.coordinates.longitude,
+              storeid: cityofbusiness.stores[i].storeid,
+            });
+          }
 
-        if (eligibledriver?.length > 0) {
-          const nearestpartner = geolib.findNearest(
+          const neareststore = geolib.findNearest(
             { latitude: cuslat, longitude: cuslong },
-            eligibledriver
+            storedlocs
           );
 
-          if (nearestpartner) {
-            const driver = await Deluser?.findById(nearestpartner?.id);
+          const storeuser = await Deluser.findById(neareststore?.storeid);
+          let eligibledriver = [];
 
-            let address = {
-              streetaddress: user?.address?.streetaddress,
-              landmark: user?.address?.landmark,
-              city: user?.address?.city,
-              pincode: user?.address?.pincode,
-              state: user?.address?.state,
-              country: user?.address?.country,
-              coordinates: {
-                latitude: user?.address?.coordinates?.latitude,
-                longitude: user?.address?.coordinates?.longitude,
-                accuracy: user?.address?.coordinates?.accuracy,
-                provider: user?.address?.coordinates?.provider,
-                bearing: user?.address?.coordinates?.bearing,
-                altitude: user?.address?.coordinates?.altitude,
-              },
-            };
-
-            const newDeliveries = new Delivery({
-              title: product?.name,
-              amount: total,
-              orderId: oi,
-              address: address,
-              partner: driver?._id,
-            });
-            await newDeliveries.save();
-
-            const data = {
-              name: user?.name,
-              address: address,
-              amount: total,
-              id: newDeliveries?._id,
-            };
-
-            await Deluser.updateOne(
-              { _id: driver?._id },
-              {
-                $push: { deliveries: data },
-              }
+          for (let i = 0; i < storeuser?.deliverypartners?.length; i++) {
+            const deliverypartner = await Deluser.findById(
+              storeuser?.deliverypartners[i]?.id
             );
 
-            const msg = {
-              notification: {
-                title: "A new order has arrived.",
-                body: `From ${user?.fullname} Total ₹${total}`,
-              },
-              data: {},
-              tokens: [
-                user?.notificationtoken,
-                driver?.notificationtoken,
-                storeuser?.notificationtoken,
-              ],
-            };
-
-            await admin
-              .messaging()
-              .sendEachForMulticast(msg)
-              .then((response) => {
-                console.log("Successfully sent message");
-              })
-              .catch((error) => {
-                console.log("Error sending message:", error);
-              });
+            if (
+              deliverypartner &&
+              deliverypartner.accstatus !== "blocked" &&
+              deliverypartner.accstatus !== "review" &&
+              deliverypartner.deliveries?.length < 21 &&
+              deliverypartner?.balance?.amount < 3000
+            ) {
+              let driverloc = {
+                latitude: deliverypartner.currentlocation?.latitude,
+                longitude: deliverypartner.currentlocation?.longitude,
+                id: deliverypartner?._id,
+              };
+              eligibledriver.push(driverloc);
+            }
           }
-        } else {
-          console.log("No delivery partner is available at the moment!");
+
+          if (eligibledriver?.length > 0) {
+            const nearestpartner = geolib.findNearest(
+              { latitude: cuslat, longitude: cuslong },
+              eligibledriver
+            );
+
+            if (nearestpartner) {
+              const driver = await Deluser?.findById(nearestpartner?.id);
+
+              let droppingaddress = {
+                streetaddress: user?.address?.streetaddress,
+                landmark: user?.address?.landmark,
+                city: user?.address?.city,
+                pincode: user?.address?.pincode,
+                state: user?.address?.state,
+                country: user?.address?.country,
+                coordinates: {
+                  latitude: user?.address?.coordinates?.latitude,
+                  longitude: user?.address?.coordinates?.longitude,
+                  accuracy: user?.address?.coordinates?.accuracy,
+                  provider: user?.address?.coordinates?.provider,
+                  bearing: user?.address?.coordinates?.bearing,
+                  altitude: user?.address?.coordinates?.altitude,
+                },
+              };
+              let pickupaddress = {
+                streetaddress: businessaddress?.storeAddress?.streetaddress,
+                landmark: businessaddress?.storeAddress?.landmark,
+                city: businessaddress?.storeAddress?.city,
+                pincode: businessaddress?.storeAddress?.pincode,
+                state: businessaddress?.storeAddress?.state,
+                country: businessaddress?.storeAddress?.country,
+                coordinates: {
+                  latitude:
+                    businessaddress?.storeAddress?.coordinates?.latitude,
+                  longitude:
+                    businessaddress?.storeAddress?.coordinates?.longitude,
+                  accuracy:
+                    businessaddress?.storeAddress?.coordinates?.accuracy,
+                  provider:
+                    businessaddress?.storeAddress?.coordinates?.provider,
+                  bearing: businessaddress?.storeAddress?.coordinates?.bearing,
+                  altitude:
+                    businessaddress?.storeAddress?.coordinates?.altitude,
+                },
+              };
+
+              //checking current time
+              const currentHour = new Date().getHours();
+              if (currentHour >= 15) {
+                const newDeliveries = new Delivery({
+                  title: product?.name,
+                  amount: total,
+                  orderId: oi,
+                  type: "pick & drop",
+                  pickupaddress: pickupaddress,
+                  droppingaddress: droppingaddress,
+                  partner: driver?._id,
+                  status: "Not Started",
+                  timing: "Today, by 7:00pm",
+                  phonenumber: user?.phone,
+                });
+                await newDeliveries.save();
+
+                const data = {
+                  name: user?.fullname,
+                  pickupaddress: pickupaddress,
+                  droppingaddress: droppingaddress,
+                  amount: total,
+                  id: newDeliveries?._id,
+                  status: "Not Started",
+                  timing: "Today, by 7:00pm",
+                  phonenumber: user?.phone,
+                  type: "pick & drop",
+                };
+
+                await Deluser.updateOne(
+                  { _id: driver?._id },
+                  {
+                    $push: { deliveries: data },
+                  }
+                );
+
+                const msg = {
+                  notification: {
+                    title: "A new order has arrived.",
+                    body: `From ${user?.fullname} Total ₹${total}`,
+                  },
+                  data: {},
+                  tokens: [
+                    // user?.notificationtoken,
+                    driver?.notificationtoken,
+                    storeuser?.notificationtoken,
+                  ],
+                };
+
+                await admin
+                  .messaging()
+                  .sendEachForMulticast(msg)
+                  .then((response) => {
+                    console.log("Successfully sent message");
+                  })
+                  .catch((error) => {
+                    console.log("Error sending message:", error);
+                  });
+              }
+            }
+          } else {
+            console.log("No delivery partner is available at the moment!");
+          }
+        };
+        assigntodriver();
+      }
+      // if business and customer are away from each other i.e. out of 10km range
+      else {
+        //getting the nearest affiliatestore of business
+        let firstresult;
+        for (let i = 0; i < locs.length; i++) {
+          const titleArray = Array.isArray(locs[i]?.title)
+            ? locs[i]?.title
+            : [locs[i]?.title];
+          firstresult = findBestMatch(
+            businessaddress?.storeAddress?.city.toLowerCase().trim() ||
+              businessaddress?.storeAddress?.city.toLowerCase(),
+            titleArray
+          );
         }
-      };
-      assigntodriver();
+        const assigntodriver = async () => {
+          let storedlocs = [];
+          const cityofbusiness = await Locations.findOne({
+            title: firstresult?.bestMatch,
+          });
+          for (let i = 0; i < cityofbusiness.stores.length; i++) {
+            storedlocs.push({
+              latitude: cityofbusiness.stores[i].address.coordinates.latitude,
+              longitude: cityofbusiness.stores[i].address.coordinates.longitude,
+              storeid: cityofbusiness.stores[i].storeid,
+            });
+          }
+
+          const neareststore = geolib.findNearest(
+            { latitude: cuslat, longitude: cuslong },
+            storedlocs
+          );
+
+          const storeuser = await Deluser.findById(neareststore?.storeid);
+          let eligibledriver = [];
+
+          for (let i = 0; i < storeuser?.deliverypartners?.length; i++) {
+            const deliverypartner = await Deluser.findById(
+              storeuser?.deliverypartners[i]?.id
+            );
+
+            if (
+              deliverypartner &&
+              deliverypartner.accstatus !== "blocked" &&
+              deliverypartner.accstatus !== "review" &&
+              deliverypartner.deliveries?.length < 21 &&
+              deliverypartner?.balance?.amount < 3000
+            ) {
+              let driverloc = {
+                latitude: deliverypartner.currentlocation?.latitude,
+                longitude: deliverypartner.currentlocation?.longitude,
+                id: deliverypartner?._id,
+              };
+              eligibledriver.push(driverloc);
+            }
+          }
+
+          if (eligibledriver?.length > 0) {
+            const nearestpartner = geolib.findNearest(
+              { latitude: cuslat, longitude: cuslong },
+              eligibledriver
+            );
+
+            if (nearestpartner) {
+              const driver = await Deluser?.findById(nearestpartner?.id);
+
+              let droppingaddress = {
+                streetaddress: storeuser?.address?.streetaddress,
+                landmark: storeuser?.address?.landmark,
+                city: storeuser?.address?.city,
+                pincode: storeuser?.address?.pincode,
+                state: storeuser?.address?.state,
+                country: storeuser?.address?.country,
+                coordinates: {
+                  latitude: storeuser?.address?.coordinates?.latitude,
+                  longitude: storeuser?.address?.coordinates?.longitude,
+                  accuracy: storeuser?.address?.coordinates?.accuracy,
+                  provider: storeuser?.address?.coordinates?.provider,
+                  bearing: storeuser?.address?.coordinates?.bearing,
+                  altitude: storeuser?.address?.coordinates?.altitude,
+                },
+              };
+              let pickupaddress = {
+                streetaddress: businessaddress?.storeAddress?.streetaddress,
+                landmark: businessaddress?.storeAddress?.landmark,
+                city: businessaddress?.storeAddress?.city,
+                pincode: businessaddress?.storeAddress?.pincode,
+                state: businessaddress?.storeAddress?.state,
+                country: businessaddress?.storeAddress?.country,
+                coordinates: {
+                  latitude:
+                    businessaddress?.storeAddress?.coordinates?.latitude,
+                  longitude:
+                    businessaddress?.storeAddress?.coordinates?.longitude,
+                  accuracy:
+                    businessaddress?.storeAddress?.coordinates?.accuracy,
+                  provider:
+                    businessaddress?.storeAddress?.coordinates?.provider,
+                  bearing: businessaddress?.storeAddress?.coordinates?.bearing,
+                  altitude:
+                    businessaddress?.storeAddress?.coordinates?.altitude,
+                },
+              };
+
+              //checking current time
+              const currentHour = new Date().getHours();
+              if (currentHour >= 15) {
+                const newDeliveries = new Delivery({
+                  title: product?.name,
+                  amount: total,
+                  orderId: oi,
+                  type: "pickup",
+                  pickupaddress: pickupaddress,
+                  droppingaddress: droppingaddress,
+                  partner: driver?._id,
+                  status: "Not Started",
+                  timing: "Today, by 7:00pm",
+                  phonenumber: user?.phone,
+                });
+                await newDeliveries.save();
+
+                const data = {
+                  name: user?.fullname,
+                  pickupaddress: pickupaddress,
+                  droppingaddress: droppingaddress,
+                  amount: total,
+                  id: newDeliveries?._id,
+                  status: "Not Started",
+                  timing: "Today, by 7:00pm",
+                  phonenumber: user?.phone,
+                  type: "pickup",
+                };
+
+                await Deluser.updateOne(
+                  { _id: driver?._id },
+                  {
+                    $push: { deliveries: data },
+                  }
+                );
+
+                const msg = {
+                  notification: {
+                    title: "A new order has arrived.",
+                    body: `From ${user?.fullname} Total ₹${total}`,
+                  },
+                  data: {},
+                  tokens: [
+                    // user?.notificationtoken,
+                    driver?.notificationtoken,
+                    storeuser?.notificationtoken,
+                  ],
+                };
+
+                await admin
+                  .messaging()
+                  .sendEachForMulticast(msg)
+                  .then((response) => {
+                    console.log("Successfully sent message");
+                  })
+                  .catch((error) => {
+                    console.log("Error sending message:", error);
+                  });
+              }
+            }
+          } else {
+            console.log("No delivery partner is available at the moment!");
+          }
+        };
+        assigntodriver();
+      }
+
       res.status(200).json({ orderId: order._id, success: true });
     }
   } catch (e) {
@@ -472,6 +705,7 @@ exports.createcartorder = async (req, res) => {
   }
 };
 
+//updating the order
 exports.updatecartorder = async (req, res) => {
   const { userId, orderId } = req.params;
   const { paymentId, success, paymentmode } = req.body;
@@ -498,5 +732,240 @@ exports.updatecartorder = async (req, res) => {
     }
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+//scanning qr
+exports.scannedqr = async (req, res) => {
+  try {
+    const { id, delid } = req.params;
+    const { phonenumber } = req.body;
+    let flashid = "655e189fb919c70bf6895485";
+    const partner = await Deluser.findById(id);
+    const user = await User.findOne({ phone: phonenumber });
+    const delivery = await Delivery.findById(delid);
+    const flash = await User.findById(flashid);
+
+    //generating otp
+    function generateOTP() {
+      return Math.floor(100000 + Math.random() * 900000);
+    }
+
+    //generating mesId
+    function msgid() {
+      return Math.floor(100000 + Math.random() * 900000);
+    }
+
+    if (partner && delivery && user) {
+      const otp = generateOTP();
+      const mesId = msgid();
+      let finalotp = {
+        otp: otp,
+        timing: Date.now().toString(),
+      };
+      const convs = await Conversation.findOne({
+        members: { $all: [user?._id, flash._id] },
+      });
+      if (convs) {
+        let data = {
+          conversationId: convs._id,
+          sender: flash._id,
+          text: `Your Otp for confirmation of receiving your order is ${otp}. This Otp is valid for 10 mins, please share it with our partner.`,
+          mesId: mesId,
+        };
+        const m = new Message(data);
+        await m.save();
+        await Deluser.updateOne(
+          { _id: partner._id },
+          {
+            $set: {
+              currentotp: finalotp,
+            },
+          }
+        );
+        await User.updateOne(
+          { _id: user?._id },
+          {
+            $push: {
+              conversations: convs?._id,
+            },
+          }
+        );
+        await User.updateOne(
+          { _id: flash._id },
+          {
+            $push: {
+              conversations: convs?._id,
+            },
+          }
+        );
+        const msg = {
+          notification: {
+            title: `Grovyo Flash`,
+            body: `Your Otp for confirmation of receiving your order is ${otp}. This Otp is valid for 10 mins, please share it with our partner.`,
+          },
+          data: {},
+          token: user?.notificationtoken,
+        };
+
+        await admin
+          .messaging()
+          .send(msg)
+          .then((response) => {
+            console.log("Successfully sent message");
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+      } else {
+        const conv = new Conversation({
+          members: [user?._id, flash._id],
+        });
+        await conv.save();
+        let data = {
+          conversationId: conv._id,
+          sender: flash._id,
+          text: `Your Otp for confirmation of reciving your order is ${otp}. This Otp is valid for 10 mins, please share it with our partner.`,
+          mesId: mesId,
+        };
+        const m = new Message(data);
+        await m.save();
+        await Deluser.updateOne(
+          { _id: partner._id },
+          {
+            $set: {
+              currentotp: finalotp,
+            },
+          }
+        );
+        await User.updateOne(
+          { _id: user?._id },
+          {
+            $push: {
+              conversations: conv?._id,
+            },
+          }
+        );
+        await User.updateOne(
+          { _id: flash._id },
+          {
+            $push: {
+              conversations: conv?._id,
+            },
+          }
+        );
+        const msg = {
+          notification: {
+            title: `Grovyo Flash`,
+            body: `Your Otp for confirmation of reciving your order is ${otp}. This Otp is valid for 10 mins, please share it with our partner.`,
+          },
+          data: {},
+          token: user?.notificationtoken,
+        };
+
+        await admin
+          .messaging()
+          .send(msg)
+          .then((response) => {
+            console.log("Successfully sent message");
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+      }
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({
+        message: "User or Delivery or partner not found",
+        success: false,
+      });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//enter the otp
+exports.enterotp = async (req, res) => {
+  try {
+    const { id, deliveryid } = req.params;
+    const { otp } = req.body;
+    const user = await Deluser.findById(id);
+    const delivery = await Delivery.findById(deliveryid);
+    if (user && delivery) {
+      //checking if time is under 10 minutes
+      const providedtime = new Date(user?.currentotp?.timing);
+
+      const currentTime = new Date();
+
+      const timeDifferenceInMinutes =
+        (currentTime - providedtime) / (1000 * 60);
+
+      const isValid = timeDifferenceInMinutes < 10;
+
+      if (isValid) {
+        if (otp === user?.currentotp?.otp.toString()) {
+          await Delivery.updateOne(
+            { _id: delivery?._id },
+            { $set: { status: "Completed" } }
+          );
+          const date = new Date(Date.now());
+
+          const formattedDate =
+            date.toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }) +
+            " at " +
+            date.toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "numeric",
+              hour12: true,
+            });
+
+          await Order.updateOne(
+            { orderId: delivery?.orderId },
+            {
+              $set: {
+                currentStatus: "completed",
+                timing: formattedDate,
+              },
+            }
+          );
+
+          res.status(200).json({
+            message: "Validated succesfully",
+            success: true,
+            isotpvalid: true,
+          });
+        } else {
+          res
+            .status(201)
+            .json({ message: "Invalid Otp", success: true, isotpvalid: false });
+        }
+      } else {
+        res
+          .status(203)
+          .json({ message: "Otp expired", success: false, sotpvalid: false });
+      }
+    } else {
+      res.status(404).json({
+        message: "User or Delivery not found",
+        success: false,
+        sotpvalid: false,
+      });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({
+      message: "Something went wrong",
+      success: false,
+      sotpvalid: false,
+    });
   }
 };
