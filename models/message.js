@@ -43,11 +43,15 @@ const messageSchema = new mongoose.Schema(
     contact: { type: String },
     reply: { type: String },
     comId: { type: ObjectId, ref: "Community" },
-    sequence: { type: String },
+    sequence: { type: Number },
     timestamp: { type: String },
     isread: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+messageSchema.index({ mesId: "Regular" });
+messageSchema.index({ topicId: "Regular" });
+messageSchema.index({ sequence: "Regular" });
 
 module.exports = mongoose.model("Message", messageSchema);

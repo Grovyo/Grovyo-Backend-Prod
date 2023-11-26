@@ -10,6 +10,8 @@ const {
   addTopic,
   udpatecommunity,
   compostfeed,
+  gettopicmessages,
+  loadmoremessages,
 } = require("../controllers/community");
 
 const storage = multer.memoryStorage();
@@ -27,5 +29,11 @@ router.post(
 );
 //community posts and data
 router.get("/v1/compostfeed/:id/:comId/:postId", compostfeed);
+
+//fetch topic messages
+router.get("/v1/gettopicmessages/:id/:topicId", gettopicmessages);
+
+//fetch more topic messages
+router.get("/v1/loadmoremessages/:id/:topicId/:sequence", loadmoremessages);
 
 module.exports = router;

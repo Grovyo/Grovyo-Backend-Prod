@@ -6,6 +6,7 @@ const Topic = require("../models/topic");
 const sharp = require("sharp");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
+const Message = require("../models/message");
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.site",
@@ -605,6 +606,118 @@ exports.compostfeed = async (req, res) => {
       });
     } else {
       res.status(404).json({ message: "User or Community not found" });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//get topic messages
+exports.gettopicmessages = async (req, res) => {
+  try {
+    const { id, topicId } = req.params;
+    const user = await User.findById(id);
+    const topic = await Topic.findById(topicId);
+    const community = await Community.find({ topics: { $in: [topic._id] } });
+    if (community && topic && user) {
+      const msg = await Message.find({ topicId: topicId })
+        .limit(20)
+        .sort({ createdAt: -1 })
+        .populate("sender", "profilepic fullname isverified");
+
+      const messages = msg.reverse();
+      if (!community[0].members.includes(user._id)) {
+        res.status(203).json({
+          message: "You are not the member of the Community",
+          success: true,
+          topicjoined: false,
+        });
+      } else {
+        if (
+          topic.type === "paid" &&
+          topic.members.some((id) => id.toString() === user._id.toString())
+        ) {
+          res.status(203).json({
+            message: "You need to join the topic first",
+            success: true,
+            topicjoined: false,
+            id: topic?._id,
+            price: topic?.price,
+            desc: topic?.message,
+            members: topic?.memberscount,
+          });
+        } else {
+          res.status(200).json({
+            messages,
+            success: true,
+            topicjoined: true,
+          });
+        }
+      }
+    } else {
+      res.status(404).json({ message: "Somthing not found", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//load more messages of a topic
+exports.loadmoremessages = async (req, res) => {
+  try {
+    const { id, topicId, sequence } = req.params;
+
+    const user = await User.findById(id);
+    const topic = await Topic.findById(topicId);
+    const community = await Community.find({ topics: { $in: [topic._id] } });
+    if (community && topic && user) {
+      let gt = parseInt(sequence);
+      let lt = parseInt(sequence) + 10;
+
+      const messages = await Message.find({
+        topicId: topicId,
+        sequence: { $gte: gt, $lte: lt },
+      })
+        .limit(20)
+        .sort({ sequence: 1 })
+        .populate("sender", "profilepic fullname isverified");
+
+      if (!community[0].members.includes(user._id)) {
+        res.status(203).json({
+          message: "You are not the member of the Community",
+          success: true,
+          topicjoined: false,
+        });
+      } else {
+        if (
+          topic.type === "paid" &&
+          topic.members.some((id) => id.toString() === user._id.toString())
+        ) {
+          res.status(203).json({
+            message: "You need to join the topic first",
+            success: true,
+            topicjoined: false,
+            id: topic?._id,
+            price: topic?.price,
+            desc: topic?.message,
+            members: topic?.memberscount,
+          });
+        } else {
+          res.status(200).json({
+            messages,
+            success: true,
+            topicjoined: true,
+          });
+        }
+      }
+    } else {
+      res.status(404).json({ message: "Somthing not found", success: false });
     }
   } catch (e) {
     console.log(e);

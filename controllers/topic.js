@@ -497,13 +497,12 @@ exports.create = async (req, res) => {
 exports.fetchtopic = async (req, res) => {
   try {
     const { id, comId } = req.params;
-    console.log(id, comId);
+
     const user = await User.findById(id);
     const community = await Community.findById(comId).populate("topics");
     if (!community) {
       res.json({ message: "Community Not Found" });
     } else {
-      console.log(community.topics);
       res.json({ topics: community.topics, success: true });
     }
   } catch (err) {
