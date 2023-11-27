@@ -9,7 +9,7 @@ const Prosite = require("../models/prosite");
 const sharp = require("sharp");
 
 const minioClient = new Minio.Client({
-  endPoint: "minio.grovyo.site",
+  endPoint: "minio.grovyo.in",
 
   useSSL: true,
   accessKey: "shreyansh379",

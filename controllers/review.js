@@ -6,7 +6,7 @@ const { response } = require("express");
 const Product = require("../models/product");
 
 const minioClient = new Minio.Client({
-  endPoint: "minio.grovyo.site",
+  endPoint: "minio.grovyo.in",
 
   useSSL: true,
   accessKey: "shreyansh379",

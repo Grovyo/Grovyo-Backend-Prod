@@ -9,7 +9,7 @@ const Comment = require("../models/comment");
 const Message = require("../models/message");
 
 const minioClient = new Minio.Client({
-  endPoint: "minio.grovyo.site",
+  endPoint: "minio.grovyo.in",
 
   useSSL: true,
   accessKey: "shreyansh379",
@@ -640,14 +640,18 @@ exports.gettopicmessages = async (req, res) => {
           topic.type === "paid" &&
           topic.members.some((id) => id.toString() === user._id.toString())
         ) {
-          res.status(203).json({
-            message: "You need to join the topic first",
-            success: true,
-            topicjoined: false,
+          let topicdetail = {
             id: topic?._id,
             price: topic?.price,
             desc: topic?.message,
             members: topic?.memberscount,
+            name: topic?.title,
+          };
+          res.status(203).json({
+            message: "You need to join the topic first",
+            success: true,
+            topicjoined: false,
+            topic: topicdetail,
           });
         } else {
           res.status(200).json({

@@ -18,7 +18,7 @@ const Conversation = require("../models/conversation");
 const Message = require("../models/message");
 
 const minioClient = new Minio.Client({
-  endPoint: "minio.grovyo.site",
+  endPoint: "minio.grovyo.in",
   useSSL: true,
   accessKey: "shreyansh379",
   secretKey: "shreyansh379",

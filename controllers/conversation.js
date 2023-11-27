@@ -7,7 +7,7 @@ const admin = require("../fireb");
 const moment = require("moment");
 
 const minioClient = new Minio.Client({
-  endPoint: "minio.grovyo.site",
+  endPoint: "minio.grovyo.in",
 
   useSSL: true,
   accessKey: "shreyansh379",
