@@ -392,7 +392,7 @@ exports.getcommunity = async (req, res) => {
 exports.addTopic = async (req, res) => {
   const { userId, comId } = req.params;
   const { title, message, type, price } = req.body;
-  const user = await User.findById(id);
+  const user = await User.findById(userId);
   try {
     const topic1 = new Topic({
       title: title,
