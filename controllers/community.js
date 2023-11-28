@@ -390,19 +390,37 @@ exports.getcommunity = async (req, res) => {
 
 //get a topic
 exports.addTopic = async (req, res) => {
-  const { comId, userId } = req.params;
-  const { text } = req.body;
+  const { userId, comId } = req.params;
+  const { title, message, type, price } = req.body;
+  const user = await User.findById(id);
   try {
     const topic1 = new Topic({
-      title: text,
+      title: title,
+      message: message,
+      type: type,
       creator: userId,
+      price,
+      price,
       community: comId,
     });
     await topic1.save();
+    await Topic.updateOne(
+      { _id: topic1._id },
+      { $push: { members: userId }, $inc: { memberscount: 1 } }
+    );
+    await Topic.updateOne(
+      { _id: topic1._id },
+      { $push: { notifications: user?.notificationtoken } }
+    );
+
+    await User.updateOne(
+      { _id: userId },
+      { $push: { topicsjoined: topic1._id }, $inc: { totaltopics: 1 } }
+    );
 
     await Community.findByIdAndUpdate(
       { _id: comId },
-      { $set: { topics: [topic1._id] } }
+      { $push: { topics: [topic1._id] }, $inc: { totaltopics: 1 } }
     );
     res.status(200).json({ success: true });
   } catch (e) {

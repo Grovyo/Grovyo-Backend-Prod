@@ -21,7 +21,7 @@ router.post("/createcom/:userId", upload.single("image"), create);
 router.post("/joincom/:userId/:comId", joinmember);
 router.post("/unjoin/:userId/:comId", unjoinmember);
 router.get("/getcommunity/:comId/:id", getcommunity);
-router.post("/addtopic/:comId/:userId", addTopic);
+router.post("/addtopic/:userId/:comId", addTopic);
 router.post(
   "/updatecommunity/:comId/:userId",
   upload.single("image"),

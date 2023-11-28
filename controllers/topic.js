@@ -451,8 +451,6 @@ exports.checkLastMessage = async (req, res) => {
 exports.create = async (req, res) => {
   const { title, message, type, price, comid } = req.body;
   const { userId } = req.params;
-  console.log(comid);
-  console.log(req.body);
   try {
     const topic = new Topic({
       title: title,
