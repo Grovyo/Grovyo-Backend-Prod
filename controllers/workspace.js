@@ -14,7 +14,7 @@ const Post = require("../models/post");
 const Collection = require("../models/Collectionss");
 
 const minioClient = new Minio.Client({
-  endPoint: "minio.grovyo.in",
+  endPoint: "minio.grovyo.xyz",
 
   useSSL: true,
   accessKey: "shreyansh379",

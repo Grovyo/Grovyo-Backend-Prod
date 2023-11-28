@@ -9,7 +9,7 @@ const Comment = require("../models/comment");
 const Message = require("../models/message");
 
 const minioClient = new Minio.Client({
-  endPoint: "minio.grovyo.in",
+  endPoint: "minio.grovyo.xyz",
 
   useSSL: true,
   accessKey: "shreyansh379",

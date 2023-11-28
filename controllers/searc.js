@@ -4,7 +4,7 @@ const User = require("../models/userAuth");
 const Minio = require("minio");
 
 const minioClient = new Minio.Client({
-  endPoint: "minio.grovyo.in",
+  endPoint: "minio.grovyo.xyz",
 
   useSSL: true,
   accessKey: "shreyansh379",
