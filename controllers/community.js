@@ -511,8 +511,9 @@ exports.compostfeed = async (req, res) => {
         community.moderators.includes(user._id) ||
         community.members.includes(user._id);
       const canedit =
-        community.admins.includes(user._id) ||
-        community.moderators.includes(user._id);
+        (community.admins.includes(user._id) ||
+          community.moderators.includes(user._id)) &&
+        community?.memberscount > 100;
 
       const dp = await generatePresignedUrl(
         "images",
