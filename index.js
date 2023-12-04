@@ -28,6 +28,7 @@ const libraryRoutes = require("./routes/library");
 const testRoutes = require("./routes/test");
 const workRoutes = require("./routes/workspace");
 const adRoutes = require("./routes/Ads");
+const memRoutes = require("./routes/membership");
 
 require("dotenv").config();
 
@@ -57,6 +58,7 @@ app.use("/api", libraryRoutes);
 app.use("/api", testRoutes);
 app.use("/api", workRoutes);
 app.use("/api", adRoutes);
+app.use("/api", memRoutes);
 
 //connect to DB
 const connectDB = async () => {

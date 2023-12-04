@@ -6,6 +6,9 @@ const Community = require("../models/community");
 const Report = require("../models/reports");
 const Job = require("../models/jobs");
 const Revenue = require("../models/revenue");
+const Advertiser = require("../models/Advertiser");
+const DelUser = require("../models/deluser");
+const Approvals = require("../models/Approvals");
 const Minio = require("minio");
 
 const minioClient = new Minio.Client({
@@ -404,5 +407,101 @@ exports.getdp = async (req, res) => {
     }
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+//new apis
+
+//getting all user data for dashboard
+exports.getalldata = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (user) {
+      let data = {
+        users: await User.countDocuments(),
+        orders: await Order.countDocuments(),
+        posts: await Post.countDocuments(),
+        products: await Product.countDocuments(),
+        communities: await Community.countDocuments(),
+        reports: await Report.countDocuments(),
+        jobs: await Job.countDocuments(),
+        revenue: await Revenue.find(),
+        advertisers: await Advertiser.countDocuments(),
+        deliverypartners: await DelUser.countDocuments(),
+        pendingapprovals: await Approvals.countDocuments(),
+      };
+      res.status(200).json({ data, success: true });
+    } else {
+      res.status(404).json({ message: "User not found", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//finding and blocking all users
+exports.findandblock = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { type, id, action } = req.body;
+    const user = await User.findById(userId);
+    if (user) {
+      if (type === "community") {
+        await Community.updateOne({ _id: id }, { $set: { status: action } });
+      } else if (type === "user") {
+        await User.updateOne({ _id: id }, { $set: { status: action } });
+      } else if (type === "product") {
+        await Product.updateOne({ _id: id }, { $set: { status: action } });
+      } else if (type === "deliverypartner") {
+        await DelUser.updateOne({ _id: id }, { $set: { accstatus: action } });
+      } else if (type === "advertiser") {
+        await Advertiser.updateOne({ _id: id }, { $set: { idstatus: action } });
+      } else {
+        await Post.updateOne({ _id: id }, { $set: { status: action } });
+      }
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ message: "User not found", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//all approvals pending
+exports.allapprovals = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    if (user) {
+      const approvals = await Approvals.find();
+      res.status(200).json({ approvals, success: true });
+    } else {
+      res.status(404).json({ message: "User not found", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//approve or rejects the pending approvals
+exports.approvalactions = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { id, action } = req.body;
+    const user = await User.findById(userId);
+    if (user) {
+      await Approvals.updateOne({ _id: id }, { $set: { status: action } });
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ message: "User not found", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
   }
 };

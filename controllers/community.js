@@ -32,7 +32,7 @@ async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
 }
 
 //creating a community
-exports.create = async (req, res) => {
+exports.createa = async (req, res) => {
   const { title, desc, topic, type, price, category } = req.body;
   const { userId } = req.params;
   const image = req.file;
@@ -747,5 +747,217 @@ exports.loadmoremessages = async (req, res) => {
     res
       .status(400)
       .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+exports.create = async (req, res) => {
+  const { title, desc, topic, type, price, category, iddata } = req.body;
+  const { userId } = req.params;
+  const image = req.file;
+  const uuidString = uuid();
+  if (!image) {
+    res.status(400).json({ message: "Please upload an image", success: false });
+  } else if (iddata != undefined) {
+    try {
+      const user = await User.findById(userId);
+      const bucketName = "images";
+      const objectName = `${Date.now()}_${uuidString}_${image.originalname}`;
+      a = objectName;
+      await minioClient.putObject(
+        bucketName,
+        objectName,
+        image.buffer,
+        image.buffer.length
+      );
+      const community = new Community({
+        title,
+        creator: userId,
+        dp: objectName,
+        desc: desc,
+        category: category,
+      });
+      const savedcom = await community.save();
+      const topic1 = new Topic({
+        title: "Posts",
+        creator: userId,
+        community: savedcom._id,
+      });
+      await topic1.save();
+
+      const topic2 = new Topic({
+        title: "All",
+        creator: userId,
+        community: savedcom._id,
+      });
+      await topic2.save();
+
+      // const topic3 = new Topic({
+      //   title: topic,
+      //   creator: userId,
+      //   community: savedcom._id,
+      //   type: type,
+      //   price: price,
+      // });
+      // await topic3.save();
+
+      await Community.updateOne(
+        { _id: savedcom._id },
+        {
+          $push: { members: userId, admins: user._id },
+          $inc: { memberscount: 1 },
+        }
+      );
+
+      await Community.updateOne(
+        { _id: savedcom._id },
+        { $push: { topics: [topic1._id, topic2._id] } }
+      );
+
+      await User.findByIdAndUpdate(
+        { _id: userId },
+        {
+          $push: {
+            topicsjoined: [topic1._id, topic2._id],
+            communityjoined: savedcom._id,
+          },
+          $inc: { totaltopics: 3, totalcom: 1 },
+        }
+      );
+
+      for (let i = 0; i < iddata.length; i++) {
+        const topicIdToStore = mongoose.Types.ObjectId(iddata[i]);
+        await Community.updateOne(
+          { _id: savedcom._id },
+          { $push: { topics: topicIdToStore } }
+        );
+        await User.findByIdAndUpdate(
+          { _id: userId },
+          { $push: { topicsjoined: topicIdToStore } }
+        );
+      }
+      // await Community.updateMany(
+      //   { _id: savedcom._id },
+      //   {
+      //     $push: { topics: [topic1._id, topic2._id, topic3._id] },
+      //     $inc: { totaltopics: 1 },
+      //   }
+      // );
+
+      // await Topic.updateOne(
+      //   { _id: topic1._id },
+      //   { $push: { members: user._id }, $inc: { memberscount: 1 } }
+      // );
+      // await Topic.updateOne(
+      //   { _id: topic2._id },
+      //   { $push: { members: user._id }, $inc: { memberscount: 1 } }
+      // );
+      // await Topic.updateOne(
+      //   { _id: topic3._id },
+      //   { $push: { members: user._id }, $inc: { memberscount: 1 } }
+      // );
+      // await Topic.updateOne(
+      //   { _id: topic1._id },
+      //   { $push: { notifications: user._id } }
+      // );
+      // await Topic.updateOne(
+      //   { _id: topic2._id },
+      //   { $push: { notifications: user._id } }
+      // );
+      // await Topic.updateOne(
+      //   { _id: topic3._id },
+      //   { $push: { notifications: user._id } }
+      // );
+
+      // await User.updateMany(
+      //   { _id: userId },
+      //   {
+      //     $push: {
+      //       topicsjoined: [topic1._id, topic2._id, topic3._id],
+      //       communityjoined: savedcom._id,
+      //     },
+      //     $inc: { totaltopics: 3, totalcom: 1 },
+      //   }
+      // );
+      res.status(200).json({ community: savedcom, success: true });
+    } catch (e) {
+      console.log(e);
+      res.status(400).json({ message: e.message, success: false });
+    }
+  } else {
+    try {
+      const user = await User.findById(userId);
+      const bucketName = "images";
+      const objectName = `${Date.now()}_${uuidString}_${image.originalname}`;
+      a = objectName;
+      await minioClient.putObject(
+        bucketName,
+        objectName,
+        image.buffer,
+        image.buffer.length
+      );
+      const community = new Community({
+        title,
+        creator: userId,
+        dp: objectName,
+        desc: desc,
+        category: category,
+      });
+      const savedcom = await community.save();
+      const topic1 = new Topic({
+        title: "Posts",
+        creator: userId,
+        community: savedcom._id,
+      });
+      await topic1.save();
+      const topic2 = new Topic({
+        title: "All",
+        creator: userId,
+        community: savedcom._id,
+      });
+      await topic2.save();
+
+      await Community.updateOne(
+        { _id: savedcom._id },
+        {
+          $push: { members: userId, admins: user._id },
+          $inc: { memberscount: 1 },
+        }
+      );
+      await Community.updateMany(
+        { _id: savedcom._id },
+        { $push: { topics: [topic1._id, topic2._id] } }
+      );
+
+      await Topic.updateOne(
+        { _id: topic1._id },
+        { $push: { members: user._id }, $inc: { memberscount: 1 } }
+      );
+      await Topic.updateOne(
+        { _id: topic2._id },
+        { $push: { members: user._id }, $inc: { memberscount: 1 } }
+      );
+      await Topic.updateOne(
+        { _id: topic1._id },
+        { $push: { notifications: user._id } }
+      );
+      await Topic.updateOne(
+        { _id: topic2._id },
+        { $push: { notifications: user._id } }
+      );
+
+      await User.updateMany(
+        { _id: userId },
+        {
+          $push: {
+            topicsjoined: [topic1._id, topic2._id],
+            communityjoined: savedcom._id,
+          },
+          $inc: { totaltopics: 2, totalcom: 1 },
+        }
+      );
+      res.status(200).json({ community: savedcom, success: true });
+    } catch (e) {
+      res.status(400).json({ message: e.message, success: false });
+    }
   }
 };

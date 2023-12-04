@@ -86,7 +86,11 @@ const userSchema = new mongoose.Schema(
     popularity: { type: String, default: "0%" },
     totalmembers: { type: Number, default: 0 },
     badgescount: { type: Number, default: 0 },
-
+    bank: {
+      accno: { type: String },
+      ifsc: { type: String },
+      name: { type: String },
+    },
     currentmoney: { type: Number, default: 0 },
     paymenthistory: [{ type: ObjectId, ref: "Payment" }],
     moneyearned: { type: Number, default: 0 },
@@ -205,6 +209,15 @@ const userSchema = new mongoose.Schema(
         id: { type: ObjectId, ref: "User" },
       },
     ],
+    memberships: {
+      membership: { type: ObjectId, ref: "membership" },
+      ending: { type: String },
+      paymentdetails: {
+        mode: { type: String },
+        amount: { type: Number },
+        gstamount: { type: Number },
+      },
+    },
   },
   { timestamps: true }
 );

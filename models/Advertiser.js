@@ -54,6 +54,11 @@ const AdvertiserSchema = new mongoose.Schema(
         logout: { type: String },
       },
     ],
+    bank: {
+      accno: { type: String },
+      ifsc: { type: String },
+      name: { type: String },
+    },
   },
   { timestamps: true }
 );

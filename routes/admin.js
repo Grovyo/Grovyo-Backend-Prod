@@ -15,6 +15,10 @@ const {
   findreports,
   markreports,
   getdp,
+  getalldata,
+  findandblock,
+  allapprovals,
+  approvalactions,
 } = require("../controllers/admin");
 const router = express.Router();
 
@@ -33,4 +37,11 @@ router.post("/blockproducts/:prodId/:id", blockproducts);
 router.post("/findreports/:id", findreports);
 router.post("/markreports/:reportId/:id", markreports);
 router.get("/getdp/:userId", getdp);
+
+//new routes
+router.get("/getalldata/:id", getalldata);
+router.post("/findandblock/:userId", findandblock);
+router.get("/allapprovals/:userId", allapprovals);
+router.post("/approvalactions/:userId", approvalactions);
+
 module.exports = router;

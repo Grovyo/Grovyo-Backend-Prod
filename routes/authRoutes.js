@@ -36,6 +36,7 @@ const {
   checkconversationsnew,
   updatenotification,
   checkLastConvMessagenew,
+  addbank,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -88,6 +89,7 @@ router.post(
   checkLastConvMessagenew
 );
 router.post("/updatenotification/:userId", updatenotification);
+router.post("/addbank/:id", addbank);
 
 router.param("userId", userbyId);
 

@@ -1775,3 +1775,33 @@ exports.updatenotification = async (req, res) => {
     res.status(400).json({ message: e.message, success: false });
   }
 };
+
+//add bank
+exports.addbank = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    const { acc, ifsc, name } = req.body;
+    if (user) {
+      const bank = {
+        accno: acc,
+        ifsc: ifsc,
+        name: name,
+      };
+      await User.updateOne(
+        { _id: id },
+        {
+          $set: { bank: bank },
+        }
+      );
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ message: "User not found", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
