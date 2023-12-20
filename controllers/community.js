@@ -510,10 +510,17 @@ exports.compostfeed = async (req, res) => {
         community.admins.includes(user._id) ||
         community.moderators.includes(user._id) ||
         community.members.includes(user._id);
+
+      //can edit topics
       const canedit =
         (community.admins.includes(user._id) ||
           community.moderators.includes(user._id)) &&
         community?.memberscount > 100;
+
+      //can post
+      const canpost =
+        community.admins.includes(user._id) ||
+        community.moderators.includes(user._id);
 
       const dp = await generatePresignedUrl(
         "images",
@@ -621,6 +628,7 @@ exports.compostfeed = async (req, res) => {
         community,
         subs,
         canedit,
+        canpost,
         success: true,
       });
     } else {
