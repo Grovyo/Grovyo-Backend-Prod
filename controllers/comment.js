@@ -162,7 +162,7 @@ exports.fetchallcomments = async (req, res) => {
       }
 
       //merging all the data
-      const merged = dps?.map((d, i) => ({
+      const merged = dps?.map((dp, i) => ({
         dp,
         comments: comment[i],
         likes: liked[i],
