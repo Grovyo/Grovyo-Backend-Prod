@@ -5,6 +5,14 @@ const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
 const cors = require("cors");
+const Redis = require("ioredis");
+const http = require("http").Server(app);
+const io = require("socket.io")(http);
+
+//Redis
+// const redis = new Redis("redis://192.168.29.221:6379");
+// const subscriber = new Redis("redis://192.168.29.221:6379");
+// const publisher = new Redis("redis://192.168.29.221:6379");
 
 //import routes
 const userAuth = require("./routes/authRoutes");
@@ -734,9 +742,7 @@ app.get("/audget", async (req, res) => {
 });
 
 //connect to App
-
 const PORT = 7700;
-
 const connectApp = () => {
   try {
     app.listen(process.env.PORT, () => {
@@ -747,3 +753,68 @@ const connectApp = () => {
   }
 };
 connectApp();
+
+//sockets
+// const connectRedis = async () => {
+//   try {
+//     // Message can be either a string or a buffer
+//     redis.publish("my-channel-1", JSON.stringify("message"));
+//     redis.subscribe("my-channel-1", "my-channel-2", (err, count) => {
+//       if (err) {
+//         // Just like other commands, subscribe() can fail for some reasons,
+//         // ex network issues.
+//         console.error("Failed to subscribe: %s", err.message);
+//       } else {
+//         // `count` represents the number of channels this client are currently subscribed to.
+//         console.log(
+//           `Subscribed successfully! This client is currently subscribed to ${count} channels.`
+//         );
+//       }
+//     });
+
+//     redis.on("message", (channel, message) => {
+//       console.log(`Received ${message} from ${channel}`);
+//     });
+//     console.log("Published %s to %s", "message");
+//   } catch (err) {
+//     console.log(err);
+//   }
+// };
+// connectRedis();
+
+// io.on("connection", (socket) => {
+//   console.log(socket.id);
+
+//   socket.on("join-redis", (a) => {
+//     console.log(a);
+//     socket.join("my-channel-1");
+//   });
+
+//   socket.on("chatMessage", (message) => {
+//     console.log(message);
+//     publisher.publish("my-channel-1", message);
+//   });
+
+//   subscriber.subscribe("my-channel-1", "my-channel-2", (err, count) => {
+//     if (err) {
+//       console.error("Failed to subscribe: %s", err.message);
+//     } else {
+//       console.log(
+//         `Subscribed successfully! This client is currently subscribed to ${count} channels.`
+//       );
+//     }
+//   });
+//   subscriber.on("message", (channel, message) => {
+//     socket.to(channel).emit("channel", message);
+//     console.log(`Received ${message} from ${channel}`);
+//   });
+//   socket.on("disconnect", () => {
+//     console.log("User disconnected");
+//     subscriber.unsubscribe("my-channel-1");
+//     subscriber.quit();
+//   });
+// });
+
+// http.listen(4300, function () {
+//   console.log("Sockets on 4300");
+// });

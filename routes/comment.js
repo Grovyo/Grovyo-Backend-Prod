@@ -17,5 +17,5 @@ router.post("/addcomment/:userId/:postId", upload.single("image"), create);
 router.post("/likecomment/:commentId/:userId", likecomment);
 router.post("/dislikecomment/:commentId", dislikecomment);
 router.delete("/deletecomment/:userId/:commentId", deletecomment);
-router.get("/fetchallcomments/:postId/:userId", fetchallcomments);
+router.get("/fetchallcomments/:userId/:postId", fetchallcomments);
 module.exports = router;
