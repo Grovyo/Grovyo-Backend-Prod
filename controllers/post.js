@@ -698,109 +698,100 @@ exports.joinedcom = async (req, res) => {
   const user = await User.findById(userId);
   const time = new Date(Date.now() - 24 * 60 * 60 * 1000);
   try {
-    const community = await Community.find({
+    const communities = await Community.find({
       members: { $in: user._id },
     })
       .populate("members", "profilepic")
       .populate("creator", "fullname");
-    if (!community) {
-      res.status(404).json({ message: "No community found", success: false });
-    } else {
-      const dps = [];
-      const urls = [];
-      const posts = [];
-      const liked = [];
-      let current = [];
-      const memdps = [];
 
-      for (let i = 0; i < community.length; i++) {
-        const post = await Post.find({
-          community: community[i]._id,
-          // createdAt: { $gte: time },
-        })
-          .populate("sender", "fullname")
-          .sort({ createdAt: -1 })
-          .limit(1);
-        posts.push(post);
+    if (!communities || communities.length === 0) {
+      res.status(404).json({ message: "No communities found", success: false });
+      return;
+    }
 
-        for (let i = 0; i < community.length; i++) {
-          for (let j = 0; j < Math.min(4, community[i].members.length); j++) {
-            const a = await generatePresignedUrl(
-              "images",
-              community[i].members[j].profilepic.toString(),
-              60 * 60
-            );
-            current.push(a);
-          }
+    const dps = [];
+    const urls = [];
+    const posts = [];
+    const liked = [];
+    let current = [];
+    const memdps = [];
 
-          memdps.push(current);
-          current = [];
-        }
+    // Sort communities based on whether they have a post and the latest post first
+    communities.sort((a, b) => {
+      const postA = a.posts.length > 0 ? a.posts[0].createdAt : 0;
+      const postB = b.posts.length > 0 ? b.posts[0].createdAt : 0;
+      return postB - postA;
+    });
 
-        if (post.length > 0) {
-          for (let i = 0; i < posts.length; i++) {
-            const like = post[i]?.likedby?.includes(user._id);
-            if (like) {
-              liked.push(true);
-            } else {
-              liked.push(false);
-            }
-          }
-        } else {
-          null;
-        }
-        let ur = [];
-        for (let i = 0; i < post?.length; i++) {
-          for (let j = 0; j < post[i]?.post?.length; j++) {
-            const a = await generatePresignedUrl(
-              "posts",
-              post[i].post[j].content?.toString(),
-              60 * 60
-            );
-            ur.push({ content: a, type: post[i].post[j]?.type });
-          }
-          urls.push(ur);
-          ur = [];
-        }
-        // for (let i = 0; i < post.length; i++) {
-        //   const a = await generatePresignedUrl(
-        //     "posts",
-        //     post[i].post.toString(),
-        //     60 * 60
-        //   );
-        //   urls.push(a);
-        // }
-      }
-      for (let i = 0; i < community.length; i++) {
+    for (const community of communities) {
+      const post = await Post.find({
+        community: community._id,
+      })
+        .populate("sender", "fullname")
+        .sort({ createdAt: -1 })
+        .limit(1);
+      posts.push(post);
+
+      for (let j = 0; j < Math.min(4, community.members.length); j++) {
         const a = await generatePresignedUrl(
           "images",
-          community[i].dp.toString(),
+          community.members[j].profilepic.toString(),
           60 * 60
         );
-        dps.push(a);
+        current.push(a);
       }
 
-      const dpData = dps;
-      const memdpData = memdps;
-      const urlData = urls;
-      const postData = posts;
-      const communityData = community;
-      const likeData = liked;
+      memdps.push(current);
+      current = [];
 
-      const mergedData = communityData.map((c, i) => ({
-        dps: dpData[i],
-        memdps: memdpData[i],
-        urls: urlData[i],
-        liked: likeData[i],
-        posts: postData[i],
-        community: c,
-      }));
+      if (post.length > 0) {
+        const like = post[0]?.likedby?.includes(user._id);
+        liked.push(like);
+      } else {
+        liked.push(false);
+      }
 
-      res.status(200).json({
-        mergedData,
-        success: true,
-      });
+      let ur = [];
+      for (let j = 0; j < post[0]?.post?.length; j++) {
+        const a = await generatePresignedUrl(
+          "posts",
+          post[0].post[j].content?.toString(),
+          60 * 60
+        );
+
+        ur.push({ content: a, type: post[0].post[j]?.type });
+      }
+
+      urls.push(ur);
+
+      const a = await generatePresignedUrl(
+        "images",
+        community.dp.toString(),
+        60 * 60
+      );
+      dps.push(a);
     }
+
+    const dpData = dps;
+    const memdpData = memdps;
+    const urlData = urls;
+    const postData = posts;
+    const communityData = communities;
+    const likeData = liked;
+
+    const mergedData = communityData.map((c, i) => ({
+      dps: dpData[i],
+      memdps: memdpData[i],
+      urls: urlData[i],
+      liked: likeData[i],
+      community: c,
+      posts: postData[i],
+    }));
+
+    res.status(200).json({
+      mergedData,
+      success: true,
+    });
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });
   }
