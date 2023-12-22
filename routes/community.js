@@ -28,7 +28,7 @@ router.post(
   udpatecommunity
 );
 //community posts and data
-router.get("/v1/compostfeed/:id/:comId/:postId", compostfeed);
+router.post("/v1/compostfeed/:id/:comId", compostfeed);
 
 //fetch topic messages
 router.get("/v1/gettopicmessages/:id/:topicId", gettopicmessages);

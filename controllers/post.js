@@ -749,15 +749,27 @@ exports.joinedcom = async (req, res) => {
         } else {
           null;
         }
-
-        for (let i = 0; i < post.length; i++) {
-          const a = await generatePresignedUrl(
-            "posts",
-            post[i].post.toString(),
-            60 * 60
-          );
-          urls.push(a);
+        let ur = [];
+        for (let i = 0; i < post?.length; i++) {
+          for (let j = 0; j < post[i]?.post?.length; j++) {
+            const a = await generatePresignedUrl(
+              "posts",
+              post[i].post[j].content?.toString(),
+              60 * 60
+            );
+            ur.push({ content: a, type: post[i].post[j]?.type });
+          }
+          urls.push(ur);
+          ur = [];
         }
+        // for (let i = 0; i < post.length; i++) {
+        //   const a = await generatePresignedUrl(
+        //     "posts",
+        //     post[i].post.toString(),
+        //     60 * 60
+        //   );
+        //   urls.push(a);
+        // }
       }
       for (let i = 0; i < community.length; i++) {
         const a = await generatePresignedUrl(
@@ -1106,7 +1118,7 @@ exports.postanything = async (req, res) => {
   const { userId, comId } = req.params;
   try {
     const { title, desc, tags } = req.body;
-
+    const tag = tags.split(",");
     const user = await User.findById(userId);
     const community = await Community.findById(comId);
     const topic = await Topic.find({ community: community._id }).find({
@@ -1153,7 +1165,7 @@ exports.postanything = async (req, res) => {
         community: comId,
         sender: userId,
         post: pos,
-        tags: tags,
+        tags: tag,
       });
       const savedpost = await post.save();
       await Community.updateOne(

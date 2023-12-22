@@ -498,12 +498,14 @@ exports.udpatecommunity = async (req, res) => {
 //new community post feed
 exports.compostfeed = async (req, res) => {
   try {
-    const { id, comId, postId } = req.params;
+    const { id, comId } = req.params;
+    const { postId } = req.body;
     const user = await User.findById(id);
     const community = await Community.findById(comId).populate(
       "topics",
       "title type price"
     );
+
     if (user && community) {
       //community data
       const subs =
@@ -534,13 +536,17 @@ exports.compostfeed = async (req, res) => {
         "fullname profilepic username isverified"
       );
       let index = -1;
-
+      posts.reverse();
       //index of post that appears first
       for (let i = 0; i < posts.length; i++) {
         if (posts[i]._id.toString() === postId) {
           index = i;
           break;
         }
+      }
+
+      if (!postId) {
+        index = 0;
       }
 
       //comments
@@ -708,12 +714,12 @@ exports.loadmoremessages = async (req, res) => {
     const topic = await Topic.findById(topicId);
     const community = await Community.find({ topics: { $in: [topic._id] } });
     if (community && topic && user) {
-      let gt = parseInt(sequence);
-      let lt = parseInt(sequence) + 10;
+      let gt = parseInt(sequence) - 1;
+      let lt = gt - 10;
 
       const messages = await Message.find({
         topicId: topicId,
-        sequence: { $gte: gt, $lte: lt },
+        sequence: { $gte: lt, $lte: gt },
       })
         .limit(20)
         .sort({ sequence: 1 })
