@@ -1192,17 +1192,21 @@ exports.contactsuggestions = async (req, res) => {
                 pic: pi,
                 isverified: contacts[i].isverified,
               };
+
+              let Chatexists = false;
+
               if (user?.conversations?.length > 0) {
                 for (let j = 0; j < user?.conversations?.length; j++) {
                   if (
                     contacts[i].conversations.includes(user.conversations[j])
                   ) {
                     Chatexists = true;
-                  } else {
-                    data.push(d);
+                    break;
                   }
                 }
-              } else {
+              }
+
+              if (!Chatexists) {
                 data.push(d);
               }
             }
@@ -1346,7 +1350,6 @@ exports.checkconversationsnew = async (req, res) => {
 
             for (const element2 of array1) {
               if (!array2.includes(element2)) {
-                console.log(element2, array1);
                 isUpdated = false;
                 mismatchedElements.push(element2);
               }
