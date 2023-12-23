@@ -37,6 +37,7 @@ const {
   updatenotification,
   checkLastConvMessagenew,
   addbank,
+  fetchconvs,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -90,6 +91,7 @@ router.post(
 );
 router.post("/updatenotification/:userId", updatenotification);
 router.post("/addbank/:id", addbank);
+router.get("/v1/fetchconvs/:id/:convId", fetchconvs);
 
 router.param("userId", userbyId);
 

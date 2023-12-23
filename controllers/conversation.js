@@ -64,9 +64,8 @@ exports.createmessagereqs = async (req, res) => {
     ) {
       blockcheck = true;
     }
-
     if (blockcheck) {
-      res.status(203).json({ message: "You are blocked", success: false });
+      res.status(201).json({ message: "You are blocked", success: false });
     } else {
       if (conv) {
         if (existsbothway) {
