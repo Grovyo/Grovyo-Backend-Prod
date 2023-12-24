@@ -36,7 +36,12 @@ const messageSchema = new mongoose.Schema(
     ],
     voted: [{ type: ObjectId, ref: "User" }],
     expression: { type: String },
-    content: { type: String },
+    content: {
+      uri: { type: String },
+      type: { type: String },
+      size: { type: String },
+      thumbnail: { type: String },
+    },
     video: { type: String },
     audio: { type: String },
     doc: { type: String },

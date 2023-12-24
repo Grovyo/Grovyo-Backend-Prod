@@ -1791,9 +1791,84 @@ exports.fetchconvs = async (req, res) => {
         .limit(20)
         .sort({ createdAt: -1 })
         .populate("sender", "profilepic fullname isverified");
-
-      res.status(200).json({ messages: msg, success: true });
+      const messages = msg.reverse();
+      res.status(200).json({ messages, success: true });
     }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//send any file
+exports.sendchatfile = async (req, res) => {
+  try {
+    const data = JSON.parse(req.body.data);
+    console.log(req.files, req.file, "here");
+    let pos = {};
+    const uuidString = uuid();
+    const bucketName = "messages";
+    const objectName = `${Date.now()}_${uuidString}_${
+      req.files[0].originalname
+    }`;
+
+    if (req.files[0].fieldname === "video") {
+      await minioClient.putObject(
+        bucketName,
+        objectName,
+        req.files[0].buffer
+        // req.files[i].size,
+        // req.files[i].mimetype
+      );
+
+      pos.uri = objectName;
+      pos.type = req.files[0].mimetype;
+    } else if (req.files[0].fieldname === "image") {
+      await sharp(req.files[0].buffer)
+        .jpeg({ quality: 50 })
+        .toBuffer()
+        .then(async (data) => {
+          await minioClient.putObject(bucketName, objectName, data);
+        })
+        .catch((err) => {
+          console.log(err.message, "-error");
+        });
+
+      pos.uri = objectName;
+      pos.type = req.files[0].mimetype;
+    } else {
+      await minioClient.putObject(
+        bucketName,
+        objectName,
+        req.files[0].buffer,
+        req.files[0].mimetype
+      );
+      pos.uri = objectName;
+      pos.type = req.files[0].mimetype;
+    }
+    const message = new Message({
+      text: data?.text,
+      sender: data?.sender_id,
+      conversationId: data?.convId,
+      typ: data?.typ,
+      mesId: data?.mesId,
+      reply: data?.reply,
+      dissapear: data?.dissapear,
+      isread: data?.isread,
+      sequence: data?.sequence,
+      timestamp: data?.timestamp,
+      content: pos,
+    });
+    await message.save();
+
+    const a = await generatePresignedUrl(
+      "messages",
+      message?.content?.uri?.toString(),
+      60 * 60
+    );
+    res.status(200).json({ success: true, link: a });
   } catch (e) {
     console.log(e);
     res
