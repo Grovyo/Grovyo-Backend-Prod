@@ -1779,25 +1779,52 @@ exports.addbank = async (req, res) => {
   }
 };
 
+//for chats new
+
 //fetch convs
 exports.fetchconvs = async (req, res) => {
   try {
     const { id, convId } = req.params;
     const user = await User.findById(id);
+
     if (!user) {
-      res.status(404).json({ message: "User not found", success: false });
-    } else {
-      const msg = await Message.find({ conversationId: convId })
-        .limit(20)
-        .sort({ createdAt: -1 })
-        .populate("sender", "profilepic fullname isverified");
-      const messages = msg.reverse();
-      res.status(200).json({ messages, success: true });
+      return res
+        .status(404)
+        .json({ message: "User not found", success: false });
     }
+
+    const msg = await Message.find({ conversationId: convId })
+      .limit(20)
+      .sort({ createdAt: -1 })
+      .populate("sender", "profilepic fullname isverified");
+
+    let messages = [];
+
+    for (let i = 0; i < msg?.length; i++) {
+      if (
+        msg[i].typ === "image" ||
+        msg[i].typ === "video" ||
+        msg[i].typ === "doc"
+      ) {
+        const url = await generatePresignedUrl(
+          "messages",
+          msg[i]?.content?.uri?.toString(),
+          60 * 60
+        );
+
+        messages.push({ ...msg[i].toObject(), url });
+      } else {
+        messages.push(msg[i].toObject());
+      }
+    }
+
+    messages = messages.reverse();
+
+    res.status(200).json({ messages, success: true });
   } catch (e) {
-    console.log(e);
+    console.error(e);
     res
-      .status(400)
+      .status(500)
       .json({ message: "Something went wrong...", success: false });
   }
 };
@@ -1806,7 +1833,7 @@ exports.fetchconvs = async (req, res) => {
 exports.sendchatfile = async (req, res) => {
   try {
     const data = JSON.parse(req.body.data);
-    console.log(req.files, req.file, "here");
+
     let pos = {};
     const uuidString = uuid();
     const bucketName = "messages";
@@ -1825,6 +1852,8 @@ exports.sendchatfile = async (req, res) => {
 
       pos.uri = objectName;
       pos.type = req.files[0].mimetype;
+      pos.name = data?.content?.name;
+      pos.size = req.files[0].size;
     } else if (req.files[0].fieldname === "image") {
       await sharp(req.files[0].buffer)
         .jpeg({ quality: 50 })
@@ -1838,6 +1867,8 @@ exports.sendchatfile = async (req, res) => {
 
       pos.uri = objectName;
       pos.type = req.files[0].mimetype;
+      pos.name = data?.content?.name;
+      pos.size = req.files[0].size;
     } else {
       await minioClient.putObject(
         bucketName,
@@ -1847,6 +1878,8 @@ exports.sendchatfile = async (req, res) => {
       );
       pos.uri = objectName;
       pos.type = req.files[0].mimetype;
+      pos.name = data?.content?.name;
+      pos.size = req.files[0].size;
     }
     const message = new Message({
       text: data?.text,
@@ -1874,5 +1907,54 @@ exports.sendchatfile = async (req, res) => {
     res
       .status(400)
       .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//load more messages
+exports.loadmorechatmsgs = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { convId, sequence } = req.body;
+    const user = await User.findById(id);
+
+    if (user) {
+      let gt = parseInt(sequence) - 1;
+      let lt = gt - 10;
+
+      const msg = await Message.find({
+        conversationId: convId,
+        sequence: { $gte: lt, $lte: gt },
+      })
+        .limit(20)
+        .sort({ sequence: 1 })
+        .populate("sender", "profilepic fullname isverified");
+
+      let messages = [];
+
+      for (let i = 0; i < msg?.length; i++) {
+        if (
+          msg[i].typ === "image" ||
+          msg[i].typ === "video" ||
+          msg[i].typ === "doc"
+        ) {
+          const url = await generatePresignedUrl(
+            "messages",
+            msg[i]?.content?.uri?.toString(),
+            60 * 60
+          );
+
+          messages.push({ ...msg[i].toObject(), url });
+        } else {
+          messages.push(msg[i].toObject());
+        }
+      }
+
+      res.status(200).json({ messages, success: true });
+    } else {
+      res.status(404).json({ messgae: "User not found!", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
   }
 };

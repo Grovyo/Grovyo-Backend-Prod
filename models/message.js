@@ -41,6 +41,7 @@ const messageSchema = new mongoose.Schema(
       type: { type: String },
       size: { type: String },
       thumbnail: { type: String },
+      name: { type: String },
     },
     video: { type: String },
     audio: { type: String },

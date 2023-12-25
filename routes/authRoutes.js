@@ -39,6 +39,7 @@ const {
   addbank,
   fetchconvs,
   sendchatfile,
+  loadmorechatmsgs,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -94,6 +95,7 @@ router.post("/updatenotification/:userId", updatenotification);
 router.post("/addbank/:id", addbank);
 router.get("/v1/fetchconvs/:id/:convId", fetchconvs);
 router.post("/v1/sendchatfile", upload.any(), sendchatfile);
+router.post("/v1/loadmorechatmsgs/:id", loadmorechatmsgs);
 
 router.param("userId", userbyId);
 
