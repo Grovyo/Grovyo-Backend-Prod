@@ -1403,6 +1403,12 @@ exports.checkconversationsnew = async (req, res) => {
 
                 const results = await Promise.all(promises);
                 const conv = results.flat();
+                conv.sort((c1, c2) => {
+                  const timeC1 = c1.msgs[0]?.createdAt || 0;
+                  const timeC2 = c2.msgs[0]?.createdAt || 0;
+
+                  return timeC2 - timeC1;
+                });
                 const response = {
                   conv,
                   reqcount,
@@ -1590,7 +1596,9 @@ exports.checkconversationsnew = async (req, res) => {
           }
 
           const results = await Promise.all(promises);
+
           const conv = results.flat();
+
           const response = {
             conv,
             reqcount,
