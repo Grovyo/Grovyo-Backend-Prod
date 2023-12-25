@@ -705,7 +705,7 @@ exports.joinedcom = async (req, res) => {
       .populate("creator", "fullname");
 
     if (!communities || communities.length === 0) {
-      res.status(404).json({ message: "No communities found", success: true });
+      res.status(203).json({ message: "No communities found", success: true });
       return;
     }
 
