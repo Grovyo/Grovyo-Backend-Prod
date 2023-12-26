@@ -73,6 +73,7 @@ exports.createrw = async (req, res) => {
 exports.create = async (req, res) => {
   const { userId, productId } = req.params;
   const { text, stars, desc } = req.body;
+  const user = await User.findById(userId);
   try {
     const review = new Review({
       senderId: userId,
@@ -80,15 +81,17 @@ exports.create = async (req, res) => {
       text: text,
       stars: stars,
       desc: desc,
+      name: user?.fullname,
+      dp: user?.profilepic,
     });
+    await review.save();
     await Product.updateOne(
       { _id: productId },
-      { $inc: { reviews: 1, totalstars: 1 } }
+      { $push: { reviews: review._id }, $inc: { totalstars: 1 } }
     );
-    await review.save();
-    res.status(200).json(review);
+    res.status(200).json({ review, success: true });
   } catch (e) {
-    res.status(400).json(e.message);
+    res.status(400).json({ error: e.message, success: false });
   }
 };
 

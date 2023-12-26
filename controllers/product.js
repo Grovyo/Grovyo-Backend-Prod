@@ -276,12 +276,17 @@ exports.highlight = async (req, res) => {
 exports.getaproduct = async (req, res) => {
   const { id, productId } = req.params;
   const user = await User.findById(id);
-  const product = await Product.findById(productId);
+  const product = await Product.findById(productId).populate({
+    path: "reviews",
+    select: "text stars desc name createdAt dp",
+    options: { limit: 5 },
+  });
   try {
     if (!product) {
       res.status(404).json({ message: "Product not found", success: false });
     } else {
       const urls = [];
+      let review = [];
       let isreviewed = false;
       if (product.reviewed.includes(user?._id)) {
         isreviewed = true;
@@ -296,9 +301,20 @@ exports.getaproduct = async (req, res) => {
           urls.push(a);
         }
       }
-      res
-        .status(200)
-        .json({ data: { reviewed: isreviewed, product, urls, success: true } });
+      for (let i = 0; i < product.images.length; i++) {
+        if (product.reviews[i] !== null) {
+          const a = await generatePresignedUrl(
+            "images",
+            product.reviews[i].dp.toString(),
+            60 * 60
+          );
+          review.push({ review: product.reviews[i], dp: a });
+        }
+      }
+
+      res.status(200).json({
+        data: { reviewed: isreviewed, product, urls, review, success: true },
+      });
     }
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });
