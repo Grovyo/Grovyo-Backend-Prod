@@ -73,6 +73,7 @@ exports.createrw = async (req, res) => {
 exports.create = async (req, res) => {
   const { userId, productId } = req.params;
   const { text, stars, desc } = req.body;
+
   const user = await User.findById(userId);
   try {
     const review = new Review({
@@ -87,7 +88,10 @@ exports.create = async (req, res) => {
     await review.save();
     await Product.updateOne(
       { _id: productId },
-      { $push: { reviews: review._id }, $inc: { totalstars: 1 } }
+      {
+        $push: { reviews: review._id, reviewed: user._id },
+        $inc: { totalstars: 1 },
+      }
     );
     res.status(200).json({ review, success: true });
   } catch (e) {
@@ -150,10 +154,10 @@ exports.like = async (req, res) => {
 //get reveiws with productid
 exports.getreviews = async (req, res) => {
   const { prodId } = req.params;
-  const review = await Review.find({ productId: prodId }).populate(
-    "senderId",
-    "fullname profilepic isverified"
-  );
+  const review = await Review.find({ productId: prodId })
+    .populate("senderId", "fullname profilepic isverified")
+    .limit(50)
+    .sort({ createdAt: -1 });
   try {
     if (!review) {
       res.status(400).json({ message: "No reviews", success: false });
@@ -171,16 +175,17 @@ exports.getreviews = async (req, res) => {
       for (let i = 0; i < review.length; i++) {
         if (review[i].content != null) {
           const a = await generatePresignedUrl(
-            "reviewimages",
+            "review",
             review[i].content.toString(),
             60 * 60
           );
           reviewpics.push(a);
         }
       }
-      res.status(200).json({ data: { review, reviewpics, dps } });
+      const finalreviews = review.map((r, i) => ({ r, dp: dps[i] }));
+      res.status(200).json({ finalreviews, success: true });
     }
   } catch (e) {
-    res.status(400).json({ message: e.message });
+    res.status(400).json({ message: e.message, success: false });
   }
 };

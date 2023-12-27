@@ -45,7 +45,8 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
-    puchase_history: [{ type: ObjectId, ref: "Order", required: true }],
+    puchase_history: [{ type: ObjectId, ref: "Order" }],
+    puchase_products: [{ type: ObjectId, ref: "Product" }],
     subscriptions: [{ type: ObjectId, ref: "Subscriptions" }],
     cart_history: {
       type: [String],

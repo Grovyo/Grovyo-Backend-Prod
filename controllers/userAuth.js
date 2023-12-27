@@ -151,6 +151,7 @@ exports.signout = async (req, res) => {
         { _id: user._id },
         {
           $push: { activity: newEditCount },
+          $set: { notificationtoken: "" },
         }
       );
       res.status(200).json({ success: true });
@@ -977,7 +978,7 @@ exports.updateaccount = async (req, res) => {
         );
         const dp = await generatePresignedUrl(
           "images",
-          user.profilepic.toString(),
+          objectName,
           60 * 60 * 24
         );
 
