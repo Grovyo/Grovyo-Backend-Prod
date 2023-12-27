@@ -71,6 +71,7 @@ const userSchema = new mongoose.Schema(
     desc: { type: String, maxLength: 500 },
     shortdesc: { type: String, maxLength: 150 },
     communityjoined: [{ type: ObjectId, ref: "Community", default: [] }],
+    communitycreated: [{ type: ObjectId, ref: "Community", default: [] }],
     totalcom: { type: Number, default: 0 },
     likedposts: [{ type: ObjectId, ref: "Post", default: [] }],
     topicsjoined: [{ type: ObjectId, ref: "Topic", default: [] }],

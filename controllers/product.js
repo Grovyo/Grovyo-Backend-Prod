@@ -325,7 +325,7 @@ exports.getaproduct = async (req, res) => {
         data: {
           incart,
           canreview: isreviewed,
-          totalreviews: product?.reviews?.length,
+          totalreviews: product?.reviewed?.length,
           product,
           urls,
           review,

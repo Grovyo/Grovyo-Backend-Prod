@@ -501,12 +501,18 @@ exports.compostfeed = async (req, res) => {
     const { id, comId } = req.params;
     const { postId } = req.body;
     const user = await User.findById(id);
-    const community = await Community.findById(comId).populate(
-      "topics",
-      "title type price"
-    );
+    const community = await Community.findById(comId)
+      .populate("topics", "title type price")
+      .populate("creator", "fullname username profilepic isverified");
 
     if (user && community) {
+      //creator data
+      const creatordp = await generatePresignedUrl(
+        "images",
+        community.creator.profilepic.toString(),
+        60 * 60
+      );
+
       //community data
       const subs =
         community.admins.includes(user._id) ||
@@ -632,6 +638,7 @@ exports.compostfeed = async (req, res) => {
         index,
         dp,
         community,
+        creatordp,
         subs,
         canedit,
         canpost,
