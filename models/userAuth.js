@@ -67,6 +67,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "Unblock",
       enum: ["Unblock", "Block"],
+      reason: { type: String },
     },
     desc: { type: String, maxLength: 500 },
     shortdesc: { type: String, maxLength: 150 },

@@ -101,13 +101,13 @@ exports.fetchallglimpse = async (req, res) => {
 
 //fetch products
 exports.fetchproducts = async (req, res) => {
-  const { userId } = req.params;
+  const { userId, mainuserId } = req.params;
   const product = await Product.find({ creator: userId }).populate(
     "creator",
     "fullname isverified"
   );
 
-  const user = await User.findById(userId).populate("cart", "product");
+  const user = await User.findById(mainuserId).populate("cart", "product");
   try {
     if (!product) {
       res.status(404).json({ message: "No products found", success: false });
@@ -132,23 +132,19 @@ exports.fetchproducts = async (req, res) => {
 
       const cId = [];
       const qty = [];
-      for (let i = 0; i < user?.cart?.length; i++) {
-        user.cart.forEach((cartItem) => {
-          const userProductId = cartItem?.product;
 
-          const matchingProduct = product.some(
-            (p) => p?._id?.toString() === userProductId.toString()
-          );
-
-          cId.push(matchingProduct ? cartItem._id : false);
+      product.forEach((p) => {
+        const matchingProduct = user.cartproducts.some((cartItem) => {
+          return p._id && p._id.toString() === cartItem.toString();
         });
-      }
+        cId.push(matchingProduct);
+      });
 
       const urlData = urls;
       const productData = product;
       const cartId = cId;
       const mergedData = urlData.map((u, i) => ({
-        cartId: cartId[i],
+        incart: cartId[i],
         quantity: qty[i],
         product: productData[i],
         urls: u,

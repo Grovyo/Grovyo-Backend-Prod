@@ -11,6 +11,10 @@ const {
   updatecartorder,
   scannedqr,
   enterotp,
+  createpdf,
+  createrzporder,
+  finaliseorder,
+  createnewproductorder,
 } = require("../controllers/order");
 
 router.post("/neworder/:userId/:productId", create);
@@ -22,5 +26,9 @@ router.patch("/orderstatus/:userId/:productId/:orderId", status);
 router.get("/orderdetails/:userId/:orderId", details);
 router.post("/scannedqr/:id/:delid", scannedqr);
 router.post("/enterotp/:id/:deliveryid", enterotp);
+router.post("/createpdf", createpdf);
+router.post("/createrzporder/:id", createrzporder);
+router.post("/finaliseorder/:id/:ordId", finaliseorder);
+router.post("/createnewproductorder/:userId", createnewproductorder);
 
 module.exports = router;

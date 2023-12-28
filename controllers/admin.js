@@ -401,7 +401,11 @@ exports.getdp = async (req, res) => {
         user.profilepic.toString(),
         60 * 60
       );
-      res.status(200).json({ success: true, dp });
+      let isbanned = false;
+      if (user.status === "Block") {
+        isbanned = true;
+      }
+      res.status(200).json({ success: true, dp, isbanned });
     } else {
       res.status(404).json({ message: "User not found", success: false });
     }

@@ -1,0 +1,156 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: black;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: auto;
+  max-width: 720px;
+  background-color: white;
+  border: 2px red solid;
+}
+
+.child {
+  width: 100%;
+  padding: 8px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin-top: 4px;
+}
+
+.center {
+  text-align: center;
+}
+
+.grid-child-1,
+.grid-child-2,
+.grid-child-4 {
+  display: flex;
+  margin: 4px;
+
+  border: 2px black solid;
+  padding: 10px;
+}
+
+.full {
+  width: 100%;
+}
+
+.flex {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border: 1px solid black;
+  padding: 8px;
+  font-size: 18px;
+  text-align: center;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+th[colspan="2"] {
+  background-color: #d3d3d3;
+}
+
+.flex-jc {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px;
+  border: 2px black solid;
+  padding: 6px;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.grid-child-4 {
+  display: flex;
+  margin: 4px;
+  padding: 3px;
+}
+.grid-child-3 {
+  display: flex;
+  margin: 4px;
+  padding: 3px;
+  justify-content: space-between;
+  border: 2px black solid;
+}
+
+.grid-child-5 {
+  display: flex;
+  flex-direction: column;
+  margin: 14px;
+  border: 2px black solid;
+  padding: 16px;
+}
+
+.border {
+  border: 10px black solid;
+}
+
+.flexcenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px black solid;
+  padding: 3px;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 4px;
+}
+
+.height {
+  min-height: 40px;
+}
+.flexonly {
+  display: flex;
+  margin: 4px;
+  border: 2px black solid;
+  padding: 6px;
+}
+
+.font {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.eighty {
+  max-width: 70%;
+  margin-top: 3px;
+}
+
+.width {
+  min-width: 100px;
+}
+
+.gap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.center {
+  margin: 2px;
+}

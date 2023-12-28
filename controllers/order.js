@@ -16,6 +16,18 @@ const Deluser = require("../models/deluser");
 const Delivery = require("../models/deliveries");
 const Conversation = require("../models/conversation");
 const Message = require("../models/message");
+const Pdf = require("pdf-creator-node");
+const fs = require("fs");
+const Razorpay = require("razorpay");
+const {
+  validatePaymentVerification,
+  validateWebhookSignature,
+} = require("razorpay/dist/utils/razorpay-utils");
+
+const instance = new Razorpay({
+  key_id: "rzp_test_jXDMq8a2wN26Ss",
+  key_secret: "bxyQhbzS0bHNBnalbBg9QTDo",
+});
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -333,7 +345,10 @@ exports.createcartorder = async (req, res) => {
         { _id: userId },
         { $push: { puchase_history: order._id } }
       );
-      await User.updateOne({ _id: user._id }, { $unset: { cart: [] } });
+      await User.updateOne(
+        { _id: user._id },
+        { $unset: { cart: [], cartproducts: [] } }
+      );
 
       //assigning the delivery to the nearest driver
       const cuslat = user.address.coordinates.latitude;
@@ -967,5 +982,239 @@ exports.enterotp = async (req, res) => {
       success: false,
       sotpvalid: false,
     });
+  }
+};
+
+exports.createpdf = async (req, res) => {
+  try {
+    let html = fs.readFileSync("./template.html", "utf8");
+    let options = {
+      format: "A4",
+      orientation: "portrait",
+      border: "10mm",
+      header: {
+        height: "30mm",
+        contents:
+          '<div style="text-align: center;  font-weight: 700;">Tax Invoice</div>',
+      },
+      footer: {
+        height: "28mm",
+        contents: {
+          first: "Cover page",
+          2: "Second page", // Any page number is working. 1-based index
+          default:
+            '<span style="color: #444;">{{page}}</span>/<span>{{pages}}</span>', // fallback value
+          last: "Last Page",
+        },
+      },
+    };
+    let users = [
+      {
+        name: "Shyam",
+        age: "26",
+      },
+      {
+        name: "Navjot",
+        age: "26",
+      },
+      {
+        name: "Vitthal",
+        age: "26",
+      },
+      {
+        name: "Vitthal",
+        age: "26",
+      },
+      {
+        name: "Vitthal",
+        age: "26",
+      },
+    ];
+    var document = {
+      html: html,
+      data: {
+        users: users,
+      },
+      path: "./output.pdf",
+      type: "",
+    };
+    Pdf.create(document, options)
+      .then((res) => {
+        console.log(res);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+    res.status(200).json({ success: true });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+//create a new product order(UPI)
+exports.createrzporder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity, deliverycharges, productId, total } = req.body;
+
+    const user = await User.findById(id);
+    const product = await Product.findById(productId).populate(
+      "creator",
+      "storeAddress"
+    );
+    let oi = Math.floor(Math.random() * 9000000) + 1000000;
+
+    if (!user && !product) {
+      return res.status(404).json({ message: "User or Product not found" });
+    } else {
+      //a new order is created
+      const ord = new Order({
+        buyerId: id,
+        productId: productId,
+        quantity: quantity,
+        total: total,
+        orderId: oi,
+        paymentMode: "UPI",
+        currentStatus: "pending",
+        deliverycharges: deliverycharges,
+        timing: "Tommorow, by 7:00 pm",
+      });
+      await ord.save();
+
+      //upating order in customers purchase history
+      await User.updateOne(
+        { _id: id },
+        { $push: { puchase_history: ord._id } }
+      );
+      //  await User.updateOne({ _id: user._id }, { $unset: { cart: [] } });
+      let pids = JSON.stringify(productId);
+      //creatign a rzp order
+      instance.orders.create(
+        {
+          amount: parseInt(total),
+          currency: "INR",
+          receipt: `receipt#${oi}`,
+          notes: {
+            total,
+            quantity,
+            deliverycharges,
+            pids,
+            total,
+          },
+        },
+        function (err, order) {
+          console.log(err, order);
+          if (err) {
+            res.status(400).json({ err, success: false });
+          } else {
+            res.status(200).json({
+              oid: order.id,
+              order: ord._id,
+              phone: user?.phone,
+              email: user?.email,
+              success: true,
+            });
+          }
+        }
+      );
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+//finalising the product order(UPI)
+exports.finaliseorder = async (req, res) => {
+  try {
+    const { id, ordId } = req.params;
+    const {
+      oid,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      status,
+    } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User or Product not found" });
+    } else {
+      const isValid = validatePaymentVerification(
+        { order_id: razorpay_order_id, payment_id: razorpay_payment_id },
+        razorpay_signature,
+        "bxyQhbzS0bHNBnalbBg9QTDo"
+      );
+
+      if (isValid) {
+        await Order.updateOne(
+          { _id: ordId },
+          { $set: { currentStatus: status, onlineorderid: oid } }
+        );
+        await User.updateOne(
+          { _id: user._id },
+          { $unset: { cart: [], cartproducts: [] } }
+        );
+
+        res.status(200).json({ success: true });
+      } else {
+        await Order.updateOne(
+          { _id: ordId },
+          { $set: { currentStatus: status, onlineorderid: oid } }
+        );
+
+        res.status(200).json({ success: true });
+      }
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+//create a new product order(cod)
+exports.createnewproductorder = async (req, res) => {
+  const { userId } = req.params;
+  const { quantity, deliverycharges, productId, total } = req.body;
+
+  try {
+    const user = await User.findById(userId);
+    const product = await Product.findById(productId).populate(
+      "creator",
+      "storeAddress"
+    );
+    let oi = Math.floor(Math.random() * 9000000) + 1000000;
+
+    if (!user && !product) {
+      return res.status(404).json({ message: "User or Product not found" });
+    } else {
+      //a new order is created
+      const order = new Order({
+        buyerId: userId,
+        productId: productId,
+        quantity: quantity,
+        total: total,
+        orderId: oi,
+        paymentMode: "Cash",
+        currentStatus: "success",
+        deliverycharges: deliverycharges,
+        timing: "Tommorow, by 7:00 pm",
+      });
+      await order.save();
+      //upating order in customers purchase history
+      await User.updateOne(
+        { _id: userId },
+        { $push: { puchase_history: order._id } }
+      );
+      await User.updateOne(
+        { _id: user._id },
+        { $unset: { cart: [], cartproducts: [] } }
+      );
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
   }
 };
