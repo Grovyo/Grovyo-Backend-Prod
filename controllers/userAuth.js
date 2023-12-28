@@ -1406,9 +1406,10 @@ exports.checkconversationsnew = async (req, res) => {
                 const conv = results.flat();
 
                 //sorting latest conv first
+
                 conv.sort((c1, c2) => {
-                  const timeC1 = c1.msgs[0]?.createdAt || 0;
-                  const timeC2 = c2.msgs[0]?.createdAt || 0;
+                  const timeC1 = c1?.msgs[0]?.createdAt || 0;
+                  const timeC2 = c2?.msgs[0]?.createdAt || 0;
                   return timeC2 - timeC1;
                 });
                 const response = {

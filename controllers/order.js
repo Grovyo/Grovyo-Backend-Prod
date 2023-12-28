@@ -1218,3 +1218,29 @@ exports.createnewproductorder = async (req, res) => {
     res.status(400).json({ success: false });
   }
 };
+
+//remove item from cart
+exports.removecartorder = async (req, res) => {
+  try {
+    const { id, cartId, productId } = req.params;
+    const user = await User.findById(id);
+    console.log(id, cartId, productId);
+    if (!user) {
+      return res.status(404).json({ message: "User or Product not found" });
+    } else {
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $pull: {
+            cartproducts: productId,
+            cart: cartId,
+          },
+        }
+      );
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
