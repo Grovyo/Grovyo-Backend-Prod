@@ -40,6 +40,7 @@ const {
   fetchconvs,
   sendchatfile,
   loadmorechatmsgs,
+  deletemessages,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -96,6 +97,7 @@ router.post("/addbank/:id", addbank);
 router.get("/v1/fetchconvs/:id/:convId", fetchconvs);
 router.post("/v1/sendchatfile", upload.any(), sendchatfile);
 router.post("/v1/loadmorechatmsgs/:id", loadmorechatmsgs);
+router.post("/v1/deletemessages/:id/:recId", deletemessages);
 
 router.param("userId", userbyId);
 

@@ -1406,7 +1406,6 @@ exports.checkconversationsnew = async (req, res) => {
                 const conv = results.flat();
 
                 //sorting latest conv first
-
                 conv.sort((c1, c2) => {
                   const timeC1 = c1?.msgs[0]?.createdAt || 0;
                   const timeC2 = c2?.msgs[0]?.createdAt || 0;
@@ -1599,9 +1598,13 @@ exports.checkconversationsnew = async (req, res) => {
           }
 
           const results = await Promise.all(promises);
-
+          console.log("worl");
           const conv = results.flat();
-
+          conv.sort((c1, c2) => {
+            const timeC1 = c1?.msgs[0]?.createdAt || 0;
+            const timeC2 = c2?.msgs[0]?.createdAt || 0;
+            return timeC2 - timeC1;
+          });
           const response = {
             conv,
             reqcount,
@@ -1804,7 +1807,11 @@ exports.fetchconvs = async (req, res) => {
         .json({ message: "User not found", success: false });
     }
 
-    const msg = await Message.find({ conversationId: convId })
+    const msg = await Message.find({
+      conversationId: convId,
+      status: "active",
+      deletedfor: { $nin: [user._id.toString()] },
+    })
       .limit(20)
       .sort({ createdAt: -1 })
       .populate("sender", "profilepic fullname isverified");
@@ -1935,6 +1942,8 @@ exports.loadmorechatmsgs = async (req, res) => {
       const msg = await Message.find({
         conversationId: convId,
         sequence: { $gte: lt, $lte: gt },
+        deletedfor: { $nin: [user._id] },
+        status: "active",
       })
         .limit(20)
         .sort({ sequence: 1 })
@@ -1963,6 +1972,35 @@ exports.loadmorechatmsgs = async (req, res) => {
       res.status(200).json({ messages, success: true });
     } else {
       res.status(404).json({ messgae: "User not found!", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+//for deleting messsages from chats
+exports.deletemessages = async (req, res) => {
+  try {
+    const { id, recId } = req.params;
+    const { convId, msgIds, action } = req.body;
+    const user = await User.findById(id);
+    const rec = await User.findById(recId);
+    if (user) {
+      if (action === "everyone") {
+        await Message.updateMany(
+          { mesId: { $in: msgIds }, conversationId: convId },
+          { $set: { status: "deleted" } }
+        );
+      } else {
+        await Message.updateMany(
+          { mesId: { $in: msgIds }, conversationId: convId },
+          { $push: { deletedfor: rec._id } }
+        );
+      }
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ message: "User not found!", success: false });
     }
   } catch (e) {
     console.log(e);
