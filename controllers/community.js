@@ -982,3 +982,44 @@ exports.create = async (req, res) => {
     }
   }
 };
+
+//get all members
+exports.getallmembers = async (req, res) => {
+  try {
+    const { id, comId } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      const community = await Community.findById(comId).populate({
+        path: "members",
+        select: "fullname pic isverified username profilepic",
+        options: { limit: 150 },
+      });
+      if (!community) {
+        res
+          .status(404)
+          .json({ message: "Community not found", success: false });
+      } else {
+        const dps = [];
+
+        for (let j = 0; j < community?.members?.length; j++) {
+          const a = await generatePresignedUrl(
+            "images",
+            community.members[j].profilepic.toString(),
+            60 * 60
+          );
+          dps.push(a);
+        }
+        const members = community.members?.map((c, i) => ({
+          c,
+          dp: dps[i],
+        }));
+        res.status(200).json({ success: true, members });
+      }
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: e.message, success: false });
+  }
+};

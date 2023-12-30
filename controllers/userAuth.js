@@ -1342,7 +1342,12 @@ exports.checkconversationsnew = async (req, res) => {
 
                 if (!convs) return null;
 
-                const msg = await Message.find({ conversationId: convs?._id })
+                const msg = await Message.find({
+                  conversationId: convs?._id,
+                  status: "active",
+                  hidden: { $nin: [user._id.toString()] },
+                  deletedfor: { $nin: [user._id] },
+                })
                   .limit(1)
                   .sort({ createdAt: -1 });
 
@@ -1431,7 +1436,12 @@ exports.checkconversationsnew = async (req, res) => {
 
                 if (!convs) return null;
 
-                const msg = await Message.find({ conversationId: convs?._id })
+                const msg = await Message.find({
+                  conversationId: convs?._id,
+                  status: "active",
+                  hidden: { $nin: [user._id.toString()] },
+                  deletedfor: { $nin: [user._id] },
+                })
                   .limit(1)
                   .sort({ createdAt: -1 });
 
@@ -1811,6 +1821,7 @@ exports.fetchconvs = async (req, res) => {
       conversationId: convId,
       status: "active",
       deletedfor: { $nin: [user._id.toString()] },
+      hidden: { $nin: [user._id.toString()] },
     })
       .limit(20)
       .sort({ createdAt: -1 })
@@ -1943,6 +1954,7 @@ exports.loadmorechatmsgs = async (req, res) => {
         conversationId: convId,
         sequence: { $gte: lt, $lte: gt },
         deletedfor: { $nin: [user._id] },
+        hidden: { $nin: [user._id.toString()] },
         status: "active",
       })
         .limit(20)
@@ -1982,10 +1994,10 @@ exports.loadmorechatmsgs = async (req, res) => {
 //for deleting messsages from chats
 exports.deletemessages = async (req, res) => {
   try {
-    const { id, recId } = req.params;
+    const { id } = req.params;
     const { convId, msgIds, action } = req.body;
     const user = await User.findById(id);
-    const rec = await User.findById(recId);
+    // const rec = await User.findById(recId);
     if (user) {
       if (action === "everyone") {
         await Message.updateMany(
@@ -1995,7 +2007,7 @@ exports.deletemessages = async (req, res) => {
       } else {
         await Message.updateMany(
           { mesId: { $in: msgIds }, conversationId: convId },
-          { $push: { deletedfor: rec._id } }
+          { $push: { deletedfor: user._id } }
         );
       }
       res.status(200).json({ success: true });
@@ -2005,5 +2017,220 @@ exports.deletemessages = async (req, res) => {
   } catch (e) {
     console.log(e);
     res.status(400).json({ success: false });
+  }
+};
+
+//fetch hidden conv
+exports.fetchhiddenconv = async (req, res) => {
+  try {
+    const { id, convId } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      const msg = await Message.find({
+        conversationId: convId,
+        status: "active",
+        hidden: { $in: [user._id.toString()] },
+        deletedfor: { $nin: [user._id] },
+      })
+        .limit(20)
+        .sort({ createdAt: -1 })
+        .populate("sender", "profilepic fullname isverified");
+
+      let messages = [];
+
+      for (let i = 0; i < msg?.length; i++) {
+        if (
+          msg[i].typ === "image" ||
+          msg[i].typ === "video" ||
+          msg[i].typ === "doc"
+        ) {
+          const url = await generatePresignedUrl(
+            "messages",
+            msg[i]?.content?.uri?.toString(),
+            60 * 60
+          );
+
+          messages.push({ ...msg[i].toObject(), url });
+        } else {
+          messages.push(msg[i].toObject());
+        }
+      }
+
+      messages = messages.reverse();
+      res.status(200).json({ messages: messages, success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//fetch more hidden conv
+exports.fetchmorehiddenconv = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { convId, sequence } = req.body;
+    const user = await User.findById(id);
+
+    if (user) {
+      let gt = parseInt(sequence) - 1;
+      let lt = gt - 10;
+      const msg = await Message.find({
+        conversationId: convId,
+        status: "active",
+        hidden: { $in: [user._id.toString()] },
+        deletedfor: { $nin: [user._id] },
+        sequence: { $gte: lt, $lte: gt },
+      })
+        .limit(20)
+        .sort({ sequence: 1 })
+        .populate("sender", "profilepic fullname isverified");
+
+      let messages = [];
+
+      for (let i = 0; i < msg?.length; i++) {
+        if (
+          msg[i].typ === "image" ||
+          msg[i].typ === "video" ||
+          msg[i].typ === "doc"
+        ) {
+          const url = await generatePresignedUrl(
+            "messages",
+            msg[i]?.content?.uri?.toString(),
+            60 * 60
+          );
+
+          messages.push({ ...msg[i].toObject(), url });
+        } else {
+          messages.push(msg[i].toObject());
+        }
+      }
+
+      res.status(200).json({ messages, success: true });
+    } else {
+      res.status(404).json({ messgae: "User not found!", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+//hide conv message
+exports.hideconvmsg = async (req, res) => {
+  try {
+    const { id, msgid } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      await Message.updateOne(
+        { mesId: msgid },
+        { $push: { hidden: user?._id } }
+      );
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//unhide conv message
+exports.unhideconvmsg = async (req, res) => {
+  try {
+    const { id, msgid } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      await Message.updateOne(
+        { mesId: msgid },
+        { $pull: { hidden: user?._id } }
+      );
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//new check for latest conversations and fetch them in chats
+exports.checkconversationswork = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { convlist } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      let results = [];
+      let reqcount = user?.messagerequests?.length;
+      for (let i = 0; i < user.conversations.length; i++) {
+        const convs = await Conversation.findById(
+          user.conversations[i]
+        ).populate(
+          "members",
+          "fullname username profilepic isverified blockedpeople"
+        );
+        const msg = await Message.find({
+          conversationId: convs?._id,
+          status: "active",
+          hidden: { $nin: [user._id.toString()] },
+          deletedfor: { $nin: [user._id] },
+        })
+          .limit(1)
+          .sort({ createdAt: -1 });
+        for (let j = 0; j < convs.members.length; j++) {
+          if (convs.members[j]?.toString() !== user._id.toString()) {
+            let pi = await generatePresignedUrl(
+              "images",
+              convs?.members[j]?.profilepic?.toString(),
+              60 * 60
+            );
+            let detail = {
+              convid: convs?._id,
+              id: convs?.members[j]?._id,
+              fullname: convs?.members[j]?.fullname,
+              username: convs?.members[j]?.username,
+              isverified: convs?.members[j]?.isverified,
+              pic: pi,
+              msgs: msg,
+            };
+            console.log(detail);
+            results.push(detail);
+          }
+        }
+      }
+
+      const conv = results.flat();
+
+      //sorting latest conv first
+      conv.sort((c1, c2) => {
+        const timeC1 = c1?.msgs[0]?.createdAt || 0;
+        const timeC2 = c2?.msgs[0]?.createdAt || 0;
+        return timeC2 - timeC1;
+      });
+      const response = {
+        conv,
+        reqcount,
+        success: true,
+      };
+
+      res.status(200).json(response);
+    }
+  } catch (e) {
+    res.status(400).json({ message: e.message, success: false });
   }
 };

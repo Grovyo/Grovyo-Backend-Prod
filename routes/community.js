@@ -12,6 +12,7 @@ const {
   compostfeed,
   gettopicmessages,
   loadmoremessages,
+  getallmembers,
 } = require("../controllers/community");
 
 const storage = multer.memoryStorage();
@@ -35,5 +36,8 @@ router.get("/v1/gettopicmessages/:id/:topicId", gettopicmessages);
 
 //fetch more topic messages
 router.get("/v1/loadmoremessages/:id/:topicId/:sequence", loadmoremessages);
+
+//fetch all community members
+router.get("/v1/getallmembers/:id/:comId", getallmembers);
 
 module.exports = router;
