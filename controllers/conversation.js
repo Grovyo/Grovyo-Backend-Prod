@@ -396,22 +396,23 @@ exports.convexists = async (req, res) => {
 //send message to existing person - Chats
 exports.sendexistingmsg = async (req, res) => {
   try {
-    const { id, uid, convId } = req.params;
-    const sender = await User.findById(id);
-    const reciever = await User.findById(uid);
-    if (!sender) {
+    const { convId } = req.params;
+    const { sender, reciever } = req.body;
+    const senderperson = await User.findById(sender);
+    const recieverperson = await User.findById(reciever);
+    if (!senderperson) {
       res.status(404).json({ message: "User not found", success: false });
     } else {
       const conv = await Conversation.findById(convId);
       if (conv) {
         if (
-          sender?.conversations?.includes(conv?._id?.toString()) &&
-          reciever?.conversations?.includes(conv?._id?.toString())
+          senderperson?.conversations?.includes(conv?._id?.toString()) &&
+          recieverperson?.conversations?.includes(conv?._id?.toString())
         ) {
           res.status(200).json({ success: true });
         } else {
           await User.updateOne(
-            { _id: id },
+            { _id: senderperson._id },
             {
               $push: {
                 conversations: convId,
@@ -587,5 +588,191 @@ exports.gettoken = async (req, res) => {
     }
   } catch (e) {
     res.status(400).json(e.message);
+  }
+};
+
+//create msg req new
+exports.createmessagereqnew = async (req, res) => {
+  try {
+    const { sender, message, reciever } = req.body;
+    const sendingperson = await User.findById(sender);
+    const recievingperson = await User.findById(reciever);
+
+    let Reqexits = false;
+    const conv = await Conversation.findOne({
+      members: { $all: [sender, reciever] },
+    });
+    if (sendingperson && recievingperson) {
+      if (conv) {
+        res.status(203).json({
+          success: true,
+          covId: conv._id,
+          convexists: true,
+        });
+      } else {
+        //checking if req exits in both persons
+        if (
+          sendingperson?.conversations?.includes(conv?._id?.toString()) &&
+          recievingperson?.conversations?.includes(conv?._id?.toString())
+        ) {
+          res
+            .status(203)
+            .json({ message: "Conv exists both ways!", success: false });
+        }
+        //checking if anyone is blocked
+        else if (
+          sendingperson.blockedpeople.find((f, i) => {
+            return f.id.toString() === reciever;
+          }) ||
+          recievingperson.blockedpeople.find((f, i) => {
+            return f.id.toString() === sender;
+          })
+        ) {
+          res.status(203).json({ message: "You are blocked", success: false });
+        } else {
+          for (const reqs of recievingperson.messagerequests) {
+            if (reqs.id.toString() === sender) {
+              Reqexits = true;
+              break;
+            }
+          }
+          for (const reqs of recievingperson.msgrequestsent) {
+            if (reqs.id.toString() === sender) {
+              Reqexits = true;
+              break;
+            }
+          }
+          for (const reqs of sendingperson.msgrequestsent) {
+            if (reqs.id.toString() === reciever) {
+              Reqexits = true;
+              break;
+            }
+          }
+          for (const reqs of sendingperson.messagerequests) {
+            if (reqs.id.toString() === reciever) {
+              Reqexits = true;
+              break;
+            }
+          }
+          if (Reqexits) {
+            res.status(200).json({ success: true, existingreq: true });
+          } else {
+            await User.updateOne(
+              { _id: reciever },
+              {
+                $push: {
+                  messagerequests: { id: sender, message: message },
+                },
+              }
+            );
+            await User.updateOne(
+              { _id: sender },
+              {
+                $push: {
+                  msgrequestsent: { id: reciever },
+                },
+              }
+            );
+
+            //message for notification
+            let date = moment(new Date()).format("hh:mm");
+            const msg = {
+              notification: {
+                title: "A new request has arrived.",
+                body: `👋 Extend your hand and accept!!`,
+              },
+              data: {
+                screen: "Requests",
+                sender_fullname: `${sendingperson?.fullname}`,
+                sender_id: `${sendingperson?._id}`,
+                text: "A new request has arrived!!",
+                isverified: `${sendingperson?.isverified}`,
+                createdAt: `${date}`,
+              },
+              token: recievingperson?.notificationtoken,
+            };
+
+            await admin
+              .messaging()
+              .send(msg)
+              .then((response) => {
+                console.log("Successfully sent message");
+              })
+              .catch((error) => {
+                console.log("Error sending message:", error);
+              });
+
+            res.status(200).json({ success: true });
+          }
+        }
+      }
+    } else {
+      res.status(404).json({ message: "Invalid users", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//fetch convs new
+exports.fetchallchatsnew = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (user) {
+      let reqcount = user?.messagerequests?.length;
+      let conv = [];
+      for (let i = 0; i < user.conversations.length; i++) {
+        const convs = await Conversation.findById(
+          user.conversations[i]
+        ).populate(
+          "members",
+          "fullname username profilepic isverified blockedpeople"
+        );
+        const msg = await Message.find({
+          conversationId: convs?._id,
+          status: "active",
+          hidden: { $nin: [user._id.toString()] },
+          deletedfor: { $nin: [user._id] },
+        })
+          .limit(1)
+          .sort({ createdAt: -1 });
+
+        for (let j = 0; j < convs.members.length; j++) {
+          if (convs.members[j]._id?.toString() !== user._id.toString()) {
+            let pi = await generatePresignedUrl(
+              "images",
+              convs?.members[j]?.profilepic?.toString(),
+              60 * 60
+            );
+            let result = {
+              convid: convs?._id,
+              id: convs?.members[j]?._id,
+              fullname: convs?.members[j]?.fullname,
+              username: convs?.members[j]?.username,
+              isverified: convs?.members[j]?.isverified,
+              pic: pi,
+              msgs: msg,
+            };
+
+            conv.push(result);
+          } else {
+            null;
+          }
+        }
+      }
+      conv.sort((c1, c2) => {
+        const timeC1 = c1?.msgs[0]?.createdAt || 0;
+        const timeC2 = c2?.msgs[0]?.createdAt || 0;
+        return timeC2 - timeC1;
+      });
+      res.status(200).json({ success: true, reqcount, conv });
+    } else {
+      res.status(404).json({ message: "User not found", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
   }
 };

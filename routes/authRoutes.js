@@ -104,8 +104,8 @@ router.post("/v1/loadmorechatmsgs/:id", loadmorechatmsgs);
 router.post("/v1/deletemessages/:id", deletemessages);
 router.get("/v1/fetchhiddenconv/:id/:convId", fetchhiddenconv);
 router.get("/v1/fetchmorehiddenconv/:id", fetchmorehiddenconv);
-router.post("/v1/hideconvmsg/:id/:msgid", hideconvmsg);
-router.post("/v1/unhideconvmsg/:id/:msgid", unhideconvmsg);
+router.post("/v1/hideconvmsg/:id", hideconvmsg);
+router.post("/v1/unhideconvmsg/:id", unhideconvmsg);
 
 router.param("userId", userbyId);
 

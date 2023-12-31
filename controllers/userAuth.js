@@ -2123,14 +2123,15 @@ exports.fetchmorehiddenconv = async (req, res) => {
 //hide conv message
 exports.hideconvmsg = async (req, res) => {
   try {
-    const { id, msgid } = req.params;
+    const { id } = req.params;
+    const { msgid } = req.body;
 
     const user = await User.findById(id);
     if (!user) {
       res.status(404).json({ message: "User not found", success: false });
     } else {
-      await Message.updateOne(
-        { mesId: msgid },
+      await Message.updateMany(
+        { mesId: { $in: msgid } },
         { $push: { hidden: user?._id } }
       );
       res.status(200).json({ success: true });
@@ -2146,13 +2147,15 @@ exports.hideconvmsg = async (req, res) => {
 //unhide conv message
 exports.unhideconvmsg = async (req, res) => {
   try {
-    const { id, msgid } = req.params;
+    const { id } = req.params;
+    const { msgid } = req.body;
+
     const user = await User.findById(id);
     if (!user) {
       res.status(404).json({ message: "User not found", success: false });
     } else {
-      await Message.updateOne(
-        { mesId: msgid },
+      await Message.updateMany(
+        { mesId: { $in: msgid } },
         { $pull: { hidden: user?._id } }
       );
       res.status(200).json({ success: true });
