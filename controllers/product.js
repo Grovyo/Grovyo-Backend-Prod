@@ -65,8 +65,9 @@ exports.create = async (req, res) => {
         let a, b, c, d;
         if (image1) {
           const bucketName = "products";
-          const objectName = `${Date.now()}_${uuidString}_${image1.originalname
-            }`;
+          const objectName = `${Date.now()}_${uuidString}_${
+            image1.originalname
+          }`;
           a = objectName;
           await minioClient.putObject(
             bucketName,
@@ -77,8 +78,9 @@ exports.create = async (req, res) => {
         }
         if (image2) {
           const bucketName = "products";
-          const objectName = `${Date.now()}_${uuidString}_${image2.originalname
-            }`;
+          const objectName = `${Date.now()}_${uuidString}_${
+            image2.originalname
+          }`;
           b = objectName;
           await minioClient.putObject(
             bucketName,
@@ -89,8 +91,9 @@ exports.create = async (req, res) => {
         }
         if (image3) {
           const bucketName = "products";
-          const objectName = `${Date.now()}_${uuidString}_${image3.originalname
-            }`;
+          const objectName = `${Date.now()}_${uuidString}_${
+            image3.originalname
+          }`;
           c = objectName;
           await minioClient.putObject(
             bucketName,
@@ -101,8 +104,9 @@ exports.create = async (req, res) => {
         }
         if (image4) {
           const bucketName = "products";
-          const objectName = `${Date.now()}_${uuidString}_${image4.originalname
-            }`;
+          const objectName = `${Date.now()}_${uuidString}_${
+            image4.originalname
+          }`;
           d = objectName;
           await minioClient.putObject(
             bucketName,
@@ -165,8 +169,9 @@ exports.createnew = async (req, res) => {
         for (let i = 0; i < req?.files?.length; i++) {
           const uuidString = uuid();
           const bucketName = "products";
-          const objectName = `${Date.now()}_${uuidString}_${req.files[i].originalname
-            }`;
+          const objectName = `${Date.now()}_${uuidString}_${
+            req.files[i].originalname
+          }`;
           if (req.files[i].fieldname === "video") {
             await minioClient.putObject(
               bucketName,
@@ -268,39 +273,6 @@ exports.highlight = async (req, res) => {
 };
 
 //get a single product
-<<<<<<< HEAD
-// exports.getaproduct = async (req, res) => {
-//   const { id, productId } = req.params;
-//   const user = await User.findById(id);
-//   const product = await Product.findById(productId);
-//   try {
-//     if (!product) {
-//       res.status(404).json({ message: "Product not found", success: false });
-//     } else {
-//       const urls = [];
-//       let isreviewed = false;
-//       if (product.reviewed.includes(user?._id)) {
-//         isreviewed = true;
-//       }
-//       for (let i = 0; i < product.images.length; i++) {
-//         if (product.images[i] !== null) {
-//           const a = await generatePresignedUrl(
-//             "products",
-//             product.images[i].content.toString(),
-//             60 * 60
-//           );
-//           urls.push(a);
-//         }
-//       }
-//       res
-//         .status(200)
-//         .json({ data: { reviewed: isreviewed, product, urls, success: true } });
-//     }
-//   } catch (e) {
-//     res.status(400).json({ message: e.message, success: false });
-//   }
-// };
-=======
 exports.getaproduct = async (req, res) => {
   const { id, productId } = req.params;
   const user = await User.findById(id);
@@ -365,7 +337,6 @@ exports.getaproduct = async (req, res) => {
     res.status(400).json({ message: e.message, success: false });
   }
 };
->>>>>>> 1814d9e08034e017a4bdb1ad53b29b3be634241a
 
 //add a review
 exports.addareview = async (req, res) => {
