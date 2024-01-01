@@ -348,26 +348,26 @@ exports.convexists = async (req, res) => {
       if (recievingperson) {
         let Reqexits = false;
 
-        for (const reqs of recievingperson.messagerequests) {
-          if (reqs.id.toString() === sender) {
+        for (const reqs of recievingperson?.messagerequests) {
+          if (reqs?.id?.toString() === sendingperson?._id?.toString()) {
             Reqexits = true;
             break;
           }
         }
-        for (const reqs of recievingperson.msgrequestsent) {
-          if (reqs.id.toString() === sender) {
+        for (const reqs of recievingperson?.msgrequestsent) {
+          if (reqs?.id?.toString() === sendingperson?._id?.toString()) {
             Reqexits = true;
             break;
           }
         }
-        for (const reqs of sendingperson.msgrequestsent) {
-          if (reqs.id.toString() === reciever) {
+        for (const reqs of sendingperson?.msgrequestsent) {
+          if (reqs?.id?.toString() === recievingperson?._id?.toString()) {
             Reqexits = true;
             break;
           }
         }
         for (const reqs of sendingperson.messagerequests) {
-          if (reqs.id.toString() === reciever) {
+          if (reqs?.id?.toString() === recievingperson?._id?.toString()) {
             Reqexits = true;
             break;
           }
