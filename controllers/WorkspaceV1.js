@@ -55,8 +55,8 @@ async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
       expiry
     );
     return presignedUrl;
-  } catch (err) {
-    console.error(err);
+  } catch (er) {
+    console.error(er);
     throw new Error("Failed to generate presigned URL");
   }
 }
