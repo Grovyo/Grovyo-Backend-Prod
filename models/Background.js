@@ -1,7 +1,7 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 
 const backgroundSchema = new mongoose.Schema({
-	backgroundImage: String,
-})
+  backgroundImage: String,
+});
 
-module.exports = new mongoose.model("BackGround", backgroundSchema)
+module.exports = mongoose.model("BackGround", backgroundSchema);
