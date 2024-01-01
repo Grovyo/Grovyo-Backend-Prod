@@ -20,7 +20,7 @@ const {
 
 router.post("/edituser/:userId", editbio);
 router.get("/fetchmedia/:userId", fetchmedia);
-router.get("/fetchproduct/:userId", fetchproducts);
+router.get("/fetchproduct/:userId/:mainuserId", fetchproducts);
 router.get("/getproduct/:productId", getproduct);
 router.get("/getcommunities/:userId", getcommunities);
 router.get("/getbio/:userId", getbio);

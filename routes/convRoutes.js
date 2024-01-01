@@ -10,6 +10,8 @@ const {
   createmessagereqs,
   removeconversation,
   sendexistingmsg,
+  createmessagereqnew,
+  fetchallchatsnew,
 } = require("../controllers/conversation");
 const router = express.Router();
 
@@ -41,6 +43,12 @@ router.post("/createmessagereqs", createmessagereqs);
 router.post("/removeconversation/:id", removeconversation);
 
 //send msg to existing conv
-router.post("/sendexistingmsg/:id/:uid/:convId", sendexistingmsg);
+router.post("/sendexistingmsg/:convId", sendexistingmsg);
+
+//send a req new
+router.post("/v1/createmessagereqnew", createmessagereqnew);
+
+//fetchallchatsnew
+router.post("/v1/fetchallchatsnew/:id", fetchallchatsnew);
 
 module.exports = router;

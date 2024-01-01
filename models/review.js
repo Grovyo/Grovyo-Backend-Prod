@@ -11,7 +11,6 @@ const reviewSchema = new mongoose.Schema(
     productId: { type: ObjectId, ref: "Product", required: true },
     text: {
       type: String,
-      required: true,
     },
     dp: { type: String },
     name: { type: String },
@@ -22,7 +21,7 @@ const reviewSchema = new mongoose.Schema(
     content: { type: String },
     contentType: { type: String },
     stars: { type: Number, default: 0, enum: [1, 2, 3, 4, 5], required: true },
-    desc: { type: String, maxLength: 100, required: true },
+    desc: { type: String, maxLength: 100 },
   },
   { timestamps: true }
 );

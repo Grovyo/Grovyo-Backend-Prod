@@ -52,7 +52,7 @@ const productSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
-  reviews: { type: Number, default: 0 },
+  reviews: [{ type: ObjectId, ref: "Review" }],
   producthighlightskey: { type: [String] },
   producthighlightsvalue: { type: [String] },
   productdetails: { type: String },

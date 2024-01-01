@@ -37,6 +37,14 @@ const {
   updatenotification,
   checkLastConvMessagenew,
   addbank,
+  fetchconvs,
+  sendchatfile,
+  loadmorechatmsgs,
+  deletemessages,
+  fetchhiddenconv,
+  hideconvmsg,
+  fetchmorehiddenconv,
+  unhideconvmsg,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -90,6 +98,14 @@ router.post(
 );
 router.post("/updatenotification/:userId", updatenotification);
 router.post("/addbank/:id", addbank);
+router.get("/v1/fetchconvs/:id/:convId", fetchconvs);
+router.post("/v1/sendchatfile", upload.any(), sendchatfile);
+router.post("/v1/loadmorechatmsgs/:id", loadmorechatmsgs);
+router.post("/v1/deletemessages/:id", deletemessages);
+router.get("/v1/fetchhiddenconv/:id/:convId", fetchhiddenconv);
+router.get("/v1/fetchmorehiddenconv/:id", fetchmorehiddenconv);
+router.post("/v1/hideconvmsg/:id", hideconvmsg);
+router.post("/v1/unhideconvmsg/:id", unhideconvmsg);
 
 router.param("userId", userbyId);
 

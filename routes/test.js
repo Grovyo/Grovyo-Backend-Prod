@@ -20,10 +20,11 @@ router.post("/testing", async (req, res) => {
   }
 });
 
-module.exports = router;
-
+// router.post("/helo/link", async (req, res) => {
+//   res.send('<script>window.open("/separate-page", "_blank");</script>');
+// });
 router.post("/helo/link", async (req, res) => {
-  res.status(200).send({ message: "Got it" });
+  res.send("<div>wytvubimo</div>");
 });
 
 router.post("/sub", async (req, res) => {
@@ -43,3 +44,15 @@ router.post("/sub", async (req, res) => {
   );
   res.status(200).send({ message: "Got it" });
 });
+
+router.get("/successs1", async (req, res) => {
+  try {
+    res.send('<script>window.open("/separate-page", "_blank");</script>');
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.post("/msgtest", async (req, res) => {});
+
+module.exports = router;

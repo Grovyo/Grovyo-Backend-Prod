@@ -132,13 +132,14 @@ exports.deletecomment = async (req, res) => {
 
 //fetch all comments
 exports.fetchallcomments = async (req, res) => {
-  const { postId, userId } = req.params;
+  const { userId, postId } = req.params;
   try {
     const user = await User.findById(userId);
-    const comment = await Comment.find({ postId: postId }).populate(
-      "senderId",
-      "fullname profilepic username"
-    );
+    const comment = await Comment.find({ postId: postId })
+      .populate("senderId", "fullname profilepic username")
+      .limit(50)
+      .sort({ createdAt: -1 });
+
     if (!comment) {
       res.status(404).json({ success: false });
     } else {
@@ -159,7 +160,14 @@ exports.fetchallcomments = async (req, res) => {
         );
         dps.push(a);
       }
-      res.status(200).json({ success: true, comment, dps, liked });
+
+      //merging all the data
+      const merged = dps?.map((dp, i) => ({
+        dp,
+        comments: comment[i],
+        likes: liked[i],
+      }));
+      res.status(200).json({ success: true, merged });
     }
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });

@@ -498,22 +498,37 @@ exports.udpatecommunity = async (req, res) => {
 //new community post feed
 exports.compostfeed = async (req, res) => {
   try {
-    const { id, comId, postId } = req.params;
+    const { id, comId } = req.params;
+    const { postId } = req.body;
     const user = await User.findById(id);
-    const community = await Community.findById(comId).populate(
-      "topics",
-      "title type price"
-    );
+    const community = await Community.findById(comId)
+      .populate("topics", "title type price")
+      .populate("creator", "fullname username profilepic isverified");
+
     if (user && community) {
+      //creator data
+      const creatordp = await generatePresignedUrl(
+        "images",
+        community.creator.profilepic.toString(),
+        60 * 60
+      );
+
       //community data
       const subs =
         community.admins.includes(user._id) ||
         community.moderators.includes(user._id) ||
         community.members.includes(user._id);
+
+      //can edit topics
       const canedit =
         (community.admins.includes(user._id) ||
           community.moderators.includes(user._id)) &&
         community?.memberscount > 100;
+
+      //can post
+      const canpost =
+        community.admins.includes(user._id) ||
+        community.moderators.includes(user._id);
 
       const dp = await generatePresignedUrl(
         "images",
@@ -527,13 +542,17 @@ exports.compostfeed = async (req, res) => {
         "fullname profilepic username isverified"
       );
       let index = -1;
-
+      posts.reverse();
       //index of post that appears first
       for (let i = 0; i < posts.length; i++) {
         if (posts[i]._id.toString() === postId) {
           index = i;
           break;
         }
+      }
+
+      if (!postId) {
+        index = 0;
       }
 
       //comments
@@ -619,8 +638,10 @@ exports.compostfeed = async (req, res) => {
         index,
         dp,
         community,
+        creatordp,
         subs,
         canedit,
+        canpost,
         success: true,
       });
     } else {
@@ -700,12 +721,12 @@ exports.loadmoremessages = async (req, res) => {
     const topic = await Topic.findById(topicId);
     const community = await Community.find({ topics: { $in: [topic._id] } });
     if (community && topic && user) {
-      let gt = parseInt(sequence);
-      let lt = parseInt(sequence) + 10;
+      let gt = parseInt(sequence) - 1;
+      let lt = gt - 10;
 
       const messages = await Message.find({
         topicId: topicId,
-        sequence: { $gte: gt, $lte: lt },
+        sequence: { $gte: lt, $lte: gt },
       })
         .limit(20)
         .sort({ sequence: 1 })
@@ -959,5 +980,46 @@ exports.create = async (req, res) => {
     } catch (e) {
       res.status(400).json({ message: e.message, success: false });
     }
+  }
+};
+
+//get all members
+exports.getallmembers = async (req, res) => {
+  try {
+    const { id, comId } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      const community = await Community.findById(comId).populate({
+        path: "members",
+        select: "fullname pic isverified username profilepic",
+        options: { limit: 150 },
+      });
+      if (!community) {
+        res
+          .status(404)
+          .json({ message: "Community not found", success: false });
+      } else {
+        const dps = [];
+
+        for (let j = 0; j < community?.members?.length; j++) {
+          const a = await generatePresignedUrl(
+            "images",
+            community.members[j].profilepic.toString(),
+            60 * 60
+          );
+          dps.push(a);
+        }
+        const members = community.members?.map((c, i) => ({
+          c,
+          dp: dps[i],
+        }));
+        res.status(200).json({ success: true, members });
+      }
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: e.message, success: false });
   }
 };

@@ -151,6 +151,7 @@ exports.signout = async (req, res) => {
         { _id: user._id },
         {
           $push: { activity: newEditCount },
+          $set: { notificationtoken: "" },
         }
       );
       res.status(200).json({ success: true });
@@ -977,7 +978,7 @@ exports.updateaccount = async (req, res) => {
         );
         const dp = await generatePresignedUrl(
           "images",
-          user.profilepic.toString(),
+          objectName,
           60 * 60 * 24
         );
 
@@ -1108,116 +1109,90 @@ exports.contactsuggestions = async (req, res) => {
     const user = await User.findById(id);
 
     if (!user) {
-      res.status(404).json({ message: "User not found", success: false });
-    } else {
-      let listA = [];
-      let listB = [];
-      let listC = [];
-      let listD = [];
+      return res
+        .status(404)
+        .json({ message: "User not found", success: false });
+    }
 
-      //checking for all contacts
-      for (let i = 0; i < user?.contacts[0]?.length; i++) {
-        if (user?.contacts[0][i]?.phoneNumbers[0]?.number !== undefined) {
-          listA.push(user?.contacts[0][i]?.phoneNumbers[0]?.number);
-        }
-        if (user?.contacts[0][i]?.phoneNumbers[1]?.number !== undefined) {
-          listB.push(user?.contacts[0][i]?.phoneNumbers[1]?.number);
-        }
-        if (user?.contacts[0][i]?.phoneNumbers[2]?.number !== undefined) {
-          listC.push(user?.contacts[0][i]?.phoneNumbers[2]?.number);
-        }
-        if (user?.contacts[0][i]?.phoneNumbers[3]?.number !== undefined) {
-          listD.push(user?.contacts[0][i]?.phoneNumbers[3]?.number);
+    let contactNumbers = [];
+
+    for (let i = 0; i < user?.contacts[0]?.length; i++) {
+      for (let j = 0; j < 4; j++) {
+        const phoneNumber = user?.contacts[0][i]?.phoneNumbers[j]?.number;
+
+        if (phoneNumber !== undefined) {
+          contactNumbers.push(phoneNumber);
         }
       }
-      let Fulllist = [...listA, ...listB, ...listC, ...listD];
-      const cleanedList = Fulllist.map((phone) => phone.replace(/[^0-9]/g, ""));
+    }
 
-      const contacts = await User.find({ phone: { $in: cleanedList } });
-      let data = [];
-      if (contacts?.length > 0) {
-        for (let i = 0; i < contacts?.length; i++) {
-          //checking if people have already blocked each other
-          if (
-            contacts[i].blockedpeople.find((f, i) => {
-              return f.id.toString() === id;
-            }) ||
-            user.blockedpeople.find((f, i) => {
-              return f.id.toString() === contacts[i]._id.toString();
-            })
-          ) {
-            console.log("blocked person");
-          } else {
-            //checking a request has been sent or may already exists
-            let Reqexits = false;
+    const cleanedContactNumbers = contactNumbers.map((phone) =>
+      phone.replace(/[^0-9]/g, "")
+    );
+    const contacts = await User.find({ phone: { $in: cleanedContactNumbers } });
+    let data = [];
 
-            for (const reqs of user.messagerequests) {
-              if (reqs.id.toString() === contacts[i]._id.toString()) {
-                Reqexits = true;
-                break;
-              }
-            }
-            for (const reqs of user.msgrequestsent) {
-              if (reqs.id.toString() === contacts[i]._id.toString()) {
-                Reqexits = true;
-                break;
-              }
-            }
-            for (const reqs of contacts[i].msgrequestsent) {
-              if (reqs.id.toString() === user._id.toString()) {
-                Reqexits = true;
-                break;
-              }
-            }
-            for (const reqs of contacts[i].messagerequests) {
-              if (reqs.id.toString() === user._id.toString()) {
-                Reqexits = true;
-                break;
-              }
-            }
+    if (contacts?.length > 0) {
+      for (let i = 0; i < contacts?.length; i++) {
+        const isBlocked =
+          contacts[i].blockedpeople.find((f) => f.id.toString() === id) ||
+          user.blockedpeople.find(
+            (f) => f.id.toString() === contacts[i]._id.toString()
+          );
 
-            if (Reqexits) {
-              console.log("req exits");
-            } else {
-              let pi = await generatePresignedUrl(
-                "images",
-                contacts[i].profilepic.toString(),
-                60 * 60
+        if (!isBlocked) {
+          let reqExists = false;
+
+          const checkMessageRequests = (reqList) => {
+            reqList.forEach((req) => {
+              if (req.id.toString() === contacts[i]._id.toString()) {
+                reqExists = true;
+              }
+            });
+          };
+
+          checkMessageRequests(user.messagerequests);
+          checkMessageRequests(user.msgrequestsent);
+          checkMessageRequests(contacts[i].msgrequestsent);
+          checkMessageRequests(contacts[i].messagerequests);
+
+          if (!reqExists) {
+            let profilePic = await generatePresignedUrl(
+              "images",
+              contacts[i].profilepic.toString(),
+              60 * 60
+            );
+
+            let suggestionData = {
+              id: contacts[i]._id,
+              name: contacts[i].fullname,
+              uname: contacts[i].username,
+              pic: profilePic,
+              isverified: contacts[i].isverified,
+            };
+
+            let chatExists = false;
+
+            if (user?.conversations?.length > 0) {
+              chatExists = user.conversations.some((convId) =>
+                contacts[i].conversations.includes(convId)
               );
+            }
 
-              let d = {
-                id: contacts[i]._id,
-                name: contacts[i].fullname,
-                uname: contacts[i].username,
-                pic: pi,
-                isverified: contacts[i].isverified,
-              };
-              if (user?.conversations?.length > 0) {
-                for (let j = 0; j < user?.conversations?.length; j++) {
-                  if (
-                    contacts[i].conversations.includes(user.conversations[j])
-                  ) {
-                    Chatexists = true;
-                  } else {
-                    data.push(d);
-                  }
-                }
-              } else {
-                data.push(d);
-              }
+            if (!chatExists) {
+              data.push(suggestionData);
             }
           }
         }
-      } else {
       }
-
-      res.status(200).json({ data, success: true });
     }
+
+    return res.status(200).json({ data, success: true });
   } catch (e) {
-    res.status(400).json({ message: e.message, success: false });
+    console.error(e);
+    return res.status(500).json({ message: e.message, success: false });
   }
 };
-
 //check for latest conversations and fetch them in chats
 exports.checkconversations = async (req, res) => {
   try {
@@ -1346,7 +1321,6 @@ exports.checkconversationsnew = async (req, res) => {
 
             for (const element2 of array1) {
               if (!array2.includes(element2)) {
-                console.log(element2, array1);
                 isUpdated = false;
                 mismatchedElements.push(element2);
               }
@@ -1368,7 +1342,12 @@ exports.checkconversationsnew = async (req, res) => {
 
                 if (!convs) return null;
 
-                const msg = await Message.find({ conversationId: convs?._id })
+                const msg = await Message.find({
+                  conversationId: convs?._id,
+                  status: "active",
+                  hidden: { $nin: [user._id.toString()] },
+                  deletedfor: { $nin: [user._id] },
+                })
                   .limit(1)
                   .sort({ createdAt: -1 });
 
@@ -1430,6 +1409,13 @@ exports.checkconversationsnew = async (req, res) => {
 
                 const results = await Promise.all(promises);
                 const conv = results.flat();
+
+                //sorting latest conv first
+                conv.sort((c1, c2) => {
+                  const timeC1 = c1?.msgs[0]?.createdAt || 0;
+                  const timeC2 = c2?.msgs[0]?.createdAt || 0;
+                  return timeC2 - timeC1;
+                });
                 const response = {
                   conv,
                   reqcount,
@@ -1450,7 +1436,12 @@ exports.checkconversationsnew = async (req, res) => {
 
                 if (!convs) return null;
 
-                const msg = await Message.find({ conversationId: convs?._id })
+                const msg = await Message.find({
+                  conversationId: convs?._id,
+                  status: "active",
+                  hidden: { $nin: [user._id.toString()] },
+                  deletedfor: { $nin: [user._id] },
+                })
                   .limit(1)
                   .sort({ createdAt: -1 });
 
@@ -1617,7 +1608,13 @@ exports.checkconversationsnew = async (req, res) => {
           }
 
           const results = await Promise.all(promises);
+          console.log("worl");
           const conv = results.flat();
+          conv.sort((c1, c2) => {
+            const timeC1 = c1?.msgs[0]?.createdAt || 0;
+            const timeC2 = c2?.msgs[0]?.createdAt || 0;
+            return timeC2 - timeC1;
+          });
           const response = {
             conv,
             reqcount,
@@ -1803,5 +1800,440 @@ exports.addbank = async (req, res) => {
     res
       .status(400)
       .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//for chats new
+
+//fetch convs
+exports.fetchconvs = async (req, res) => {
+  try {
+    const { id, convId } = req.params;
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "User not found", success: false });
+    }
+
+    const msg = await Message.find({
+      conversationId: convId,
+      status: "active",
+      deletedfor: { $nin: [user._id.toString()] },
+      hidden: { $nin: [user._id.toString()] },
+    })
+      .limit(20)
+      .sort({ createdAt: -1 })
+      .populate("sender", "profilepic fullname isverified");
+
+    let messages = [];
+
+    for (let i = 0; i < msg?.length; i++) {
+      if (
+        msg[i].typ === "image" ||
+        msg[i].typ === "video" ||
+        msg[i].typ === "doc"
+      ) {
+        const url = await generatePresignedUrl(
+          "messages",
+          msg[i]?.content?.uri?.toString(),
+          60 * 60
+        );
+
+        messages.push({ ...msg[i].toObject(), url });
+      } else {
+        messages.push(msg[i].toObject());
+      }
+    }
+
+    messages = messages.reverse();
+
+    res.status(200).json({ messages, success: true });
+  } catch (e) {
+    console.error(e);
+    res
+      .status(500)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//send any file
+exports.sendchatfile = async (req, res) => {
+  try {
+    const data = JSON.parse(req.body.data);
+
+    let pos = {};
+    const uuidString = uuid();
+    const bucketName = "messages";
+    const objectName = `${Date.now()}_${uuidString}_${
+      req.files[0].originalname
+    }`;
+
+    if (req.files[0].fieldname === "video") {
+      await minioClient.putObject(
+        bucketName,
+        objectName,
+        req.files[0].buffer
+        // req.files[i].size,
+        // req.files[i].mimetype
+      );
+
+      pos.uri = objectName;
+      pos.type = req.files[0].mimetype;
+      pos.name = data?.content?.name;
+      pos.size = req.files[0].size;
+    } else if (req.files[0].fieldname === "image") {
+      await sharp(req.files[0].buffer)
+        .jpeg({ quality: 50 })
+        .toBuffer()
+        .then(async (data) => {
+          await minioClient.putObject(bucketName, objectName, data);
+        })
+        .catch((err) => {
+          console.log(err.message, "-error");
+        });
+
+      pos.uri = objectName;
+      pos.type = req.files[0].mimetype;
+      pos.name = data?.content?.name;
+      pos.size = req.files[0].size;
+    } else {
+      await minioClient.putObject(
+        bucketName,
+        objectName,
+        req.files[0].buffer,
+        req.files[0].mimetype
+      );
+      pos.uri = objectName;
+      pos.type = req.files[0].mimetype;
+      pos.name = data?.content?.name;
+      pos.size = req.files[0].size;
+    }
+    const message = new Message({
+      text: data?.text,
+      sender: data?.sender_id,
+      conversationId: data?.convId,
+      typ: data?.typ,
+      mesId: data?.mesId,
+      reply: data?.reply,
+      dissapear: data?.dissapear,
+      isread: data?.isread,
+      sequence: data?.sequence,
+      timestamp: data?.timestamp,
+      content: pos,
+    });
+    await message.save();
+
+    const a = await generatePresignedUrl(
+      "messages",
+      message?.content?.uri?.toString(),
+      60 * 60
+    );
+    res.status(200).json({ success: true, link: a });
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//load more messages
+exports.loadmorechatmsgs = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { convId, sequence } = req.body;
+    const user = await User.findById(id);
+
+    if (user) {
+      let gt = parseInt(sequence) - 1;
+      let lt = gt - 10;
+
+      const msg = await Message.find({
+        conversationId: convId,
+        sequence: { $gte: lt, $lte: gt },
+        deletedfor: { $nin: [user._id] },
+        hidden: { $nin: [user._id.toString()] },
+        status: "active",
+      })
+        .limit(20)
+        .sort({ sequence: 1 })
+        .populate("sender", "profilepic fullname isverified");
+
+      let messages = [];
+
+      for (let i = 0; i < msg?.length; i++) {
+        if (
+          msg[i].typ === "image" ||
+          msg[i].typ === "video" ||
+          msg[i].typ === "doc"
+        ) {
+          const url = await generatePresignedUrl(
+            "messages",
+            msg[i]?.content?.uri?.toString(),
+            60 * 60
+          );
+
+          messages.push({ ...msg[i].toObject(), url });
+        } else {
+          messages.push(msg[i].toObject());
+        }
+      }
+
+      res.status(200).json({ messages, success: true });
+    } else {
+      res.status(404).json({ messgae: "User not found!", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+//for deleting messsages from chats
+exports.deletemessages = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { convId, msgIds, action } = req.body;
+    const user = await User.findById(id);
+    // const rec = await User.findById(recId);
+    if (user) {
+      if (action === "everyone") {
+        await Message.updateMany(
+          { mesId: { $in: msgIds }, conversationId: convId },
+          { $set: { status: "deleted" } }
+        );
+      } else {
+        await Message.updateMany(
+          { mesId: { $in: msgIds }, conversationId: convId },
+          { $push: { deletedfor: user._id } }
+        );
+      }
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ message: "User not found!", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+//fetch hidden conv
+exports.fetchhiddenconv = async (req, res) => {
+  try {
+    const { id, convId } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      const msg = await Message.find({
+        conversationId: convId,
+        status: "active",
+        hidden: { $in: [user._id.toString()] },
+        deletedfor: { $nin: [user._id] },
+      })
+        .limit(20)
+        .sort({ createdAt: -1 })
+        .populate("sender", "profilepic fullname isverified");
+
+      let messages = [];
+
+      for (let i = 0; i < msg?.length; i++) {
+        if (
+          msg[i].typ === "image" ||
+          msg[i].typ === "video" ||
+          msg[i].typ === "doc"
+        ) {
+          const url = await generatePresignedUrl(
+            "messages",
+            msg[i]?.content?.uri?.toString(),
+            60 * 60
+          );
+
+          messages.push({ ...msg[i].toObject(), url });
+        } else {
+          messages.push(msg[i].toObject());
+        }
+      }
+
+      messages = messages.reverse();
+      res.status(200).json({ messages: messages, success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//fetch more hidden conv
+exports.fetchmorehiddenconv = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { convId, sequence } = req.body;
+    const user = await User.findById(id);
+
+    if (user) {
+      let gt = parseInt(sequence) - 1;
+      let lt = gt - 10;
+      const msg = await Message.find({
+        conversationId: convId,
+        status: "active",
+        hidden: { $in: [user._id.toString()] },
+        deletedfor: { $nin: [user._id] },
+        sequence: { $gte: lt, $lte: gt },
+      })
+        .limit(20)
+        .sort({ sequence: 1 })
+        .populate("sender", "profilepic fullname isverified");
+
+      let messages = [];
+
+      for (let i = 0; i < msg?.length; i++) {
+        if (
+          msg[i].typ === "image" ||
+          msg[i].typ === "video" ||
+          msg[i].typ === "doc"
+        ) {
+          const url = await generatePresignedUrl(
+            "messages",
+            msg[i]?.content?.uri?.toString(),
+            60 * 60
+          );
+
+          messages.push({ ...msg[i].toObject(), url });
+        } else {
+          messages.push(msg[i].toObject());
+        }
+      }
+
+      res.status(200).json({ messages, success: true });
+    } else {
+      res.status(404).json({ messgae: "User not found!", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+//hide conv message
+exports.hideconvmsg = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { msgid } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      await Message.updateMany(
+        { mesId: { $in: msgid } },
+        { $push: { hidden: user?._id } }
+      );
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//unhide conv message
+exports.unhideconvmsg = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { msgid } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      await Message.updateMany(
+        { mesId: { $in: msgid } },
+        { $pull: { hidden: user?._id } }
+      );
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//new check for latest conversations and fetch them in chats
+exports.checkconversationswork = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { convlist } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      let results = [];
+      let reqcount = user?.messagerequests?.length;
+      for (let i = 0; i < user.conversations.length; i++) {
+        const convs = await Conversation.findById(
+          user.conversations[i]
+        ).populate(
+          "members",
+          "fullname username profilepic isverified blockedpeople"
+        );
+        const msg = await Message.find({
+          conversationId: convs?._id,
+          status: "active",
+          hidden: { $nin: [user._id.toString()] },
+          deletedfor: { $nin: [user._id] },
+        })
+          .limit(1)
+          .sort({ createdAt: -1 });
+        for (let j = 0; j < convs.members.length; j++) {
+          if (convs.members[j]?.toString() !== user._id.toString()) {
+            let pi = await generatePresignedUrl(
+              "images",
+              convs?.members[j]?.profilepic?.toString(),
+              60 * 60
+            );
+            let detail = {
+              convid: convs?._id,
+              id: convs?.members[j]?._id,
+              fullname: convs?.members[j]?.fullname,
+              username: convs?.members[j]?.username,
+              isverified: convs?.members[j]?.isverified,
+              pic: pi,
+              msgs: msg,
+            };
+            console.log(detail);
+            results.push(detail);
+          }
+        }
+      }
+
+      const conv = results.flat();
+
+      //sorting latest conv first
+      conv.sort((c1, c2) => {
+        const timeC1 = c1?.msgs[0]?.createdAt || 0;
+        const timeC2 = c2?.msgs[0]?.createdAt || 0;
+        return timeC2 - timeC1;
+      });
+      const response = {
+        conv,
+        reqcount,
+        success: true,
+      };
+
+      res.status(200).json(response);
+    }
+  } catch (e) {
+    res.status(400).json({ message: e.message, success: false });
   }
 };
