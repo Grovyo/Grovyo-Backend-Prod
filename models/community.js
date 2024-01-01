@@ -5,6 +5,7 @@ const communitySchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     creator: { type: ObjectId, ref: "User", required: true },
+    popularity: { type: Number },
     category: { type: String, required: true },
     dp: { type: String, required: true },
     members: [
@@ -49,6 +50,11 @@ const communitySchema = new mongoose.Schema(
         //  required: true
       },
     ],
+    stats: [{
+      X: [{ type: Number }], //days(x-axis)
+      Y1: [{ type: Number }],
+      Y2: [{ type: Number }],
+    }],
     visitors: { type: Number, default: 0 },
     newmemberscount: { type: Number, default: 0 },
     newmembers: [{ type: ObjectId, ref: "User" }],

@@ -48,7 +48,6 @@ const productSchema = new mongoose.Schema({
       thumbnail: { type: String },
     },
   ],
-  reviewed: [{ type: ObjectId, ref: "User" }],
   totalstars: {
     type: Number,
     default: 0,
@@ -63,13 +62,17 @@ const productSchema = new mongoose.Schema({
   type: { type: String },
   tags: { type: [String] },
   weight: { type: String },
+  reviewed: [{ type: ObjectId, ref: "User" }],
   status: {
     type: String,
     default: "Unblock",
     enum: ["Unblock", "Block"],
   },
   sharescount: { type: Number, default: 0 },
+  // changed
+  itemsold: { type: Number, default: 0 },
   collectionss: { type: ObjectId, ref: "Collectionss" },
+  createdAt: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model("Product", productSchema);

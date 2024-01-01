@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema(
     passw: { type: String },
     otp: { type: String },
     salt: String,
+    governmentid: { type: String },
     role: {
       type: String,
       default: "User",
@@ -77,9 +78,17 @@ const userSchema = new mongoose.Schema(
     notifications: [{ type: ObjectId, ref: "Notification" }],
     notificationscount: { type: Number, default: 0 },
     purchasestotal: { type: Number, default: 0 },
-    gender: {
-      type: "String",
+    // gender: {
+    //   type: "String",
+    // },
+    // CHANGED BY AD
+    age: {
+      type: Number,
     },
+    // gender: {
+    //   type: String,
+    //   enum: ["MALE", "FEMALE"]
+    // },
     location: { type: String },
     ipaddress: { type: String },
     currentlogin: { type: String },
@@ -164,7 +173,7 @@ const userSchema = new mongoose.Schema(
         id: { type: String },
       },
     ],
-    collectionss: [{ type: String }],
+    collectionss: [{ type: mongoose.Schema.Types.ObjectId, ref: "Collectionss" }],
     address: {
       streetaddress: { type: String },
       state: { type: String },
@@ -211,6 +220,7 @@ const userSchema = new mongoose.Schema(
     ],
     memberships: {
       membership: { type: ObjectId, ref: "membership" },
+      status: { type: Boolean, default: true },
       ending: { type: String },
       paymentdetails: {
         mode: { type: String },

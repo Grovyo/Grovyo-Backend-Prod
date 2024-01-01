@@ -19,7 +19,9 @@ const prositeSchema = new mongoose.Schema({
     type: ObjectId,
     ref: "User",
   },
-
+  htmlcontent: {
+    type: String,
+  },
   lottie: { type: String },
   image1: { type: String },
   image2: { type: String },
