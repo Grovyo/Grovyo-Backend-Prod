@@ -27,7 +27,7 @@ router.post("/initiatetopic/:topicId", initiatetopic);
 router.post("/jointopic/:topicId/:id/:comId/:orderId", jointopic);
 
 // ad code
-router.get("/fetchtopic/:id/:comId", fetchtopic);
+// router.get("/fetchtopic/:id/:comId", fetchtopic);
 
 //create topic order new
 router.post("/v1/createtopicporder/:id/:topicId", createtopicporder);
