@@ -49,6 +49,11 @@ const communitySchema = new mongoose.Schema(
         //  required: true
       },
     ],
+    stats: {
+      X: [{ type: Number }], //days(x-axis)
+      Y1: [{ type: Number }], //members
+      Y2: [{ type: Number }], //visitors
+    },
     visitors: { type: Number, default: 0 },
     newmemberscount: { type: Number, default: 0 },
     newmembers: [{ type: ObjectId, ref: "User" }],

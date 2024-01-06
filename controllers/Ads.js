@@ -81,6 +81,7 @@ exports.checkaccount = async (req, res) => {
   }
 };
 
+//create adv account !!missing password hashing
 exports.createadvacc = async (req, res) => {
   const {
     firstname,
@@ -137,6 +138,49 @@ exports.createadvacc = async (req, res) => {
       });
 
     await adv.save();
+
+    //generate random username
+    const generateRandomUsername = () => {
+      const min = 100;
+      const max = 999;
+      const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+      const usernam = `${
+        firstname + lastname.replace(/\s/g, "").toLowerCase()
+      }_${randomNumber}`;
+      return usernam;
+    };
+
+    let username = generateRandomUsername();
+
+    //address
+    const finaladdress = {
+      buildingno: address,
+      city: city,
+      state: state,
+
+      landmark: landmark,
+      gst: gst,
+    };
+
+    //creating a user account
+    const user = new User({
+      fullname: firstname + " " + lastname,
+      username: username,
+      phone: phone,
+      profilepic: objectName,
+      desc: "Hi, I am on Grovyo",
+      address: finaladdress,
+      adid: advid,
+    });
+    await user.save();
+
+    await Advertiser.updateOne(
+      { _id: advid._id },
+      {
+        $set: { userid: user._id },
+      }
+    );
+
     res.status(200).json({ success: true });
   } catch (e) {
     console.log(e);
@@ -192,8 +236,8 @@ exports.newad = async (req, res) => {
             console.log(err.message, "-error");
           });
         const contents = {
-          extension: image.mimetype,
-          name: objectName,
+          type: image.mimetype,
+          content: objectName,
         };
         const newAd = new Ads({
           adname,
@@ -214,8 +258,7 @@ exports.newad = async (req, res) => {
           dailybudget,
           estaudience,
           category,
-          content: contents,
-
+          post: contents,
           adid: adid,
           gender,
           advertiserid,

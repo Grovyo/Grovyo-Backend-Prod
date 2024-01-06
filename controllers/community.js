@@ -410,7 +410,7 @@ exports.addTopic = async (req, res) => {
     );
     await Topic.updateOne(
       { _id: topic1._id },
-      { $push: { notifications: user?.notificationtoken } }
+      { $push: { notifications: user?._id } }
     );
 
     await User.updateOne(
@@ -418,12 +418,13 @@ exports.addTopic = async (req, res) => {
       { $push: { topicsjoined: topic1._id }, $inc: { totaltopics: 1 } }
     );
 
-    await Community.findByIdAndUpdate(
+    await Community.updateOne(
       { _id: comId },
-      { $push: { topics: [topic1._id] }, $inc: { totaltopics: 1 } }
+      { $push: { topics: topic1._id }, $inc: { totaltopics: 1 } }
     );
     res.status(200).json({ success: true });
   } catch (e) {
+    console.log(e);
     res.status(400).json(e.message);
   }
 };
@@ -505,7 +506,39 @@ exports.compostfeed = async (req, res) => {
       .populate("topics", "title type price")
       .populate("creator", "fullname username profilepic isverified");
 
+    let today = Date.now();
+
     if (user && community) {
+      //visitor count
+      for (let i = 0; i < community.stats.X.length; i++) {
+        if (community.stats.X[i] === today) {
+          let d = {
+            Y1: parseInt(community.stats.Y1[i]) + 1,
+          };
+          await Community.updateOne(
+            { _id: community._id },
+            {
+              $addToSet: {
+                stats: d,
+              },
+            }
+          );
+        } else {
+          let d = {
+            X: Date.now(),
+            Y1: parseInt(community.stats.Y1[i]) + 1,
+          };
+          await Community.updateOne(
+            { _id: community._id },
+            {
+              $addToSet: {
+                stats: d,
+              },
+            }
+          );
+        }
+      }
+
       //creator data
       const creatordp = await generatePresignedUrl(
         "images",
@@ -669,6 +702,7 @@ exports.gettopicmessages = async (req, res) => {
         .populate("sender", "profilepic fullname isverified");
 
       const messages = msg.reverse();
+
       if (!community[0].members.includes(user._id)) {
         res.status(203).json({
           message: "You are not the member of the Community",
@@ -677,9 +711,15 @@ exports.gettopicmessages = async (req, res) => {
         });
       } else {
         if (
-          topic.type === "paid" &&
-          topic.members.some((id) => id.toString() === user._id.toString())
+          topic.type !== "paid" &&
+          topic.members.some((memberId) => memberId.equals(user?._id))
         ) {
+          res.status(200).json({
+            messages,
+            success: true,
+            topicjoined: true,
+          });
+        } else {
           let topicdetail = {
             id: topic?._id,
             price: topic?.price,
@@ -687,22 +727,33 @@ exports.gettopicmessages = async (req, res) => {
             members: topic?.memberscount,
             name: topic?.title,
           };
-          res.status(203).json({
-            message: "You need to join the topic first",
-            success: true,
-            topicjoined: false,
-            topic: topicdetail,
-          });
-        } else {
-          res.status(200).json({
-            messages,
-            success: true,
-            topicjoined: true,
-          });
+          if (
+            topic?.type === "paid" &&
+            topic.purchased.some((memberId) => memberId.id.equals(user?._id))
+          ) {
+            console.log(
+              topic?.type === "paid" &&
+                topic.purchased.some((memberId) =>
+                  memberId.id.equals(user?._id)
+                )
+            );
+            res.status(200).json({
+              messages,
+              success: true,
+              topicjoined: true,
+            });
+          } else {
+            res.status(203).json({
+              messages: "Not joined",
+              success: true,
+              topicjoined: false,
+              topic: topicdetail,
+            });
+          }
         }
       }
     } else {
-      res.status(404).json({ message: "Somthing not found", success: false });
+      res.status(404).json({ message: "Something not found!", success: false });
     }
   } catch (e) {
     console.log(e);
@@ -776,6 +827,7 @@ exports.create = async (req, res) => {
   const { userId } = req.params;
   const image = req.file;
   const uuidString = uuid();
+
   if (!image) {
     res.status(400).json({ message: "Please upload an image", success: false });
   } else if (iddata != undefined) {

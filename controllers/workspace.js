@@ -683,7 +683,7 @@ exports.registerstore = async (req, res) => {
       documenttype: documenttype,
       documentfile: documentfile,
     };
-    console.log(finaladdress, "finaladdress");
+
     if (findStore) {
       await User.updateOne(
         { _id: userId },

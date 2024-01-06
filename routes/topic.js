@@ -12,6 +12,8 @@ const {
   initiatetopic,
   jointopic,
   checkLastMessage,
+  createtopicporder,
+  finalisetopicorder,
 } = require("../controllers/topic");
 
 // router.post("/createtopic/:userId/:comId", create);
@@ -35,5 +37,11 @@ router.post("/jointopic/:topicId/:id/:comId/:orderId", jointopic);
 
 // ad code
 router.get("/fetchtopic/:id/:comId", fetchtopic);
+
+//create topic order new
+router.post("/v1/createtopicporder/:id/:topicId", createtopicporder);
+
+//finalisetopicorder new
+router.post("/v1/finalisetopicorder/:id/:ordId/:topicId", finalisetopicorder);
 
 module.exports = router;

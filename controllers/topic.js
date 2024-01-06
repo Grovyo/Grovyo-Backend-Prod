@@ -4,6 +4,16 @@ const Community = require("../models/community");
 const User = require("../models/userAuth");
 const Minio = require("minio");
 const Subscription = require("../models/Subscriptions");
+const Razorpay = require("razorpay");
+const {
+  validatePaymentVerification,
+  validateWebhookSignature,
+} = require("razorpay/dist/utils/razorpay-utils");
+
+const instance = new Razorpay({
+  key_id: "rzp_test_jXDMq8a2wN26Ss",
+  key_secret: "bxyQhbzS0bHNBnalbBg9QTDo",
+});
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -673,5 +683,155 @@ exports.edittopic = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Internal Server Error", success: false });
     console.log(err);
+  }
+};
+
+//buy topic a new topic order
+exports.createtopicporder = async (req, res) => {
+  try {
+    const { id, topicId } = req.params;
+
+    const user = await User.findById(id);
+    const topic = await Topic.findById(topicId);
+
+    if (!user && !topic) {
+      return res.status(404).json({ message: "User or topic not found" });
+    } else {
+      const currentValidity = new Date();
+      const thirtyDaysInMillis = 30 * 24 * 60 * 60 * 1000;
+      const newValidity = new Date(
+        currentValidity.getTime() + thirtyDaysInMillis
+      ).toISOString();
+      let oi = Math.floor(Math.random() * 9000000) + 1000000;
+      //a new subscription is created
+      const subscription = new Subscription({
+        topic: topic._id,
+        community: topic.community,
+        validity: newValidity,
+        amount: topic.price,
+        orderId: oi,
+        paymentMode: "UPI",
+        currentStatus: "pending",
+      });
+      await subscription.save();
+
+      //upating subscription of customers
+      await User.updateOne(
+        { _id: id },
+        { $push: { subscriptions: subscription._id } }
+      );
+
+      //creatign a rzp subscription
+      instance.orders.create(
+        {
+          amount: parseInt(topic.price) * 100,
+          currency: "INR",
+          receipt: `receiptofsubs#${oi}`,
+          notes: {
+            price: topic.price,
+            subscription: subscription._id,
+          },
+        },
+        function (err, subs) {
+          console.log(err, subs);
+          if (err) {
+            res.status(400).json({ err, success: false });
+          } else {
+            res.status(200).json({
+              oid: subs.id,
+              subs: subscription._id,
+              phone: user?.phone,
+              email: user?.email,
+              success: true,
+            });
+          }
+        }
+      );
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+//finalising the topic order
+exports.finalisetopicorder = async (req, res) => {
+  try {
+    const { id, ordId, topicId } = req.params;
+    const {
+      oid,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      status,
+    } = req.body;
+
+    const user = await User.findById(id);
+    const topic = await Topic.findById(topicId);
+    const community = await Community.findById(topic?.community);
+    if (!user) {
+      return res.status(404).json({ message: "User or Product not found" });
+    } else {
+      const isValid = validatePaymentVerification(
+        { order_id: razorpay_order_id, payment_id: razorpay_payment_id },
+        razorpay_signature,
+        "bxyQhbzS0bHNBnalbBg9QTDo"
+      );
+
+      if (isValid) {
+        let purchase = { id: user._id, broughton: Date.now() };
+        await Subscription.updateOne(
+          { _id: ordId },
+          {
+            $set: {
+              currentStatus: status,
+              onlineorderid: oid,
+              purchasedby: user?._id,
+            },
+          }
+        );
+        await Topic.updateOne(
+          { _id: topic._id },
+          {
+            $push: {
+              purchased: purchase,
+              members: user._id,
+              notifications: user?._id,
+            },
+            $inc: { memberscount: 1 },
+          }
+        );
+        //person who brought status update
+        await User.updateOne(
+          { _id: user._id },
+          { $push: { topicsjoined: topic._id }, $inc: { totaltopics: 1 } }
+        );
+        //person who created the topic gets money
+        await User.updateOne(
+          { _id: community.creator },
+          {
+            $inc: { moneyearned: topic.price },
+            $push: {
+              earningtype: {
+                how: "Topic Purchase",
+                when: Date.now(),
+              },
+            },
+          }
+        );
+
+        res.status(200).json({ success: true });
+      } else {
+        await Subscription.updateOne(
+          { _id: ordId },
+          { $set: { currentStatus: status, onlineorderid: oid } }
+        );
+
+        res.status(200).json({ success: true });
+      }
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
   }
 };

@@ -59,6 +59,7 @@ const AdvertiserSchema = new mongoose.Schema(
       ifsc: { type: String },
       name: { type: String },
     },
+    userid: { type: ObjectId, ref: "Uder" },
   },
   { timestamps: true }
 );

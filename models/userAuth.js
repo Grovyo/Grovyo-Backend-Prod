@@ -97,6 +97,8 @@ const userSchema = new mongoose.Schema(
     currentmoney: { type: Number, default: 0 },
     paymenthistory: [{ type: ObjectId, ref: "Payment" }],
     moneyearned: { type: Number, default: 0 },
+    earningtype: [{ how: { type: String }, when: { type: Number } }],
+    secretcode: { type: String },
     revenue: { type: Number, default: 0 },
     cart: [{ type: ObjectId, ref: "Cart" }],
     cartproducts: [{ type: "String" }],
@@ -109,6 +111,8 @@ const userSchema = new mongoose.Schema(
     organization: { type: String },
     contacts: [{ type: Array }],
     notificationtoken: { type: String },
+    adid: { type: Number },
+    advertiserid: { type: ObjectId, ref: "Advertiser" },
     sessions: [
       {
         time: { type: String, default: Date.now().toString() },

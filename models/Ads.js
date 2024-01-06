@@ -14,7 +14,15 @@ const AdsSchema = new mongoose.Schema(
     category: { type: String },
     cta: { type: String },
     ctalink: { type: String },
-    content: [{ extension: { type: String }, name: { type: String } }],
+    // content: [{ extension: { type: String }, name: { type: String } }],
+    post: [
+      {
+        content: { type: String },
+        type: { type: String },
+        size: { type: String },
+        thumbnail: { type: String },
+      },
+    ],
     preferedsection: { type: String },
     tags: [{ type: String }],
     location: [{ type: String }],
@@ -28,6 +36,7 @@ const AdsSchema = new mongoose.Schema(
     category: { type: String },
     transactions: [{ type: ObjectId, ref: "AdTransactions" }],
     adid: { type: String, required: true },
+    userid: { type: ObjectId, ref: "User" },
     editcount: [
       {
         date: { type: String, default: Date.now().toString() },

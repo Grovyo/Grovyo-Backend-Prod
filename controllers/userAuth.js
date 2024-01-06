@@ -8,6 +8,8 @@ const uuid = require("uuid").v4;
 const sharp = require("sharp");
 const Conversation = require("../models/conversation");
 const Message = require("../models/message");
+const aesjs = require("aes-js");
+
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
 
@@ -15,6 +17,45 @@ const minioClient = new Minio.Client({
   accessKey: "shreyansh379",
   secretKey: "shreyansh379",
 });
+
+//encryption and decryption
+const encryptaes = (data) => {
+  try {
+    const textBytes = aesjs.utils.utf8.toBytes(data);
+    const aesCtr = new aesjs.ModeOfOperation.ctr(
+      JSON.parse(process.env.key),
+      new aesjs.Counter(5)
+    );
+    const encryptedBytes = aesCtr.encrypt(textBytes);
+    const encryptedHex = aesjs.utils.hex.fromBytes(encryptedBytes);
+    return encryptedHex;
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+const decryptaes = (data) => {
+  try {
+    let d;
+    if (typeof data !== "string") {
+      d = JSON.stringify(data);
+    } else {
+      d = data;
+    }
+    const encryptedBytes = aesjs.utils.hex.toBytes(d);
+    const aesCtr = new aesjs.ModeOfOperation.ctr(
+      JSON.parse(process.env.key),
+      new aesjs.Counter(5)
+    );
+    const decryptedBytes = aesCtr.decrypt(encryptedBytes);
+
+    const decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
+    return decryptedText;
+  } catch (e) {
+    console.error("Decryption error:", e);
+    throw new Error("Decryption failed");
+  }
+};
 
 //function to ge nerate a presignedurl of minio
 async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
@@ -390,6 +431,7 @@ exports.checkusername = async (req, res) => {
   }
 };
 
+//creating a new account mobile
 exports.createnewaccount = async (req, res) => {
   const {
     fullname,
@@ -764,44 +806,56 @@ exports.createnewaccountemail = async (req, res) => {
   }
 };
 
+//for checking the user via email
 exports.checkemail = async (req, res) => {
   const { email, password, time, type, contacts, loc, device, token } =
     req.body;
 
   try {
-    const user = await User.findOne({ email: email, passw: password });
-    if (!user) {
-      res
-        .status(203)
-        .json({ message: "User not found", success: true, userexists: false });
-    } else {
-      let pic = await generatePresignedUrl(
-        "images",
-        user.profilepic.toString(),
-        60 * 60
-      );
+    const user = await User.findOne({ email: email });
+    const pass = decryptaes(user?.passw) || null;
 
-      const newEditCount = {
-        time: time,
-        deviceinfo: device,
-        type: type,
-        location: loc,
-      };
-      await User.updateOne(
-        { _id: user._id },
-        {
-          $push: { activity: newEditCount },
-          $addToSet: { contacts: contacts },
-          $set: { notificationtoken: token },
-        }
-      );
-      res.status(200).json({
-        message: "Account exists",
-        user,
-        pic,
-        success: true,
-        userexists: true,
+    if (!user) {
+      res.status(203).json({
+        message: "No user found with that email",
+        success: false,
+        userexists: false,
       });
+    } else {
+      if (password === pass.toString()) {
+        let pic = await generatePresignedUrl(
+          "images",
+          user.profilepic.toString(),
+          60 * 60
+        );
+
+        const newEditCount = {
+          time: time,
+          deviceinfo: device,
+          type: type,
+          location: loc,
+        };
+        await User.updateOne(
+          { _id: user._id },
+          {
+            $push: { activity: newEditCount },
+            $addToSet: { contacts: contacts },
+            $set: { notificationtoken: token },
+          }
+        );
+        res.status(200).json({
+          user,
+          pic,
+          success: true,
+          userexists: true,
+        });
+      } else {
+        res.status(201).json({
+          message: "Incorrect password",
+          success: false,
+          userexists: true,
+        });
+      }
     }
   } catch (e) {
     console.log(e);

@@ -1322,9 +1322,10 @@ exports.newfetchfeed = async (req, res) => {
         currentMonth < birthMonth ||
         (currentMonth === birthMonth && currentDay < birthDay)
       ) {
-        age--; // Adjust age if birthday hasn't occurred yet this year
+        age--;
       }
 
+      //ads
       const ad = await Ads.aggregate([
         {
           $match: {
@@ -1380,6 +1381,14 @@ exports.newfetchfeed = async (req, res) => {
         addp.push(dp);
       }
 
+      //ad data
+      const admerge = ads.map((a, i) => ({
+        ad: a,
+        content: content[i],
+        dp: addp[i],
+      }));
+
+      //post
       for (let i = 0; i < post.length; i++) {
         const a = await generatePresignedUrl(
           "images",
@@ -1421,6 +1430,7 @@ exports.newfetchfeed = async (req, res) => {
         current = [];
       }
 
+      //post data
       const dpData = dps;
       const memdpData = memdps;
       const urlData = urls;
@@ -1428,7 +1438,7 @@ exports.newfetchfeed = async (req, res) => {
       const subData = subs;
       const likeData = liked;
 
-      const mergedData = urlData.map((u, i) => ({
+      const postsData = urlData.map((u, i) => ({
         dps: dpData[i],
         memdps: memdpData[i],
         urls: u,
@@ -1437,6 +1447,24 @@ exports.newfetchfeed = async (req, res) => {
         posts: postData[i],
       }));
 
+      //merging ad and post
+      let mergedData = [];
+
+      if (admerge.length > 0) {
+        const firstAdItem = admerge.shift();
+        mergedData.push(firstAdItem);
+      }
+
+      postsData.forEach((postItem, i) => {
+        mergedData.push(postItem);
+
+        if ((i + 1) % 10 === 0 && admerge.length > 0) {
+          const adItem = admerge.shift();
+          mergedData.push(adItem);
+        }
+      });
+
+      console.log(ads);
       res.status(200).json({
         mergedData,
 
