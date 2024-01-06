@@ -5,6 +5,7 @@ const communitySchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     creator: { type: ObjectId, ref: "User", required: true },
+    popularity: { type: Number },
     category: { type: String, required: true },
     dp: { type: String, required: true },
     members: [

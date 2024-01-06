@@ -195,7 +195,6 @@ exports.details = async (req, res) => {
         order.productId.images[0].toString(),
         60 * 60
       );
-
       res.status(200).json({ order, url, success: true });
     }
   } catch (e) {

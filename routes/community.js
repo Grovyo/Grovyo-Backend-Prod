@@ -18,7 +18,7 @@ const {
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-router.post("/createcom/:userId", upload.single("image"), create);
+// router.post("/createcom/:userId", upload.single("image"), create);
 router.post("/joincom/:userId/:comId", joinmember);
 router.post("/unjoin/:userId/:comId", unjoinmember);
 router.get("/getcommunity/:comId/:id", getcommunity);

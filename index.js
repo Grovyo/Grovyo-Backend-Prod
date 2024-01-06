@@ -37,13 +37,18 @@ const testRoutes = require("./routes/test");
 const workRoutes = require("./routes/workspace");
 const adRoutes = require("./routes/Ads");
 const memRoutes = require("./routes/membership");
+// const workspacev1 = require("./routes/WorkspaceV1");
+const Community = require("./models/community");
+const Order = require("./models/orders");
 
 require("dotenv").config();
 
 //middlewares
 app.use(cors());
+app.use(bodyParser.json({ limit: "10mb" }));
+app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
 app.use(morgan("dev"));
-app.use(bodyParser.json());
+// app.use(bodyParser.json());
 app.use(cookieParser());
 app.use("/api", userAuth);
 app.use("/api", chatRoutes);
@@ -66,7 +71,7 @@ app.use("/api", libraryRoutes);
 app.use("/api", testRoutes);
 app.use("/api", workRoutes);
 app.use("/api", adRoutes);
-app.use("/api", memRoutes);
+// app.use("/api/v1", workspacev1);
 
 //connect to DB
 const connectDB = async () => {
@@ -75,11 +80,57 @@ const connectDB = async () => {
     mongoose.connect(process.env.DATABASE).then(() => {
       console.log("DB is connected");
     });
+    // mongoose.connect('mongodb+srv://fsayush100:shreyansh7@cluster0.mrnejwh.mongodb.net/your-database-name?retryWrites=true&w=majority').then(() => {
+    //   console.log("DB is connected");
+    // });
   } catch (err) {
     console.log(err);
   }
 };
 connectDB();
+
+// const add = async () => {
+//   try {
+//     const l = async () => {
+//       const generateRandomData = () => {
+//         const random = Math.ceil(Math.random() * 100 + 1);
+//         return random;
+//       };
+
+//       const find = await Order.find({ _id: "654a0521861e3b687bb924e3" });
+
+//       const resultArray = {
+//         x: Array(find.length).fill().map(generateRandomData),
+//         y1: Array(find.length).fill().map(generateRandomData),
+//         y2: Array(find.length).fill().map(generateRandomData),
+//       };
+
+//       return resultArray;
+//     };
+//     const com = await Order.find({ _id: "654a0521861e3b687bb924e3" });
+//     for (j = 0; j < com.length; j++) {
+//       const orders = com[j];
+//       console.log(orders);
+//       const datafororders = await l();
+//       const statsdata = {
+//         X: datafororders.x,
+//         Y1: datafororders.y1,
+//         Y2: datafororders.y2,
+//       };
+//       // if (orders.stats.length > 0) {
+//       //   orders.stats.pop()
+//       // }
+//       if (orders.stats.length <= 0) {
+//         orders.stats.push(statsdata);
+//       }
+
+//       await orders.save();
+//     }
+//   } catch (err) {
+//     console.error(err);
+//   }
+// };
+// add();
 
 app.post("/addata", async (req, res) => {
   try {

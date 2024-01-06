@@ -35,6 +35,17 @@ const OrderSchema = new mongoose.Schema(
       enum: ["Cash", "UPI", "Card"],
       default: "Cash",
     },
+    stats: [{
+      X: [{ type: Number }], //days(x-axis)
+      Y1: [{ type: Number }],
+      Y2: [{ type: Number }],
+    }],
+    routes: {
+      A: { type: String },
+      B: { type: String },
+      C: { type: String },
+      D: { type: String },
+    },
     discountamount: { type: Number, min: 0 },
     finalprice: { type: Number, min: 0 },
     paymentId: { type: String },

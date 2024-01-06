@@ -458,163 +458,155 @@ exports.checkLastMessage = async (req, res) => {
   }
 };
 
-exports.createc = async (req, res) => {
-  const { title, message, type, price, comid } = req.body;
-  const { userId } = req.params;
-  try {
-    const topic = new Topic({
-      title: title,
-      creator: userId,
-      // community: comId,
-      message: message,
-      type: type,
-      price: price,
-    });
+// exports.createc = async (req, res) => {
+//   const { title, message, type, price, comid } = req.body;
+//   const { userId } = req.params;
+//   try {
+//     const topic = new Topic({
+//       title: title,
+//       creator: userId,
+//       // community: comId,
+//       message: message,
+//       type: type,
+//       price: price,
+//     });
 
-    await topic.save();
+//     await topic.save();
 
-    await Topic.updateOne(
-      { _id: topic._id },
-      { $push: { members: userId }, $inc: { memberscount: 1 } }
-    );
-    // await Community.updateOne(
-    //   { _id: comId },
-    //   {
-    //     $push: { topics: topic._id },
-    //     $inc: { totaltopics: 1 },
-    //   }
-    // );
-    await User.updateOne(
-      { _id: userId },
-      { $push: { topicsjoined: topic._id }, $inc: { totaltopics: 1 } }
-    );
+//     await Topic.updateOne(
+//       { _id: topic._id },
+//       { $push: { members: userId }, $inc: { memberscount: 1 } }
+//     );
+//     // await Community.updateOne(
+//     //   { _id: comId },
+//     //   {
+//     //     $push: { topics: topic._id },
+//     //     $inc: { totaltopics: 1 },
+//     //   }
+//     // );
+//     await User.updateOne(
+//       { _id: userId },
+//       { $push: { topicsjoined: topic._id }, $inc: { totaltopics: 1 } }
+//     );
 
-    if (comid) {
-      await Community.findByIdAndUpdate(
-        { _id: comid },
-        { $push: { topics: topic._id } }
-      );
-    }
-    res.status(200).json({ topic, success: true });
-  } catch (e) {
-    res.status(400).json({ message: e.message, success: false });
-  }
-};
+//     if (comid) {
+//       await Community.findByIdAndUpdate(
+//         { _id: comid },
+//         { $push: { topics: topic._id } }
+//       );
+//     }
+//     res.status(200).json({ topic, success: true });
+//   } catch (e) {
+//     res.status(400).json({ message: e.message, success: false });
+//   }
+// };
 
 // fetchTopic
-exports.fetchtopicc = async (req, res) => {
-  try {
-    const { id, comId } = req.params;
+// exports.fetchtopicc = async (req, res) => {
+//   try {
+//     const { id, comId } = req.params;
 
-    const user = await User.findById(id);
-    const community = await Community.findById(comId).populate("topics");
-    if (!community) {
-      res.json({ message: "Community Not Found" });
-    } else {
-      res.json({ topics: community.topics, success: true });
-    }
-  } catch (err) {
-    res.status(400).json({ message: err.message, success: false });
-    console.log(err);
-  }
-};
+//     const user = await User.findById(id);
+//     const community = await Community.findById(comId).populate("topics");
+//     if (!community) {
+//       res.json({ message: "Community Not Found" });
+//     } else {
+//       res.json({ topics: community.topics, success: true });
+//     }
+//   } catch (err) {
+//     res.status(400).json({ message: err.message, success: false });
+//     console.log(err);
+//   }
+// };
 
 //Delete Topic
-exports.deletetopicc = async (req, res) => {
-  const { topicId, userId } = req.params;
-  const { idtosend } = req.body;
-  const topic = await Topic.findById(topicId);
-  try {
-    if (!topicId) {
-      res.status(400).json({ message: "No topic found", success: false });
-    } else if (topic.creator.toString() != userId) {
-      res
-        .status(400)
-        .json({ message: "Not Authorized - You can't delete others topic" });
-    } else {
-      await Topic.findByIdAndDelete(topicId);
-      if (idtosend) {
-        await Community.findByIdAndUpdate(
-          { _id: idtosend },
-          { $pull: { topics: topicId } }
-        );
-      }
-      res.status(200).json({ success: true });
-    }
-  } catch (e) {
-    res.status(400).json({ message: e.message });
-  }
-};
+// exports.deletetopicc = async (req, res) => {
+//   const { topicId, userId } = req.params;
+//   const { idtosend } = req.body;
+//   const topic = await Topic.findById(topicId);
+//   try {
+//     if (!topicId) {
+//       res.status(400).json({ message: "No topic found", success: false });
+//     } else if (topic.creator.toString() != userId) {
+//       res
+//         .status(400)
+//         .json({ message: "Not Authorized - You can't delete others topic" });
+//     } else {
+//       await Topic.findByIdAndDelete(topicId);
+//       if (idtosend) {
+//         await Community.findByIdAndUpdate(
+//           { _id: idtosend },
+//           { $pull: { topics: topicId } }
+//         );
+//       }
+//       res.status(200).json({ success: true });
+//     }
+//   } catch (e) {
+//     res.status(400).json({ message: e.message });
+//   }
+// };
 
 // edit topic
 // changed
-exports.edittopicc = async (req, res) => {
-  try {
-    const { id, topicid } = req.params;
-    const topic = await Topic.findById(topicid);
-    if (!topic) {
-      res.status(400).json({ message: "No topic found", success: false });
-    } else if (topic.creator.toString() != id) {
-      res
-        .status(400)
-        .json({ message: "Not Authorized - You can't edit others topic" });
-    } else {
-      const updatedTopic = await Topic.findOneAndUpdate(
-        { _id: topicid },
-        req.body,
-        { new: true }
-      );
+// exports.edittopicc = async (req, res) => {
+//   try {
+//     const { id, topicid } = req.params;
+//     const topic = await Topic.findById(topicid);
+//     if (!topic) {
+//       res.status(400).json({ message: "No topic found", success: false });
+//     } else if (topic.creator.toString() != id) {
+//       res
+//         .status(400)
+//         .json({ message: "Not Authorized - You can't edit others topic" });
+//     } else {
+//       const updatedTopic = await Topic.findOneAndUpdate(
+//         { _id: topicid },
+//         req.body,
+//         { new: true }
+//       );
 
-      res.status(200).json({ updatedTopic, success: true });
-    }
-  } catch (err) {
-    res.status(500).json({ message: "Internal Server Error", success: false });
-    console.log(err);
-  }
-};
+//       res.status(200).json({ updatedTopic, success: true });
+//     }
+//   } catch (err) {
+//     res.status(500).json({ message: "Internal Server Error", success: false });
+//     console.log(err);
+//   }
+// };
 
-exports.create = async (req, res) => {
-  const { title, message, type, price, comid } = req.body;
-  const { userId } = req.params;
-  try {
-    const topic = new Topic({
-      title: title,
-      creator: userId,
+//       message: message,
+//       type: type,
+//       price: price,
+//     });
 
-      message: message,
-      type: type,
-      price: price,
-    });
+//     await topic.save();
 
-    await topic.save();
+//     await Topic.updateOne(
+//       { _id: topic._id },
+//       { $push: { members: userId }, $inc: { memberscount: 1 } }
+//     );
+//     // await Community.updateOne(
+//     //   { _id: comId },
+//     //   {
+//     //     $push: { topics: topic._id },
+//     //     $inc: { totaltopics: 1 },
+//     //   }
+//     // );
+//     await User.updateOne(
+//       { _id: userId },
+//       { $push: { topicsjoined: topic._id }, $inc: { totaltopics: 1 } }
+//     );
 
-    await Topic.updateOne(
-      { _id: topic._id },
-      { $push: { members: userId }, $inc: { memberscount: 1 } }
-    );
-    // await Community.updateOne(
-    //   { _id: comId },
-    //   {
-    //     $push: { topics: topic._id },
-    //     $inc: { totaltopics: 1 },
-    //   }
-    // );
-    await User.updateOne(
-      { _id: userId },
-      { $push: { topicsjoined: topic._id }, $inc: { totaltopics: 1 } }
-    );
-
-    if (comid) {
-      await Community.findByIdAndUpdate(
-        { _id: comid },
-        { $push: { topics: topic._id } }
-      );
-    }
-    res.status(200).json({ topic, success: true });
-  } catch (e) {
-    res.status(400).json({ message: e.message, success: false });
-  }
-};
+//     if (comid) {
+//       await Community.findByIdAndUpdate(
+//         { _id: comid },
+//         { $push: { topics: topic._id } }
+//       );
+//     }
+//     res.status(200).json({ topic, success: true });
+//   } catch (e) {
+//     res.status(400).json({ message: e.message, success: false });
+//   }
+// };
 
 // fetchTopic
 exports.fetchtopic = async (req, res) => {

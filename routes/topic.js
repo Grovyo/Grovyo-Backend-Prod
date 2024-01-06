@@ -2,13 +2,10 @@ const express = require("express");
 const router = express.Router();
 
 const {
-  create,
-  fetchtopic,
-  deletetopic,
   getmessages,
   newmessage,
   hiddenmes,
-  edittopic,
+
   initiatetopic,
   jointopic,
   checkLastMessage,
@@ -17,12 +14,6 @@ const {
 } = require("../controllers/topic");
 
 // router.post("/createtopic/:userId/:comId", create);
-router.post("/createtopic/:userId", create);
-
-router.post("/deletetopic/:userId/:topicId", deletetopic);
-
-router.post("/edittopic/:id/:topicid", edittopic);
-
 router.get("/getmessages/:topicId/:userId", getmessages);
 
 router.get("/hiddenmes/:comId/:id", hiddenmes);

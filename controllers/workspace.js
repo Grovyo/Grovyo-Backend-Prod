@@ -69,50 +69,50 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.allcoms = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const Co = await Community.find({ creator: id }).populate(
-      "creator",
-      "fullname"
-    );
-    const dps = [];
-    let avgeng = [];
-    for (let i = 0; i < Co.length; i++) {
-      const a = await generatePresignedUrl(
-        "images",
-        Co[i].dp.toString(),
-        60 * 60
-      );
-      dps.push(a);
-    }
-    const Com = Co.reverse();
-    for (let i = 0; i < Co.length; i++) {
-      const post = await Post.find({ community: Co[0]._id });
+// exports.allcoms = async (req, res) => {
+//   const { id } = req.params;
+//   try {
+//     const Co = await Community.find({ creator: id }).populate(
+//       "creator",
+//       "fullname"
+//     );
+//     const dps = [];
+//     let avgeng = [];
+//     for (let i = 0; i < Co.length; i++) {
+//       const a = await generatePresignedUrl(
+//         "images",
+//         Co[i].dp.toString(),
+//         60 * 60
+//       );
+//       dps.push(a);
+//     }
+//     const Com = Co.reverse();
+//     for (let i = 0; i < Co.length; i++) {
+//       const post = await Post.find({ community: Co[0]._id });
 
-      let totalLikes = 0;
-      let numberOfPosts = post.length;
-      let totalshares = 0;
+//       let totalLikes = 0;
+//       let numberOfPosts = post.length;
+//       let totalshares = 0;
 
-      for (let j = 0; j < post.length; j++) {
-        totalLikes += post[j].likes;
-        totalshares += post[j].sharescount;
-      }
+//       for (let j = 0; j < post.length; j++) {
+//         totalLikes += post[j].likes;
+//         totalshares += post[j].sharescount;
+//       }
 
-      const averageLikes =
-        numberOfPosts > 0 ? (totalLikes / numberOfPosts) * 100 : 0;
-      const averageshares =
-        numberOfPosts > 0 ? (totalshares / numberOfPosts) * 100 : 0;
-      avgeng.push(averageLikes + averageshares);
-    }
+//       const averageLikes =
+//         numberOfPosts > 0 ? (totalLikes / numberOfPosts) * 100 : 0;
+//       const averageshares =
+//         numberOfPosts > 0 ? (totalshares / numberOfPosts) * 100 : 0;
+//       avgeng.push(averageLikes + averageshares);
+//     }
 
-    dps.reverse();
-    avgeng.reverse();
-    res.status(200).json({ Com, avgeng, dps, success: true });
-  } catch (e) {
-    res.status(400).json({ message: e.message, success: false });
-  }
-};
+//     dps.reverse();
+//     avgeng.reverse();
+//     res.status(200).json({ Com, avgeng, dps, success: true });
+//   } catch (e) {
+//     res.status(400).json({ message: e.message, success: false });
+//   }
+// };
 
 exports.getmembers = async (req, res) => {
   const { id, comId } = req.params;
@@ -410,326 +410,312 @@ exports.fetchaworkspaceproducts = async (req, res) => {
   }
 };
 
-//fetch orders
-exports.fetchallorders = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const user = await User.findById(id);
-    if (user) {
-      const orders = await Order.find({ sellerId: user._id });
-      const pendingOrders = orders.filter(
-        (order) => order.currentStatus === "pending"
-      );
-      const completedOrders = orders.filter(
-        (order) => order.currentStatus === "completed"
-      );
-      const cancelled = orders.filter(
-        (order) => order.currentStatus === "cancelled"
-      );
-      const returned = orders.filter(
-        (order) => order.currentStatus === "returned"
-      );
-      const damaged = orders.filter(
-        (order) => order.currentStatus === "damaged"
-      );
-      const allorders = orders.length;
-      const customers = user?.customers?.length;
-      res.status(200).json({
-        pendingOrders,
-        completedOrders,
-        allorders,
-        cancelled,
-        returned,
-        damaged,
-        customers,
-        orders,
-      });
-    } else {
-      res.status(404).json({ message: "User not found", success: false });
-    }
-  } catch (e) {
-    res.status(400).json({ message: e.message, success: false });
-  }
-};
+// //fetch orders
+// exports.fetchallorders = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const user = await User.findById(id);
+//     if (user) {
+//       const orders = await Order.find({ sellerId: user._id });
+//       const pendingOrders = orders.filter(
+//         (order) => order.currentStatus === "pending"
+//       );
+//       const completedOrders = orders.filter(
+//         (order) => order.currentStatus === "completed"
+//       );
+//       const cancelled = orders.filter(
+//         (order) => order.currentStatus === "cancelled"
+//       );
+//       const returned = orders.filter(
+//         (order) => order.currentStatus === "returned"
+//       );
+//       const damaged = orders.filter(
+//         (order) => order.currentStatus === "damaged"
+//       );
+//       const allorders = orders.length;
+//       const customers = user?.customers?.length;
+//       res.status(200).json({
+//         pendingOrders,
+//         completedOrders,
+//         allorders,
+//         cancelled,
+//         returned,
+//         damaged,
+//         customers,
+//         orders,
+//       });
+//     } else {
+//       res.status(404).json({ message: "User not found", success: false });
+//     }
+//   } catch (e) {
+//     res.status(400).json({ message: e.message, success: false });
+//   }
+// };
 
 // ad code
 
 // community delete
-exports.deletecom = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const find = await Community.findByIdAndDelete(id);
-
-    if (!find) {
-      res.status(404).json({ status: "not found" });
-    } else {
-      res.status(200).json({ success: true });
-    }
-  } catch (e) {
-    res.status(500).json({ message: e.message, success: false });
-  }
-};
 
 //update community
-exports.updatecommunity = async (req, res) => {
-  const { comId, userId } = req.params;
-  const { category, title, desc, topicId, message, price, topicname, type } =
-    req.body;
-  const uuidString = uuid();
-  console.log(req.file, req.body, userId, comId);
-  try {
-    const user = await User.findById(userId);
-    const com = await Community.findById(comId);
-    if (!user) {
-      res.status(404).json({ message: "User not found", success: false });
-    } else if (!com) {
-      res.status(404).json({ message: "Community not found", success: false });
-    } else {
-      if (req.file) {
-        const bucketName = "images";
-        const objectName = `${Date.now()}${uuidString}${req.file.originalname}`;
-        a1 = objectName;
-        a2 = req.file.mimetype;
+// exports.updatecommunity = async (req, res) => {
+//   const { comId, userId } = req.params;
+//   const { category, title, desc, topicId, message, price, topicname, type } =
+//     req.body;
+//   const uuidString = uuid();
+//   console.log(req.file, req.body, userId, comId);
+//   try {
+//     const user = await User.findById(userId);
+//     const com = await Community.findById(comId);
+//     if (!user) {
+//       res.status(404).json({ message: "User not found", success: false });
+//     } else if (!com) {
+//       res.status(404).json({ message: "Community not found", success: false });
+//     } else {
+//       if (req.file) {
+//         const bucketName = "images";
+//         const objectName = `${Date.now()}${uuidString}${req.file.originalname}`;
+//         a1 = objectName;
+//         a2 = req.file.mimetype;
 
-        await sharp(req.file.buffer)
-          .jpeg({ quality: 50 })
-          .toBuffer()
-          .then(async (data) => {
-            await minioClient.putObject(bucketName, objectName, data);
-          })
-          .catch((err) => {
-            console.log(err.message, "-error");
-          });
-        await Community.updateOne(
-          { _id: com._id },
-          {
-            $set: {
-              category: category,
-              title: title,
-              desc: desc,
-              dp: objectName,
-            },
-          }
-        );
-      }
-      await Community.updateOne(
-        { _id: com._id },
-        {
-          $set: { category: category, title: title, desc: desc },
-        }
-      );
+//         await sharp(req.file.buffer)
+//           .jpeg({ quality: 50 })
+//           .toBuffer()
+//           .then(async (data) => {
+//             await minioClient.putObject(bucketName, objectName, data);
+//           })
+//           .catch((err) => {
+//             console.log(err.message, "-error");
+//           });
+//         await Community.updateOne(
+//           { _id: com._id },
+//           {
+//             $set: {
+//               category: category,
+//               title: title,
+//               desc: desc,
+//               dp: objectName,
+//             },
+//           }
+//         );
+//       }
+//       await Community.updateOne(
+//         { _id: com._id },
+//         {
+//           $set: { category: category, title: title, desc: desc },
+//         }
+//       );
 
-      if (topicname) {
-        await Topic.updateOne(
-          { _id: topicId },
-          {
-            $set: {
-              title: topicname,
-              message: message,
-              price: price,
-              type: type,
-            },
-          }
-        );
-      }
+//       if (topicname) {
+//         await Topic.updateOne(
+//           { _id: topicId },
+//           {
+//             $set: {
+//               title: topicname,
+//               message: message,
+//               price: price,
+//               type: type,
+//             },
+//           }
+//         );
+//       }
 
-      res.status(200).json({ success: true });
-    }
-  } catch (e) {
-    console.log(e);
-    res.status(400).json({ message: e.message, success: false });
-  }
-};
+//       res.status(200).json({ success: true });
+//     }
+//   } catch (e) {
+//     console.log(e);
+//     res.status(400).json({ message: e.message, success: false });
+//   }
+// };
 
-// add a product
-exports.create = async (req, res) => {
-  const { userId, colid } = req.params;
-  console.log(colid);
-  const {
-    name,
-    brandname,
-    desc,
-    quantity,
-    shippingcost,
-    price,
-    discountedprice,
-    sellername,
-    totalstars,
-    weight,
-    type,
-  } = req.body;
+// // add a product
+// exports.create = async (req, res) => {
+//   const { userId, colid } = req.params;
+//   console.log(colid);
+//   const {
+//     name,
+//     brandname,
+//     desc,
+//     quantity,
+//     shippingcost,
+//     price,
+//     discountedprice,
+//     sellername,
+//     totalstars,
+//     weight,
+//     type,
+//   } = req.body;
 
-  const image1 = req.files[0];
-  const image2 = req.files[1];
-  const image3 = req.files[2];
-  const image4 = req.files[3];
+//   const image1 = req.files[0];
+//   const image2 = req.files[1];
+//   const image3 = req.files[2];
+//   const image4 = req.files[3];
 
-  const user = await User.findById(userId);
-  if (!user) {
-    res.status(400).json({ message: "User not found", success: false });
-  } else {
-    if (!image1 && !image2 && !image3 && !image4) {
-      res.status(400).json({ message: "Must have one image" });
-    } else {
-      try {
-        const uuidString = uuid();
-        let a, b, c, d;
-        if (image1) {
-          const bucketName = "products";
-          const objectName = `${Date.now()}${uuidString}${image1.originalname}`;
-          a = objectName;
-          await minioClient.putObject(
-            bucketName,
-            objectName,
-            image1.buffer,
-            image1.buffer.length
-          );
-        }
-        if (image2) {
-          const bucketName = "products";
-          const objectName = `${Date.now()}${uuidString}${image2.originalname}`;
-          b = objectName;
-          await minioClient.putObject(
-            bucketName,
-            objectName,
-            image2.buffer,
-            image2.buffer.length
-          );
-        }
-        if (image3) {
-          const bucketName = "products";
-          const objectName = `${Date.now()}${uuidString}${image3.originalname}`;
-          c = objectName;
-          await minioClient.putObject(
-            bucketName,
-            objectName,
-            image3.buffer,
-            image3.buffer.length
-          );
-        }
-        if (image4) {
-          const bucketName = "products";
-          const objectName = `${Date.now()}${uuidString}${image4.originalname}`;
-          d = objectName;
-          await minioClient.putObject(
-            bucketName,
-            objectName,
-            image4.buffer,
-            image4.buffer.length
-          );
-        }
-        const p = new Product({
-          name,
-          brandname,
-          desc,
-          creator: userId,
-          quantity,
-          shippingcost,
-          price,
-          discountedprice,
-          sellername,
-          totalstars,
-          images: [a, b, c, d],
-          weight,
-          type,
-        });
-        const data = await p.save();
+//   const user = await User.findById(userId);
+//   if (!user) {
+//     res.status(400).json({ message: "User not found", success: false });
+//   } else {
+//     if (!image1 && !image2 && !image3 && !image4) {
+//       res.status(400).json({ message: "Must have one image" });
+//     } else {
+//       try {
+//         const uuidString = uuid();
+//         let a, b, c, d;
+//         if (image1) {
+//           const bucketName = "products";
+//           const objectName = `${Date.now()}${uuidString}${image1.originalname}`;
+//           a = objectName;
+//           await minioClient.putObject(
+//             bucketName,
+//             objectName,
+//             image1.buffer,
+//             image1.buffer.length
+//           );
+//         }
+//         if (image2) {
+//           const bucketName = "products";
+//           const objectName = `${Date.now()}${uuidString}${image2.originalname}`;
+//           b = objectName;
+//           await minioClient.putObject(
+//             bucketName,
+//             objectName,
+//             image2.buffer,
+//             image2.buffer.length
+//           );
+//         }
+//         if (image3) {
+//           const bucketName = "products";
+//           const objectName = `${Date.now()}${uuidString}${image3.originalname}`;
+//           c = objectName;
+//           await minioClient.putObject(
+//             bucketName,
+//             objectName,
+//             image3.buffer,
+//             image3.buffer.length
+//           );
+//         }
+//         if (image4) {
+//           const bucketName = "products";
+//           const objectName = `${Date.now()}${uuidString}${image4.originalname}`;
+//           d = objectName;
+//           await minioClient.putObject(
+//             bucketName,
+//             objectName,
+//             image4.buffer,
+//             image4.buffer.length
+//           );
+//         }
+//         const p = new Product({
+//           name,
+//           brandname,
+//           desc,
+//           creator: userId,
+//           quantity,
+//           shippingcost,
+//           price,
+//           discountedprice,
+//           sellername,
+//           totalstars,
+//           images: [a, b, c, d],
+//           weight,
+//           type,
+//         });
+//         const data = await p.save();
 
-        const collection = await Collection.findById(colid);
+//         const collection = await Collection.findById(colid);
 
-        if (!collection) {
-          return res
-            .status(404)
-            .json({ message: "Collection not found", success: false });
-        }
+//         if (!collection) {
+//           return res
+//             .status(404)
+//             .json({ message: "Collection not found", success: false });
+//         }
 
-        collection.products.push(data);
-        const actualdata = await collection.save();
+//         collection.products.push(data);
+//         const actualdata = await collection.save();
 
-        res.status(200).json(actualdata);
-      } catch (e) {
-        console.log(e);
-        res.status(500).json({ message: e.message });
-      }
-    }
-  }
-};
+//         res.status(200).json(actualdata);
+//       } catch (e) {
+//         console.log(e);
+//         res.status(500).json({ message: e.message });
+//       }
+//     }
+//   }
+// };
 
 // register store
-exports.registerstore = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const {
-      buildingno,
-      postal,
-      landmark,
-      gst,
-      businesscategory,
-      documenttype,
-      documentfile,
-      state,
-      city,
-    } = req.body;
+// exports.registerstore = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+//     const {
+//       buildingno,
+//       postal,
+//       landmark,
+//       gst,
+//       businesscategory,
+//       documenttype,
+//       documentfile,
+//       state,
+//       city,
+//     } = req.body;
 
-    const findStore = await User.findById(userId);
-    const finaladdress = {
-      buildingno: buildingno,
-      city: city,
-      state: state,
-      postal: postal,
-      landmark: landmark,
-      gst: gst,
-      businesscategory: businesscategory,
-      documenttype: documenttype,
-      documentfile: documentfile,
-    };
+// const findStore = await User.findById(userId);
+// const finaladdress = {
+//   buildingno: buildingno,
+//   city: city,
+//   state: state,
+//   postal: postal,
+//   landmark: landmark,
+//   gst: gst,
+//   businesscategory: businesscategory,
+//   documenttype: documenttype,
+//   documentfile: documentfile,
+// };
 
-    if (findStore) {
-      await User.updateOne(
-        { _id: userId },
-        { $set: { storeAddress: finaladdress } }
-      );
+// if (findStore) {
+//   await User.updateOne(
+//     { _id: userId },
+//     { $set: { storeAddress: finaladdress } }
+//   );
 
-      res.status(200).json({ status: "success" });
-    } else {
-      res.status(404).json({ status: "User Not Found" });
-    }
-  } catch (e) {
-    console.log(e);
-    res.status(400).json({ message: e.message, success: false });
-  }
-};
+//       res.status(200).json({ status: "success" });
+//     } else {
+//       res.status(404).json({ status: "User Not Found" });
+//     }
+//   } catch (e) {
+//     console.log(e);
+//     res.status(400).json({ message: e.message, success: false });
+//   }
+// };
 
 // create collection product
-exports.createCollection = async (req, res) => {
-  try {
-    const { name, category, verfication } = req.body;
-    const { userId } = req.params;
+// exports.createCollection = async (req, res) => {
+//   try {
+//     const { name, category, verfication } = req.body;
+//     const { userId } = req.params;
 
-    const data = {
-      name: name,
-      category: category,
-      verfication: verfication,
-      creator: userId,
-    };
-    const col = await Collection.findById(userId);
+//     const data = {
+//       name: name,
+//       category: category,
+//       verfication: verfication,
+//       creator: userId,
+//     };
+//     const col = await Collection.findById(userId);
 
-    if (!col) {
-      const newCol = new Collection(data);
-      await newCol.save();
-      await User.updateOne(
-        { _id: userId },
-        { $push: { collectionss: newCol._id } }
-      );
-      res.status(200).json({ status: "success" });
-    } else {
-      res.status(201).json({ status: "Collection already exists" });
-    }
-  } catch (e) {
-    console.log(e);
-    res.status(400).json({ message: e.message, success: false });
-  }
-};
+//     if (!col) {
+//       const newCol = new Collection(data);
+//       await newCol.save();
+//       await User.updateOne(
+//         { _id: userId },
+//         { $push: { collectionss: newCol._id } }
+//       );
+//       res.status(200).json({ status: "success" });
+//     } else {
+//       res.status(201).json({ status: "Collection already exists" });
+//     }
+//   } catch (e) {
+//     console.log(e);
+//     res.status(400).json({ message: e.message, success: false });
+//   }
+// };
 
 // exports.fetchProduct = async (req, res) => {
 //   try {
@@ -838,143 +824,143 @@ exports.createCollection = async (req, res) => {
 //   }
 // };
 
-exports.fetchProduct = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const user = await User.findById(userId);
+// exports.fetchProduct = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+//     const user = await User.findById(userId);
 
-    if (user) {
-      const collectionsToSend = [];
+//     if (user) {
+//       const collectionsToSend = [];
 
-      for (const collectionId of user.collectionss) {
-        const find = await Collection.findById(
-          collectionId.toString()
-        ).populate("products");
-        const dps = await Promise.all(
-          find.products.map(async (product) => {
-            const imageUrl = product.images[0].toString();
-            return await generatePresignedUrl("products", imageUrl, 60 * 60);
-          })
-        );
+//       for (const collectionId of user.collectionss) {
+//         const find = await Collection.findById(
+//           collectionId.toString()
+//         ).populate("products");
+//         const dps = await Promise.all(
+//           find.products.map(async (product) => {
+//             const imageUrl = product.images[0].toString();
+//             return await generatePresignedUrl("products", imageUrl, 60 * 60);
+//           })
+//         );
 
-        const productsWithDps = find.products.map((product, index) => {
-          return {
-            ...product.toObject(),
-            dp: dps[index],
-          };
-        });
-        collectionsToSend.push({
-          ...find.toObject(),
-          products: productsWithDps,
-        });
-      }
+//         const productsWithDps = find.products.map((product, index) => {
+//           return {
+//             ...product.toObject(),
+//             dp: dps[index],
+//           };
+//         });
+//         collectionsToSend.push({
+//           ...find.toObject(),
+//           products: productsWithDps,
+//         });
+//       }
 
-      res.json({ collections: collectionsToSend, success: true });
-    } else {
-      res.json({ message: "User Not Found" });
-    }
-  } catch (err) {
-    res.status(404).json({ message: err.message, success: false });
-    console.log(err);
-  }
-};
+//       res.json({ collections: collectionsToSend, success: true });
+//     } else {
+//       res.json({ message: "User Not Found" });
+//     }
+//   } catch (err) {
+//     res.status(404).json({ message: err.message, success: false });
+//     console.log(err);
+//   }
+// };
 
 //delete a product
-exports.deleteproduct = async (req, res) => {
-  const { userId, colid, productId } = req.params;
-  try {
-    const collection = await Collection.findById(colid);
+// exports.deleteproduct = async (req, res) => {
+//   const { userId, colid, productId } = req.params;
+//   try {
+//     const collection = await Collection.findById(colid);
 
-    if (!collection) {
-      return res.status(404).json({ message: "Collection not found" });
-    }
+//     if (!collection) {
+//       return res.status(404).json({ message: "Collection not found" });
+//     }
 
-    if (collection.creator.toString() !== userId) {
-      return res
-        .status(403)
-        .json({ message: "You can't delete products in this collection" });
-    }
+//     if (collection.creator.toString() !== userId) {
+//       return res
+//         .status(403)
+//         .json({ message: "You can't delete products in this collection" });
+//     }
 
-    const product = collection.products.find(
-      (p) => p._id.toString() === productId
-    );
+//     const product = collection.products.find(
+//       (p) => p._id.toString() === productId
+//     );
 
-    if (!product) {
-      return res
-        .status(404)
-        .json({ message: "Product not found in this collection" });
-    }
+//     if (!product) {
+//       return res
+//         .status(404)
+//         .json({ message: "Product not found in this collection" });
+//     }
 
-    await Product.findByIdAndDelete(productId);
+//     await Product.findByIdAndDelete(productId);
 
-    collection.products = collection.products.filter(
-      (p) => p._id.toString() !== productId
-    );
-    await collection.save();
+//     collection.products = collection.products.filter(
+//       (p) => p._id.toString() !== productId
+//     );
+//     await collection.save();
 
-    res.status(200).json({ success: true });
-  } catch (e) {
-    res.status(400).json(e.message);
-  }
-};
+//     res.status(200).json({ success: true });
+//   } catch (e) {
+//     res.status(400).json(e.message);
+//   }
+// };
 
 // update product
-exports.updateproduct = async (req, res) => {
-  try {
-    const { userId, colid, productId } = req.params;
+// exports.updateproduct = async (req, res) => {
+//   try {
+//     const { userId, colid, productId } = req.params;
 
-    const collection = await Collection.findById(colid);
+//     const collection = await Collection.findById(colid);
 
-    if (!collection) {
-      return res.status(404).json({ message: "Collection not found" });
-    }
+//     if (!collection) {
+//       return res.status(404).json({ message: "Collection not found" });
+//     }
 
-    if (collection.creator.toString() !== userId) {
-      return res
-        .status(403)
-        .json({ message: "You can't update products in this collection" });
-    }
+//     if (collection.creator.toString() !== userId) {
+//       return res
+//         .status(403)
+//         .json({ message: "You can't update products in this collection" });
+//     }
 
-    const product = collection.products.find(
-      (p) => p._id.toString() === productId
-    );
+//     const product = collection.products.find(
+//       (p) => p._id.toString() === productId
+//     );
 
-    if (!product) {
-      res.status(404).json({ message: "Product not found", success: false });
-    } else {
-      await Product.updateOne({ _id: productId }, { $set: req.body });
-      res.status(200).json({ success: true });
-    }
-  } catch (e) {
-    res.status(400).json({ message: e.message, success: false });
-  }
-};
+//     if (!product) {
+//       res.status(404).json({ message: "Product not found", success: false });
+//     } else {
+//       await Product.updateOne({ _id: productId }, { $set: req.body });
+//       res.status(200).json({ success: true });
+//     }
+//   } catch (e) {
+//     res.status(400).json({ message: e.message, success: false });
+//   }
+// };
 
-// // delete collection
-exports.collectiondelete = async (req, res) => {
-  try {
-    const { userId, colid } = req.params;
-    const collection = await Collection.findById(colid);
-    const user = await User.findById(userId);
-    if (!collection) {
-      return res.status(404).json({ message: "Collection not found" });
-    } else {
-      console.log(collection._id, user.collectionss);
-      if (collection.creator.toString() !== userId) {
-        return res
-          .status(403)
-          .json({ message: "You can't delete collections of other users" });
-      } else {
-        await Product.deleteMany({ _id: { $in: collection.products } });
-        await User.updateOne(
-          { _id: userId },
-          { $pull: { collectionss: collection._id } }
-        );
-        await collection.deleteOne();
-        res.status(200).json({ success: true });
-      }
-    }
-  } catch (e) {
-    res.status(400).json({ message: e.message, success: false });
-  }
-};
+// delete collection
+// exports.collectiondelete = async (req, res) => {
+//   try {
+//     const { userId, colid } = req.params;
+//     const collection = await Collection.findById(colid);
+//     const user = await User.findById(userId);
+//     if (!collection) {
+//       return res.status(404).json({ message: "Collection not found" });
+//     } else {
+//       console.log(collection._id, user.collectionss);
+//       if (collection.creator.toString() !== userId) {
+//         return res
+//           .status(403)
+//           .json({ message: "You can't delete collections of other users" });
+//       } else {
+//         await Product.deleteMany({ _id: { $in: collection.products } });
+//         await User.updateOne(
+//           { _id: userId },
+//           { $pull: { collectionss: collection._id } }
+//         );
+//         await collection.deleteOne();
+//         res.status(200).json({ success: true });
+//       }
+//     }
+//   } catch (e) {
+//     res.status(400).json({ message: e.message, success: false });
+//   }
+// };
