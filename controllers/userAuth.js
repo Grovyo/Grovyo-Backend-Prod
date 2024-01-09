@@ -18,14 +18,13 @@ const minioClient = new Minio.Client({
   secretKey: "shreyansh379",
 });
 
+let k = [16, 12, 3, 7, 9, 5, 11, 6, 3, 2, 10, 1, 13, 3, 13, 4];
+
 //encryption and decryption
 const encryptaes = (data) => {
   try {
     const textBytes = aesjs.utils.utf8.toBytes(data);
-    const aesCtr = new aesjs.ModeOfOperation.ctr(
-      JSON.parse(process.env.key),
-      new aesjs.Counter(5)
-    );
+    const aesCtr = new aesjs.ModeOfOperation.ctr(k, new aesjs.Counter(5));
     const encryptedBytes = aesCtr.encrypt(textBytes);
     const encryptedHex = aesjs.utils.hex.fromBytes(encryptedBytes);
     return encryptedHex;
@@ -36,18 +35,29 @@ const encryptaes = (data) => {
 
 const decryptaes = (data) => {
   try {
+    if (data === undefined) {
+      throw new Error("Invalid data for decryption");
+    }
+
     let d;
     if (typeof data !== "string") {
       d = JSON.stringify(data);
     } else {
       d = data;
     }
+
     const encryptedBytes = aesjs.utils.hex.toBytes(d);
-    const aesCtr = new aesjs.ModeOfOperation.ctr(
-      JSON.parse(process.env.key),
-      new aesjs.Counter(5)
-    );
+
+    if (encryptedBytes.some(isNaN)) {
+      throw new Error("Invalid data for decryption");
+    }
+
+    const aesCtr = new aesjs.ModeOfOperation.ctr(k, new aesjs.Counter(5));
     const decryptedBytes = aesCtr.decrypt(encryptedBytes);
+
+    if (decryptedBytes.some(isNaN)) {
+      throw new Error("Invalid data after decryption");
+    }
 
     const decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
     return decryptedText;
@@ -457,6 +467,19 @@ exports.createnewaccount = async (req, res) => {
 
   const contactsfinal = JSON.parse(contacts);
 
+  function generateRandomCode() {
+    let code = "";
+    for (let i = 0; i < 6; i++) {
+      const digit = Math.floor(Math.random() * 9) + 1;
+      code += digit.toString();
+    }
+    return code;
+  }
+
+  const randomCode = generateRandomCode();
+  //encrypted secret code
+  const ecrndmcode = encryptaes(randomCode);
+
   const newEditCount = {
     time: time,
     deviceinfo: device,
@@ -709,6 +732,9 @@ exports.createnewaccountemail = async (req, res) => {
     location: loc,
   };
 
+  //encrypting password
+  const encrptedpass = encryptaes(pass);
+
   if (req.file) {
     try {
       const bucketName = "images";
@@ -727,7 +753,7 @@ exports.createnewaccountemail = async (req, res) => {
         fullname: fullname,
         username: username,
         email: email,
-        passw: pass,
+        passw: encrptedpass,
         profilepic: objectName,
         desc: bio,
         interest: individualInterests,
@@ -768,7 +794,7 @@ exports.createnewaccountemail = async (req, res) => {
         fullname: fullname,
         username: username,
         email: email,
-        passw: pass,
+        passw: encrptedpass,
         profilepic: image,
         desc: bio,
         interest: individualInterests,
@@ -813,15 +839,15 @@ exports.checkemail = async (req, res) => {
 
   try {
     const user = await User.findOne({ email: email });
-    const pass = decryptaes(user?.passw) || null;
 
     if (!user) {
       res.status(203).json({
         message: "No user found with that email",
-        success: false,
+        success: true,
         userexists: false,
       });
     } else {
+      const pass = decryptaes(user?.passw) || null;
       if (password === pass.toString()) {
         let pic = await generatePresignedUrl(
           "images",
@@ -2289,5 +2315,54 @@ exports.checkconversationswork = async (req, res) => {
     }
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+//magic code
+exports.magiccode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    const check = await User.findOne({ email: email });
+
+    if (check) {
+      const usercode = decryptaes(check.secretcode.toString());
+
+      if (code === usercode) {
+        res.status(200).json({ success: true });
+      } else {
+        res.status(203).json({ success: false, message: "Invalid code" });
+      }
+    } else {
+      res.status(404).json({ success: false, message: "User not found!" });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//password change
+exports.changepass = async (req, res) => {
+  try {
+    const { email, pass } = req.body;
+    const check = await User.findOne({ email: email });
+    if (check) {
+      const givepass = encryptaes(pass);
+      await User.updateOne(
+        { _id: check._id },
+        { $set: { secretcode: givepass } }
+      );
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ success: false, message: "User not found!" });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
   }
 };

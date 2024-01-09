@@ -1464,7 +1464,6 @@ exports.newfetchfeed = async (req, res) => {
         }
       });
 
-      console.log(ads);
       res.status(200).json({
         mergedData,
 

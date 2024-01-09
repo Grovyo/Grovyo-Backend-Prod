@@ -50,14 +50,65 @@ const communitySchema = new mongoose.Schema(
         //  required: true
       },
     ],
-    stats: {
-      X: [{ type: Number }], //days(x-axis)
-      Y1: [{ type: Number }], //members
-      Y2: [{ type: Number }], //visitors
+    // stats: {
+    //   X: [{ type: String }], //days(x-axis)
+    //   Y1: [{ type: String }], //members
+    //   Y2: [{ type: String }], //visitors
+    // },
+    stats: [
+      {
+        X: { type: String }, //date
+        Y1: { type: Number }, //members
+        Y2: { type: Number }, //vistors
+      },
+    ],
+    demographics: {
+      age: {
+        "18-24": { type: Number, default: 0 },
+        "25-34": { type: Number, default: 0 },
+        "35-44": { type: Number, default: 0 },
+        "45-64": { type: Number, default: 0 },
+        "65+": { type: Number, default: 0 },
+      },
+      gender: {
+        male: { type: Number, default: 0 },
+        female: { type: Number, default: 0 },
+      },
+    },
+    location: {
+      AndhraPradesh: { type: Number, default: 0 },
+      ArunachalPradesh: { type: Number, default: 0 },
+      Assam: { type: Number, default: 0 },
+      Bihar: { type: Number, default: 0 },
+      Chhattisgarh: { type: Number, default: 0 },
+      Goa: { type: Number, default: 0 },
+      Gujarat: { type: Number, default: 0 },
+      Haryana: { type: Number, default: 0 },
+      HimachalPradesh: { type: Number, default: 0 },
+      Jharkhand: { type: Number, default: 0 },
+      Karnataka: { type: Number, default: 0 },
+      Kerala: { type: Number, default: 0 },
+      MadhyaPradesh: { type: Number, default: 0 },
+      Maharashtra: { type: Number, default: 0 },
+      Manipur: { type: Number, default: 0 },
+      Meghalaya: { type: Number, default: 0 },
+      Mizoram: { type: Number, default: 0 },
+      Nagaland: { type: Number, default: 0 },
+      Odisha: { type: Number, default: 0 },
+      Punjab: { type: Number, default: 0 },
+      Rajasthan: { type: Number, default: 0 },
+      Sikkim: { type: Number, default: 0 },
+      TamilNadu: { type: Number, default: 0 },
+      Telangana: { type: Number, default: 0 },
+      Tripura: { type: Number, default: 0 },
+      UttarPradesh: { type: Number, default: 0 },
+      Uttarakhand: { type: Number, default: 0 },
+      WestBengal: { type: Number, default: 0 },
     },
     visitors: { type: Number, default: 0 },
     newmemberscount: { type: Number, default: 0 },
     newmembers: [{ type: ObjectId, ref: "User" }],
+    paidmemberscount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

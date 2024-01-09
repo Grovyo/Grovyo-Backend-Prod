@@ -793,6 +793,11 @@ exports.finalisetopicorder = async (req, res) => {
             $inc: { memberscount: 1 },
           }
         );
+        //updating paid members count
+        await Community.updateOne(
+          { _id: user._id },
+          { $inc: { paidmemberscount: 1 } }
+        );
         //person who brought status update
         await User.updateOne(
           { _id: user._id },

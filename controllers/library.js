@@ -100,9 +100,14 @@ exports.fetchorders = async (req, res) => {
           image.push(a);
         }
       }
+
+      const merge = orders.map((orders, i) => ({
+        orders,
+        image: image[i],
+      }));
       res
         .status(200)
-        .json({ orders, image, address: user.location, success: true });
+        .json({ data: merge, address: user.location, success: true });
     }
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });
@@ -174,14 +179,18 @@ exports.fetchcart = async (req, res) => {
         user.address.pincode +
         ", " +
         user.address.state;
+
+      const cart = user.cart;
+      const imgs = image;
+
+      const merge = cart?.map((c, i) => ({ c, image: imgs[i] }));
       res.status(200).json({
         totalqty: totalqty,
         total: total,
         discountedtotal: discountedTotal,
-        cart: user.cart,
+        data: merge,
         discount: discount,
         address: completeaddress,
-        image,
         success: true,
         ids,
       });

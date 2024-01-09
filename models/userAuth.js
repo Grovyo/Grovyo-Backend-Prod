@@ -122,6 +122,7 @@ const userSchema = new mongoose.Schema(
     notificationtoken: { type: String },
     adid: { type: Number },
     advertiserid: { type: ObjectId, ref: "Advertiser" },
+    secretcode: { type: String },
     sessions: [
       {
         time: { type: String, default: Date.now().toString() },
@@ -180,7 +181,9 @@ const userSchema = new mongoose.Schema(
         id: { type: String },
       },
     ],
-    collectionss: [{ type: mongoose.Schema.Types.ObjectId, ref: "Collectionss" }],
+    collectionss: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "Collectionss" },
+    ],
     address: {
       streetaddress: { type: String },
       state: { type: String },

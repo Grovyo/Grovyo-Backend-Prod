@@ -45,6 +45,8 @@ const {
   hideconvmsg,
   fetchmorehiddenconv,
   unhideconvmsg,
+  magiccode,
+  changepass,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -106,6 +108,8 @@ router.get("/v1/fetchhiddenconv/:id/:convId", fetchhiddenconv);
 router.get("/v1/fetchmorehiddenconv/:id", fetchmorehiddenconv);
 router.post("/v1/hideconvmsg/:id", hideconvmsg);
 router.post("/v1/unhideconvmsg/:id", unhideconvmsg);
+router.post("/v1/magiccode", magiccode);
+router.post("/v1/changepass", changepass);
 
 router.param("userId", userbyId);
 

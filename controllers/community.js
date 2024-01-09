@@ -247,6 +247,82 @@ exports.joinmember = async (req, res) => {
           .status(201)
           .json({ message: "Already Subscriber", success: false, publictopic });
       } else if (community.type === "public") {
+        //members count increase
+        let today = new Date();
+
+        let year = today.getFullYear();
+        let month = String(today.getMonth() + 1).padStart(2, "0");
+        let day = String(today.getDate()).padStart(2, "0");
+
+        let formattedDate = `${day}/${month}/${year}`;
+
+        //visitor count
+        if (
+          community?.stats?.length > 0 &&
+          community.stats[0]?.X === formattedDate
+        ) {
+          await Community.updateOne(
+            { _id: community._id, "stats.X": formattedDate },
+            {
+              $inc: {
+                "stats.$.Y1": 1,
+              },
+            }
+          );
+        } else {
+          let d = {
+            X: formattedDate,
+            Y1: 1,
+          };
+          await Community.updateOne(
+            { _id: community._id },
+            {
+              $push: {
+                stats: d,
+              },
+            }
+          );
+        }
+        let updateQuery = {};
+        //increase demographics and location
+        const dobString = user.DOB;
+
+        const dob = new Date(dobString);
+
+        const currentDate = new Date();
+
+        const age = currentDate.getFullYear() - dob.getFullYear();
+
+        if (
+          currentDate.getMonth() < dob.getMonth() ||
+          (currentDate.getMonth() === dob.getMonth() &&
+            currentDate.getDate() < dob.getDate())
+        ) {
+          age--;
+        }
+
+        if (user.gender === "male") {
+          updateQuery.$inc = { "demographics.gender.male": 1 };
+        } else if (user.gender === "female") {
+          updateQuery.$inc = { "demographics.gender.female": 1 };
+        }
+
+        // Update age range
+        if (age >= 18 && age <= 24) {
+          updateQuery.$inc["demographics.age.18-24"] = 1;
+        } else if (age >= 25 && age <= 34) {
+          updateQuery.$inc["demographics.age.25-34"] = 1;
+        } else if (age >= 35 && age <= 44) {
+          updateQuery.$inc["demographics.age.35-44"] = 1;
+        } else if (age >= 45 && age <= 64) {
+          updateQuery.$inc["demographics.age.45-64"] = 1;
+        } else if (age >= 65) {
+          updateQuery.$inc["demographics.age.65+"] = 1;
+        }
+
+        await Community.updateOne({ _id: community._id }, updateQuery);
+
+        //other updations
         await Community.updateOne(
           { _id: comId },
           { $push: { members: user._id }, $inc: { memberscount: 1 } }
@@ -283,7 +359,8 @@ exports.joinmember = async (req, res) => {
         res.status(200).json({ success: true });
       }
     } catch (e) {
-      res.status(400).json(e.message);
+      console.log(e);
+      res.status(400).json({ message: e.message, success: false });
     }
   }
 };
@@ -496,7 +573,7 @@ exports.udpatecommunity = async (req, res) => {
   }
 };
 
-//new community post feed
+//new community post feed and increasing visitors
 exports.compostfeed = async (req, res) => {
   try {
     const { id, comId } = req.params;
@@ -506,38 +583,53 @@ exports.compostfeed = async (req, res) => {
       .populate("topics", "title type price")
       .populate("creator", "fullname username profilepic isverified");
 
-    let today = Date.now();
+    let today = new Date();
+
+    let year = today.getFullYear();
+    let month = String(today.getMonth() + 1).padStart(2, "0");
+    let day = String(today.getDate()).padStart(2, "0");
+
+    let formattedDate = `${day}/${month}/${year}`;
+    const incrementValue = 1;
 
     if (user && community) {
       //visitor count
-      for (let i = 0; i < community.stats.X.length; i++) {
-        if (community.stats.X[i] === today) {
-          let d = {
-            Y1: parseInt(community.stats.Y1[i]) + 1,
-          };
-          await Community.updateOne(
-            { _id: community._id },
-            {
-              $addToSet: {
-                stats: d,
-              },
-            }
-          );
-        } else {
-          let d = {
-            X: Date.now(),
-            Y1: parseInt(community.stats.Y1[i]) + 1,
-          };
-          await Community.updateOne(
-            { _id: community._id },
-            {
-              $addToSet: {
-                stats: d,
-              },
-            }
-          );
-        }
+      if (
+        community?.stats?.length > 0 &&
+        community.stats[0]?.X === formattedDate
+      ) {
+        await Community.updateOne(
+          { _id: community._id, "stats.X": formattedDate },
+          {
+            $inc: {
+              "stats.$.Y2": 1,
+            },
+          }
+        );
+      } else {
+        let d = {
+          X: formattedDate,
+          Y1: 0,
+          Y2: incrementValue,
+        };
+        await Community.updateOne(
+          { _id: community._id },
+          {
+            $push: {
+              stats: d,
+            },
+          }
+        );
       }
+
+      await Community.updateOne(
+        { _id: community._id },
+        {
+          $inc: {
+            visitors: 1,
+          },
+        }
+      );
 
       //creator data
       const creatordp = await generatePresignedUrl(
