@@ -329,19 +329,15 @@ exports.updateaddress = async (req, res) => {
 exports.subscriptions = async (req, res) => {
   const { userId } = req.params;
   try {
-    const user = await User.findById(userId).populate({
-      path: "subscriptions",
-      populate: {
-        path: "topic",
-        model: "Topic",
-      },
-    });
+    const user = await User.findById(userId).populate("cartproducts", "name");
+
     if (!user) {
       res.status(404).json({ message: "No user found", success: false });
     } else {
-      res.status(200).json({ subs: user.subscriptions, success: true });
+      res.status(200).json({ subs: user, success: true });
     }
   } catch (e) {
+    console.log(e);
     res.status(400).json({ message: e.message, success: false });
   }
 };

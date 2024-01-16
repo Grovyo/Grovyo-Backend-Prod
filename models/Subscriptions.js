@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const { ObjectId } = mongoose.Schema;
 
-const SubscrpitionsSchema = new mongoose.Schema(
+const SubscriptionsSchema = new mongoose.Schema(
   {
     topic: { type: ObjectId, ref: "Topic" },
     community: { type: ObjectId, ref: "Community" },
@@ -32,6 +32,6 @@ const SubscrpitionsSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-SubscrpitionsSchema.index({ title: "text" });
+SubscriptionsSchema.index({ onlineorderid: "text" });
 
-module.exports = mongoose.model("Subscrpitions", SubscrpitionsSchema);
+module.exports = mongoose.model("Subscriptions", SubscriptionsSchema);

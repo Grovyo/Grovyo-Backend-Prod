@@ -47,7 +47,9 @@ router.post("/sub", async (req, res) => {
 
 router.get("/successs1", async (req, res) => {
   try {
-    res.send('<script>window.open("/separate-page", "_blank");</script>');
+    res
+      .status(400)
+      .json('<script>window.open("/separate-page", "_blank");</script>');
   } catch (e) {
     console.log(e);
   }

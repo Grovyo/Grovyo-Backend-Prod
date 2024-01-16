@@ -40,6 +40,7 @@ const memRoutes = require("./routes/membership");
 // const workspacev1 = require("./routes/WorkspaceV1");
 const Community = require("./models/community");
 const Order = require("./models/orders");
+const Deliveryroutes = require("./routes/delivery");
 
 require("dotenv").config();
 
@@ -71,6 +72,7 @@ app.use("/api", libraryRoutes);
 app.use("/api", testRoutes);
 app.use("/api", workRoutes);
 app.use("/api", adRoutes);
+app.use("/api", Deliveryroutes);
 // app.use("/api/v1", workspacev1);
 
 //connect to DB

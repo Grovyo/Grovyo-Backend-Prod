@@ -47,6 +47,7 @@ const {
   unhideconvmsg,
   magiccode,
   changepass,
+  signupmobiledelivery,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -54,7 +55,8 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 router.post("/signup", signup);
-router.post("/signup-mobile", signupmobile);
+router.post("/signup-mobile", signupmobile); //for app
+router.post("/signup-delivery", signupmobiledelivery); // for delivery app
 router.post("/verify", verify);
 router.post("/signout/:id", signout);
 router.get("/getdetails/:id", returnuser);

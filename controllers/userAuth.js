@@ -1,4 +1,5 @@
 const User = require("../models/userAuth");
+const Deluser = require("../models/deluser");
 const jwt = require("jsonwebtoken");
 const sng = require("@sendgrid/mail");
 const { errorHandler } = require("../helpers/dbErrorHandler");
@@ -157,6 +158,52 @@ exports.signupmobile = async (req, res) => {
         location: loc,
       };
       await User.updateOne(
+        { _id: user._id },
+        {
+          $push: { activity: newEditCount },
+          $addToSet: { contacts: contacts },
+          $set: { notificationtoken: token },
+        }
+      );
+      res.status(200).json({
+        message: "user exists signup via mobile success",
+        user,
+        userexists: true,
+        a,
+        success: true,
+      });
+    } else if (!user) {
+      res.status(200).json({
+        message: "signup via mobile success",
+        userexists: false,
+        success: true,
+      });
+    }
+  } catch (e) {
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+//signup for delivery
+exports.signupmobiledelivery = async (req, res) => {
+  const { phone, loc, device, contacts, type, time, token } = req.body;
+
+  try {
+    const user = await Deluser.findOne({ phone: phone });
+
+    if (user) {
+      const a = await generatePresignedUrl(
+        "images",
+        user.profilepic.toString(),
+        60 * 60 * 24
+      );
+      const newEditCount = {
+        time: time,
+        deviceinfo: device,
+        type: type,
+        location: loc,
+      };
+      await Deluser.updateOne(
         { _id: user._id },
         {
           $push: { activity: newEditCount },

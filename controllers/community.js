@@ -229,7 +229,7 @@ exports.joinmember = async (req, res) => {
     let publictopic = [];
     for (let i = 0; i < community.topics.length; i++) {
       const topic = await Topic.findById({ _id: community.topics[i] });
-      if (topic.title === "Posts" || topic.title === "All") {
+      if (topic.type === "free") {
         publictopic.push(topic);
       }
     }
@@ -291,7 +291,7 @@ exports.joinmember = async (req, res) => {
 
         const currentDate = new Date();
 
-        const age = currentDate.getFullYear() - dob.getFullYear();
+        let age = currentDate.getFullYear() - dob.getFullYear();
 
         if (
           currentDate.getMonth() < dob.getMonth() ||
@@ -332,22 +332,32 @@ exports.joinmember = async (req, res) => {
           { $push: { communityjoined: community._id }, $inc: { totalcom: 1 } }
         );
 
-        await Topic.updateOne(
-          { _id: publictopic[0]._id },
-          { $push: { members: user._id }, $inc: { memberscount: 1 } }
+        const topicIds = publictopic.map((topic) => topic._id);
+
+        await Topic.updateMany(
+          { _id: { $in: topicIds } },
+          {
+            $push: { members: user._id, notifications: user._id },
+            $inc: { memberscount: 1 },
+          }
         );
-        await Topic.updateOne(
-          { _id: publictopic[0]._id },
-          { $push: { notifications: user._id } }
-        );
-        await Topic.updateOne(
-          { _id: publictopic[1]._id },
-          { $push: { notifications: user._id } }
-        );
-        await Topic.updateOne(
-          { _id: publictopic[1]._id },
-          { $push: { members: user._id }, $inc: { memberscount: 1 } }
-        );
+
+        // await Topic.updateOne(
+        //   { _id: publictopic[0]._id },
+        //   { $push: { members: user._id }, $inc: { memberscount: 1 } }
+        // );
+        // await Topic.updateOne(
+        //   { _id: publictopic[0]._id },
+        //   { $push: { notifications: user._id } }
+        // );
+        // await Topic.updateOne(
+        //   { _id: publictopic[1]._id },
+        //   { $push: { notifications: user._id } }
+        // );
+        // await Topic.updateOne(
+        //   { _id: publictopic[1]._id },
+        //   { $push: { members: user._id }, $inc: { memberscount: 1 } }
+        // );
 
         await User.updateMany(
           { _id: userId },

@@ -788,6 +788,14 @@ exports.joinedcom = async (req, res) => {
       posts: postData[i],
     }));
 
+    //arrange acc ot latest post first
+    mergedData.sort((a, b) => {
+      const timeA = a?.posts[0]?.createdAt || 0;
+      const timeB = b?.posts[0]?.createdAt || 0;
+
+      return timeB - timeA;
+    });
+
     res.status(200).json({
       mergedData,
       success: true,

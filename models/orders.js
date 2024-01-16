@@ -35,11 +35,13 @@ const OrderSchema = new mongoose.Schema(
       enum: ["Cash", "UPI", "Card"],
       default: "Cash",
     },
-    stats: [{
-      X: [{ type: Number }], //days(x-axis)
-      Y1: [{ type: Number }],
-      Y2: [{ type: Number }],
-    }],
+    stats: [
+      {
+        X: [{ type: Number }], //days(x-axis)
+        Y1: [{ type: Number }],
+        Y2: [{ type: Number }],
+      },
+    ],
     routes: {
       A: { type: String },
       B: { type: String },
@@ -51,6 +53,7 @@ const OrderSchema = new mongoose.Schema(
     paymentId: { type: String },
     topicId: { type: String },
     timing: { type: String },
+    finisheddeliveries: [{ type: ObjectId, ref: "DeliveriesSchema" }], //compeleted deliveries
   },
   { timestamps: true }
 );
