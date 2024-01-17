@@ -301,26 +301,26 @@ exports.joinmember = async (req, res) => {
           age--;
         }
 
-        if (user.gender === "male") {
-          updateQuery.$inc = { "demographics.gender.male": 1 };
-        } else if (user.gender === "female") {
-          updateQuery.$inc = { "demographics.gender.female": 1 };
-        }
+        // if (user.gender === "male") {
+        //   updateQuery.$inc = { "demographics.gender.male": 1 };
+        // } else if (user.gender === "female") {
+        //   updateQuery.$inc = { "demographics.gender.female": 1 };
+        // }
 
-        // Update age range
-        if (age >= 18 && age <= 24) {
-          updateQuery.$inc["demographics.age.18-24"] = 1;
-        } else if (age >= 25 && age <= 34) {
-          updateQuery.$inc["demographics.age.25-34"] = 1;
-        } else if (age >= 35 && age <= 44) {
-          updateQuery.$inc["demographics.age.35-44"] = 1;
-        } else if (age >= 45 && age <= 64) {
-          updateQuery.$inc["demographics.age.45-64"] = 1;
-        } else if (age >= 65) {
-          updateQuery.$inc["demographics.age.65+"] = 1;
-        }
+        // // Update age range
+        // if (age >= 18 && age <= 24) {
+        //   updateQuery.$inc["demographics.age.18-24"] = 1;
+        // } else if (age >= 25 && age <= 34) {
+        //   updateQuery.$inc["demographics.age.25-34"] = 1;
+        // } else if (age >= 35 && age <= 44) {
+        //   updateQuery.$inc["demographics.age.35-44"] = 1;
+        // } else if (age >= 45 && age <= 64) {
+        //   updateQuery.$inc["demographics.age.45-64"] = 1;
+        // } else if (age >= 65) {
+        //   updateQuery.$inc["demographics.age.65+"] = 1;
+        // }
 
-        await Community.updateOne({ _id: community._id }, updateQuery);
+        // await Community.updateOne({ _id: community._id }, updateQuery);
 
         //other updations
         await Community.updateOne(
