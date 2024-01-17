@@ -192,11 +192,18 @@ exports.signupmobiledelivery = async (req, res) => {
     const user = await Deluser.findOne({ phone: phone });
 
     if (user) {
-      const a = await generatePresignedUrl(
-        "images",
-        user.profilepic.toString(),
-        60 * 60 * 24
-      );
+      let dp = [];
+      for (let i = 0; i < user.photos?.length; i++) {
+        if (user?.photos[i].type === "dp") {
+          const d = await generatePresignedUrl(
+            "documents",
+            user.photos[i].content.toString(),
+            60 * 60
+          );
+          dp.push(d);
+        }
+      }
+
       const newEditCount = {
         time: time,
         deviceinfo: device,
@@ -215,7 +222,7 @@ exports.signupmobiledelivery = async (req, res) => {
         message: "user exists signup via mobile success",
         user,
         userexists: true,
-        a,
+        a: dp[0],
         success: true,
       });
     } else if (!user) {
