@@ -98,6 +98,12 @@ exports.createa = async (req, res) => {
           $inc: { totaltopics: 1 },
         }
       );
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $push: { communitycreated: community._id },
+        }
+      );
 
       await Topic.updateOne(
         { _id: topic1._id },
@@ -222,13 +228,13 @@ exports.joinmember = async (req, res) => {
   const { userId, comId } = req.params;
   const user = await User.findById(userId);
   const community = await Community.findById(comId);
-
   if (!community) {
     res.status(400).json({ message: "Community not found" });
   } else {
     let publictopic = [];
     for (let i = 0; i < community.topics.length; i++) {
       const topic = await Topic.findById({ _id: community.topics[i] });
+
       if (topic.type === "free") {
         publictopic.push(topic);
       }
@@ -362,10 +368,17 @@ exports.joinmember = async (req, res) => {
         await User.updateMany(
           { _id: userId },
           {
-            $push: { topicsjoined: [publictopic[0]._id, publictopic[1]._id] },
+            $push: { topicsjoined: topicIds },
             $inc: { totaltopics: 2 },
           }
         );
+        // await User.updateMany(
+        //   { _id: userId },
+        //   {
+        //     $push: { topicsjoined: [publictopic[0]?._id, publictopic[1]?._id] },
+        //     $inc: { totaltopics: 2 },
+        //   }
+        // );
         res.status(200).json({ success: true });
       }
     } catch (e) {

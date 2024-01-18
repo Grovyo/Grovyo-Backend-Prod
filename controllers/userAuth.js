@@ -10,6 +10,8 @@ const sharp = require("sharp");
 const Conversation = require("../models/conversation");
 const Message = require("../models/message");
 const aesjs = require("aes-js");
+const Community = require("../models/community");
+const Topic = require("../models/topic");
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -85,7 +87,7 @@ async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
 
 //signup via email
 exports.signup = async (req, res) => {
-  sng.setApiKey(process.env.SENDGRID_API_KEY);
+  // sng.setApiKey(process.env.SENDGRID_API_KEY);
   const otp = Math.floor(10000 + Math.random() * 90000);
   const { email } = await req.body;
   const newUser = new User({ email, otp });
@@ -574,6 +576,44 @@ exports.createnewaccount = async (req, res) => {
           $set: { notificationtoken: token },
         }
       );
+
+      //joining community by default of Grovyo
+      let comId = "65a66eb9e953a4573e6c8f44";
+      let publictopic = [];
+      const community = await Community.findById(comId);
+      for (let i = 0; i < community.topics.length; i++) {
+        const topic = await Topic.findById({ _id: community.topics[i] });
+
+        if (topic.type === "free") {
+          publictopic.push(topic);
+        }
+      }
+
+      await Community.updateOne(
+        { _id: comId },
+        { $push: { members: user._id }, $inc: { memberscount: 1 } }
+      );
+      await User.updateOne(
+        { _id: user._id },
+        { $push: { communityjoined: community._id }, $inc: { totalcom: 1 } }
+      );
+
+      const topicIds = publictopic.map((topic) => topic._id);
+
+      await Topic.updateMany(
+        { _id: { $in: topicIds } },
+        {
+          $push: { members: user._id, notifications: user._id },
+          $inc: { memberscount: 1 },
+        }
+      );
+      await User.updateMany(
+        { _id: user._id },
+        {
+          $push: { topicsjoined: topicIds },
+          $inc: { totaltopics: 2 },
+        }
+      );
       let pic = await generatePresignedUrl(
         "images",
         user.profilepic.toString(),
@@ -618,6 +658,44 @@ exports.createnewaccount = async (req, res) => {
         "images",
         user.profilepic.toString(),
         60 * 60
+      );
+
+      //joining community by default of Grovyo
+      let comId = "65a66eb9e953a4573e6c8f44";
+      let publictopic = [];
+      const community = await Community.findById(comId);
+      for (let i = 0; i < community.topics.length; i++) {
+        const topic = await Topic.findById({ _id: community.topics[i] });
+
+        if (topic.type === "free") {
+          publictopic.push(topic);
+        }
+      }
+
+      await Community.updateOne(
+        { _id: comId },
+        { $push: { members: user._id }, $inc: { memberscount: 1 } }
+      );
+      await User.updateOne(
+        { _id: user._id },
+        { $push: { communityjoined: community._id }, $inc: { totalcom: 1 } }
+      );
+
+      const topicIds = publictopic.map((topic) => topic._id);
+
+      await Topic.updateMany(
+        { _id: { $in: topicIds } },
+        {
+          $push: { members: user._id, notifications: user._id },
+          $inc: { memberscount: 1 },
+        }
+      );
+      await User.updateMany(
+        { _id: user._id },
+        {
+          $push: { topicsjoined: topicIds },
+          $inc: { totaltopics: 2 },
+        }
       );
 
       res.status(200).json({
@@ -828,7 +906,43 @@ exports.createnewaccountemail = async (req, res) => {
         user.profilepic.toString(),
         60 * 60
       );
+      //joining community by default of Grovyo
+      let comId = "65a66eb9e953a4573e6c8f44";
+      let publictopic = [];
+      const community = await Community.findById(comId);
+      for (let i = 0; i < community.topics.length; i++) {
+        const topic = await Topic.findById({ _id: community.topics[i] });
 
+        if (topic.type === "free") {
+          publictopic.push(topic);
+        }
+      }
+
+      await Community.updateOne(
+        { _id: comId },
+        { $push: { members: user._id }, $inc: { memberscount: 1 } }
+      );
+      await User.updateOne(
+        { _id: user._id },
+        { $push: { communityjoined: community._id }, $inc: { totalcom: 1 } }
+      );
+
+      const topicIds = publictopic.map((topic) => topic._id);
+
+      await Topic.updateMany(
+        { _id: { $in: topicIds } },
+        {
+          $push: { members: user._id, notifications: user._id },
+          $inc: { memberscount: 1 },
+        }
+      );
+      await User.updateMany(
+        { _id: user._id },
+        {
+          $push: { topicsjoined: topicIds },
+          $inc: { totaltopics: 2 },
+        }
+      );
       res.status(200).json({
         message: "Account created successfully",
         user,
@@ -868,6 +982,43 @@ exports.createnewaccountemail = async (req, res) => {
         "images",
         user.profilepic.toString(),
         60 * 60
+      );
+      //joining community by default of Grovyo
+      let comId = "65a66eb9e953a4573e6c8f44";
+      let publictopic = [];
+      const community = await Community.findById(comId);
+      for (let i = 0; i < community.topics.length; i++) {
+        const topic = await Topic.findById({ _id: community.topics[i] });
+
+        if (topic.type === "free") {
+          publictopic.push(topic);
+        }
+      }
+
+      await Community.updateOne(
+        { _id: comId },
+        { $push: { members: user._id }, $inc: { memberscount: 1 } }
+      );
+      await User.updateOne(
+        { _id: user._id },
+        { $push: { communityjoined: community._id }, $inc: { totalcom: 1 } }
+      );
+
+      const topicIds = publictopic.map((topic) => topic._id);
+
+      await Topic.updateMany(
+        { _id: { $in: topicIds } },
+        {
+          $push: { members: user._id, notifications: user._id },
+          $inc: { memberscount: 1 },
+        }
+      );
+      await User.updateMany(
+        { _id: user._id },
+        {
+          $push: { topicsjoined: topicIds },
+          $inc: { totaltopics: 2 },
+        }
       );
 
       res.status(200).json({

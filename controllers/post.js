@@ -798,6 +798,7 @@ exports.joinedcom = async (req, res) => {
 
     res.status(200).json({
       mergedData,
+      communitycreated: user?.communitycreated?.length,
       success: true,
     });
   } catch (e) {
