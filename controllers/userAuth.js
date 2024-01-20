@@ -2133,7 +2133,11 @@ exports.fetchconvs = async (req, res) => {
     }
 
     messages = messages.reverse();
-
+    const msgids = messages.map((message) => message.mesId);
+    await Message.updateMany(
+      { mesId: { $in: msgids } },
+      { $addToSet: { readby: user._id } }
+    );
     res.status(200).json({ messages, success: true });
   } catch (e) {
     console.error(e);
@@ -2563,6 +2567,29 @@ exports.changepass = async (req, res) => {
       res.status(200).json({ success: true });
     } else {
       res.status(404).json({ success: false, message: "User not found!" });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//reading bulk conv msgs
+exports.readconvs = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { msgids } = req.body;
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ success: false });
+    } else {
+      await Message.updateMany(
+        { mesId: { $in: msgids } },
+        { $addToSet: { readby: user._id } }
+      );
+      res.status(200).json({ success: true });
     }
   } catch (e) {
     console.log(e);

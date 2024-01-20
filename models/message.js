@@ -54,6 +54,7 @@ const messageSchema = new mongoose.Schema(
     sequence: { type: Number },
     timestamp: { type: String },
     isread: { type: Boolean, default: false },
+    readby: [{ type: ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );

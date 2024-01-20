@@ -48,6 +48,7 @@ const {
   magiccode,
   changepass,
   signupmobiledelivery,
+  readconvs,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -112,6 +113,7 @@ router.post("/v1/hideconvmsg/:id", hideconvmsg);
 router.post("/v1/unhideconvmsg/:id", unhideconvmsg);
 router.post("/v1/magiccode", magiccode);
 router.post("/v1/changepass", changepass);
+router.post("/v1/readconvs/:id", readconvs);
 
 router.param("userId", userbyId);
 
