@@ -2093,18 +2093,34 @@ exports.addbank = async (req, res) => {
 //fetch convs
 exports.fetchconvs = async (req, res) => {
   try {
-    const { id, convId } = req.params;
+    const { id, convId, otherid } = req.params;
     const user = await User.findById(id);
-
-    if (!user) {
+    const otherperson = await User.findById(otherid);
+    if (!user || !otherperson) {
       return res
         .status(404)
         .json({ message: "User not found", success: false });
     }
+    //blocking/unblocking status
+    //am i blocked
+    let isblocked = false;
+    otherperson.blockedpeople.forEach((p) => {
+      if (p?.id?.toString() === user._id.toString()) {
+        isblocked = true;
+      }
+    });
+
+    //can i block
+    let canblock = false;
+    user.blockedpeople.forEach((p) => {
+      if (p?.id?.toString() === otherperson._id.toString()) {
+        canblock = true;
+      }
+    });
 
     const msg = await Message.find({
       conversationId: convId,
-      status: "active",
+      // status: "active",
       deletedfor: { $nin: [user._id.toString()] },
       hidden: { $nin: [user._id.toString()] },
     })
@@ -2118,7 +2134,8 @@ exports.fetchconvs = async (req, res) => {
       if (
         msg[i].typ === "image" ||
         msg[i].typ === "video" ||
-        msg[i].typ === "doc"
+        msg[i].typ === "doc" ||
+        msg[i].typ === "glimpse"
       ) {
         const url = await generatePresignedUrl(
           "messages",
@@ -2138,7 +2155,11 @@ exports.fetchconvs = async (req, res) => {
       { mesId: { $in: msgids } },
       { $addToSet: { readby: user._id } }
     );
-    res.status(200).json({ messages, success: true });
+    if (isblocked) {
+      res.status(200).json({ canblock, isblocked, success: true });
+    } else {
+      res.status(200).json({ canblock, isblocked, messages, success: true });
+    }
   } catch (e) {
     console.error(e);
     res
@@ -2333,7 +2354,8 @@ exports.fetchhiddenconv = async (req, res) => {
         if (
           msg[i].typ === "image" ||
           msg[i].typ === "video" ||
-          msg[i].typ === "doc"
+          msg[i].typ === "doc" ||
+          msg[i].typ === "glimpse"
         ) {
           const url = await generatePresignedUrl(
             "messages",
@@ -2590,6 +2612,99 @@ exports.readconvs = async (req, res) => {
         { $addToSet: { readby: user._id } }
       );
       res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//for muting and unmuting
+exports.muting = async (req, res) => {
+  try {
+    const { id, convId } = req.body;
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ success: false, message: "User not found!" });
+    } else {
+      const exists = user.muted.includes(convId);
+
+      if (exists) {
+        await User.updateOne({ _id: user._id }, { $pull: { muted: convId } });
+      } else {
+        await User.updateOne(
+          { _id: user._id },
+          { $addToSet: { muted: convId } }
+        );
+      }
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//checking for if passcode exists
+exports.passexist = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      if (user.passcode) {
+        res.status(200).json({ success: true, exists: true });
+      } else {
+        res.status(200).json({ success: true, exists: false });
+      }
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//entering for new passcode
+exports.newpasscode = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { pass } = req.body;
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      await User.updateOne({ _id: user._id }, { $set: { passcode: pass } });
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//checking if passcode is correc
+exports.ispasscorrect = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { pass } = req.body;
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      if (user.passcode === pass) {
+        res.status(200).json({ success: true, correct: true });
+      } else {
+        res.status(200).json({ success: true, correct: false });
+      }
     }
   } catch (e) {
     console.log(e);

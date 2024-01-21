@@ -732,7 +732,7 @@ exports.fetchallchatsnew = async (req, res) => {
         );
         const msg = await Message.find({
           conversationId: convs?._id,
-          status: "active",
+          //status: "active",
           hidden: { $nin: [user._id.toString()] },
           deletedfor: { $nin: [user._id] },
         })
@@ -746,6 +746,35 @@ exports.fetchallchatsnew = async (req, res) => {
               convs?.members[j]?.profilepic?.toString(),
               60 * 60
             );
+            //checking the blocking
+            let isblocked = false;
+            let other = await User.findById(convs.members[j]._id?.toString());
+            if (other) {
+              other.blockedpeople.forEach((p) => {
+                if (p?.id?.toString() === id) {
+                  isblocked = true;
+                }
+              });
+            }
+            //counting unread msgs
+            let unread = 0;
+            const msgcount = await Message.find({
+              conversationId: convs?._id,
+              status: "active",
+              deletedfor: { $nin: [user._id.toString()] },
+              hidden: { $nin: [user._id.toString()] },
+            })
+              .limit(20)
+              .sort({ createdAt: -1 });
+            for (let k = 0; k < msgcount.length; k++) {
+              if (
+                !msgcount[k].readby.includes(id) &&
+                msgcount[k].sender?.toString() !== id
+              ) {
+                unread++;
+              }
+            }
+
             let result = {
               convid: convs?._id,
               id: convs?.members[j]?._id,
@@ -753,7 +782,9 @@ exports.fetchallchatsnew = async (req, res) => {
               username: convs?.members[j]?.username,
               isverified: convs?.members[j]?.isverified,
               pic: pi,
-              msgs: msg,
+              msgs: isblocked ? [] : msg,
+              ismuted: user.muted?.includes(convs._id),
+              unread,
             };
 
             conv.push(result);

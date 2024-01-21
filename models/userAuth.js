@@ -184,6 +184,7 @@ const userSchema = new mongoose.Schema(
     collectionss: [
       { type: mongoose.Schema.Types.ObjectId, ref: "Collectionss" },
     ],
+    muted: [{ type: ObjectId, ref: "Conversation" }],
     address: {
       streetaddress: { type: String },
       state: { type: String },
@@ -237,6 +238,7 @@ const userSchema = new mongoose.Schema(
         gstamount: { type: Number },
       },
     },
+    passcode: { type: String },
   },
   { timestamps: true }
 );

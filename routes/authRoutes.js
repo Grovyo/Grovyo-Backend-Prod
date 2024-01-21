@@ -49,6 +49,10 @@ const {
   changepass,
   signupmobiledelivery,
   readconvs,
+  muting,
+  passexist,
+  newpasscode,
+  ispasscorrect,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -103,7 +107,7 @@ router.post(
 );
 router.post("/updatenotification/:userId", updatenotification);
 router.post("/addbank/:id", addbank);
-router.get("/v1/fetchconvs/:id/:convId", fetchconvs);
+router.get("/v1/fetchconvs/:id/:convId/:otherid", fetchconvs);
 router.post("/v1/sendchatfile", upload.any(), sendchatfile);
 router.post("/v1/loadmorechatmsgs/:id", loadmorechatmsgs);
 router.post("/v1/deletemessages/:id", deletemessages);
@@ -114,6 +118,12 @@ router.post("/v1/unhideconvmsg/:id", unhideconvmsg);
 router.post("/v1/magiccode", magiccode);
 router.post("/v1/changepass", changepass);
 router.post("/v1/readconvs/:id", readconvs);
+router.post("/v1/mute", muting); //for muting and unmusting chats
+
+//passcode for hide chats check
+router.get("/v1/passexist/:id", passexist);
+router.post("/v1/newpasscode/:id", newpasscode);
+router.post("/v1/ispasscorrect/:id", ispasscorrect);
 
 router.param("userId", userbyId);
 
