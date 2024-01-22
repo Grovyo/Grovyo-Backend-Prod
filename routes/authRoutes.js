@@ -53,7 +53,7 @@ const {
   passexist,
   newpasscode,
   ispasscorrect,
-  updatenotificationdelivery,
+  updatenotificationdel,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -121,7 +121,7 @@ router.post("/v1/changepass", changepass);
 router.post("/v1/readconvs/:id", readconvs);
 router.post("/v1/mute", muting); //for muting and unmusting chats
 
-router.post("/updatenotificationdelivery/:userId", updatenotificationdelivery); //for delivery
+router.post("/updatenotificationdelivery/:id", updatenotificationdel); //for delivery
 
 //passcode for hide chats check
 router.get("/v1/passexist/:id", passexist);

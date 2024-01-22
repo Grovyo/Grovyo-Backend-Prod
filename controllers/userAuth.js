@@ -2715,11 +2715,11 @@ exports.ispasscorrect = async (req, res) => {
 };
 
 //update notification token for delivery
-exports.updatenotificationdelivery = async (req, res) => {
+exports.updatenotificationdel = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { id } = req.params;
     const { token } = req.body;
-    const user = await Deluser.findById(userId);
+    const user = await Deluser.findById(id);
     if (user) {
       await Deluser.updateOne(
         { _id: user._id },
