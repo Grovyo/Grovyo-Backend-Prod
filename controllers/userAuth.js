@@ -2713,3 +2713,25 @@ exports.ispasscorrect = async (req, res) => {
       .json({ message: "Something went wrong...", success: false });
   }
 };
+
+//update notification token for delivery
+exports.updatenotificationdelivery = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { token } = req.body;
+    const user = await Deluser.findById(userId);
+    if (user) {
+      await Deluser.updateOne(
+        { _id: user._id },
+        {
+          $set: { notificationtoken: token },
+        }
+      );
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ message: "User not found", success: false });
+    }
+  } catch (e) {
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
