@@ -919,8 +919,12 @@ exports.deletepost = async (req, res) => {
   } else if (post.sender.toString() !== userId) {
     res.status(400).json({ message: "You can't delete others post" });
   } else {
-    await minioClient.removeObject("posts", post.post[1]);
+    await Community.updateOne(
+      { _id: post.community },
+      { $inc: { totalposts: -1 }, $pull: { posts: post?._id } }
+    );
     await Post.findByIdAndDelete(postId);
+
     res.status(200).json({ success: true });
   }
 };
@@ -1203,6 +1207,16 @@ exports.newfetchfeed = async (req, res) => {
     const urls = [];
     const content = [];
     const addp = [];
+
+    //checking and removing posts with no communities
+    const p = await Post.find();
+
+    for (let i = 0; i < p.length; i++) {
+      const com = await Community.findById(p[i].community);
+      if (!com) {
+        p[i].remove();
+      }
+    }
     //fetching post
     const post = await Post.aggregate([
       { $match: { tags: { $in: user.interest } } },
@@ -1301,7 +1315,7 @@ exports.newfetchfeed = async (req, res) => {
     for (let k = 0; k < post.length; k++) {
       const coms = await Community.findById(post[k].community);
 
-      if (coms?.members?.includes(user?._id)) {
+      if (coms?.members?.includes(user._id)) {
         subs.push("subscribed");
       } else {
         subs.push("unsubscribed");
@@ -1480,6 +1494,92 @@ exports.newfetchfeed = async (req, res) => {
       });
     }
   } catch (err) {
+    console.log(err);
     res.status(500).json({ message: err, success: false });
+  }
+};
+
+//delete null posts
+exports.delenu = async (req, res) => {
+  try {
+    const post = await Post.find();
+
+    for (let i = 0; i < post.length; i++) {
+      const com = await Community.findById(post[i].community);
+      if (!com) {
+        post[i].remove();
+      }
+    }
+    res.status(200).send({ success: true });
+  } catch (err) {
+    console.log(ee);
+  }
+};
+
+//create a poll for community post section
+exports.createpollcom = async (req, res) => {
+  try {
+    const { id, comId } = req.params;
+    const { options, title, tag, desc } = req.body;
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      let pos = [];
+      if (req.files?.length > 0) {
+        for (let i = 0; i < req?.files?.length; i++) {
+          const uuidString = uuid();
+          const bucketName = "posts";
+          const objectName = `${Date.now()}_${uuidString}_${
+            req.files[i].originalname
+          }`;
+
+          if (req.files[i].fieldname === "video") {
+            await minioClient.putObject(
+              bucketName,
+              objectName,
+              req.files[i].buffer
+              // req.files[i].size,
+              // req.files[i].mimetype
+            );
+
+            pos.push({ content: objectName, type: req.files[i].mimetype });
+          } else {
+            await sharp(req.files[i].buffer)
+              .jpeg({ quality: 50 })
+              .toBuffer()
+              .then(async (data) => {
+                await minioClient.putObject(bucketName, objectName, data);
+              })
+              .catch((err) => {
+                console.log(err.message, "-error");
+              });
+
+            pos.push({ content: objectName, type: req.files[i].mimetype });
+          }
+        }
+      }
+      const poll = new Post({
+        title,
+        desc,
+        options: options,
+        community: comId,
+        sender: user._id,
+        post: pos,
+        tags: tag,
+        kind: "poll",
+      });
+
+      const savedpost = await poll.save();
+      await Community.updateOne(
+        { _id: comId },
+        { $push: { posts: savedpost._id }, $inc: { totalposts: 1 } }
+      );
+
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
   }
 };

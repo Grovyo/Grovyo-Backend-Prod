@@ -17,6 +17,7 @@ const PostSchema = new mongoose.Schema(
     sender: { type: ObjectId, ref: "User" },
     isverified: { type: Boolean, default: false },
     commpic: { type: ObjectId, ref: "Community" },
+    kind: { type: String, default: "post" },
     post: [
       {
         content: { type: String },
@@ -25,6 +26,15 @@ const PostSchema = new mongoose.Schema(
         thumbnail: { type: String },
       },
     ],
+    options: [
+      {
+        title: String,
+        strength: { type: Number, default: 0 },
+        votedby: [{ type: ObjectId, ref: "User" }],
+      },
+    ],
+    votedby: [{ type: ObjectId, ref: "User" }],
+    totalvotes: { type: Number, default: 0 },
     contenttype: { type: [String] },
     user: { type: String },
     date: { type: Date, default: Date.now() },

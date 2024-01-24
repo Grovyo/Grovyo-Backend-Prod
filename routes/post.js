@@ -17,7 +17,10 @@ const {
   fetchmore,
   postanything,
   newfetchfeed,
+  delenu,
+  createpollcom,
 } = require("../controllers/post");
+const { votenowpoll } = require("../controllers/community");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -36,5 +39,14 @@ router.post("/likepost/:userId/:postId", likepost);
 router.post("/dislikepost/:userId/:postId", dislikepost);
 router.post("/test123", upload.single("video"), test);
 router.post("/updatesettings/:id", updatesettings);
+
+router.post("/createpollcom/:id/:comId", upload.any(), createpollcom);
+
+router.post("/votenowpoll/:id/:postId/:opId", votenowpoll);
+
 router.delete("/deletepost/:userId/:postId", deletepost);
+
+//delete null posts
+router.post("/deletnull", delenu);
+
 module.exports = router;

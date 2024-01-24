@@ -730,6 +730,10 @@ exports.fetchallchatsnew = async (req, res) => {
           "members",
           "fullname username profilepic isverified blockedpeople"
         );
+        //if convs is null then remove it
+        if (convs?._id === null || !convs?._id) {
+          convs.remove();
+        }
         const msg = await Message.find({
           conversationId: convs?._id,
           //status: "active",

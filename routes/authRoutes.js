@@ -54,6 +54,7 @@ const {
   newpasscode,
   ispasscorrect,
   updatenotificationdel,
+  deletemessagestopic,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -111,7 +112,8 @@ router.post("/addbank/:id", addbank);
 router.get("/v1/fetchconvs/:id/:convId/:otherid", fetchconvs);
 router.post("/v1/sendchatfile", upload.any(), sendchatfile);
 router.post("/v1/loadmorechatmsgs/:id", loadmorechatmsgs);
-router.post("/v1/deletemessages/:id", deletemessages);
+router.post("/v1/deletemessages/:id", deletemessages); //for conv messages
+router.post("/v1/deletemessagestopic/:id", deletemessagestopic); //for topic messages
 router.get("/v1/fetchhiddenconv/:id/:convId", fetchhiddenconv);
 router.get("/v1/fetchmorehiddenconv/:id", fetchmorehiddenconv);
 router.post("/v1/hideconvmsg/:id", hideconvmsg);

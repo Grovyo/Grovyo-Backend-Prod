@@ -832,3 +832,20 @@ exports.finalisetopicorder = async (req, res) => {
     res.status(400).json({ success: false });
   }
 };
+
+//delete topics without communities
+exports.delenutopic = async (req, res) => {
+  try {
+    const t = await Topic.find();
+
+    for (let i = 0; i < t.length; i++) {
+      const com = await Community.findById(t[i].community);
+      if (!com) {
+        t[i].remove();
+      }
+    }
+    res.status(200).send({ success: true });
+  } catch (err) {
+    console.log(ee);
+  }
+};

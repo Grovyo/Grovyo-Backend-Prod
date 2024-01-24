@@ -328,10 +328,15 @@ exports.joinmember = async (req, res) => {
 
         // await Community.updateOne({ _id: community._id }, updateQuery);
 
+        let notif = { id: user._id, muted: false };
+
         //other updations
         await Community.updateOne(
           { _id: comId },
-          { $push: { members: user._id }, $inc: { memberscount: 1 } }
+          {
+            $push: { members: user._id, notifications: notif },
+            $inc: { memberscount: 1 },
+          }
         );
         await User.updateOne(
           { _id: userId },
@@ -343,7 +348,7 @@ exports.joinmember = async (req, res) => {
         await Topic.updateMany(
           { _id: { $in: topicIds } },
           {
-            $push: { members: user._id, notifications: user._id },
+            $push: { members: user._id, notifications: notif },
             $inc: { memberscount: 1 },
           }
         );
@@ -422,30 +427,31 @@ exports.unjoinmember = async (req, res) => {
         { $pull: { communityjoined: community._id }, $inc: { totalcom: -1 } }
       );
 
-      await Topic.updateOne(
-        { _id: publictopic[0]._id },
-        { $pull: { members: user._id }, $inc: { memberscount: -1 } }
-      );
-      await Topic.updateOne(
-        { _id: publictopic[0]._id },
-        { $pull: { notifications: user._id } }
-      );
-      await Topic.updateOne(
-        { _id: publictopic[1]._id },
-        { $pull: { notifications: user._id } }
-      );
-      await Topic.updateOne(
-        { _id: publictopic[1]._id },
-        { $pull: { members: user._id }, $inc: { memberscount: -1 } }
+      await Community.updateOne(
+        { _id: comId },
+        { $pull: { notifications: { id: user._id } } }
       );
 
-      await User.updateMany(
-        { _id: userId },
-        {
-          $pull: { topicsjoined: [publictopic[0]._id, publictopic[1]._id] },
-          $inc: { totaltopics: -2 },
+      for (let i = 0; i < community.topics?.length; i++) {
+        const topic = await Topic.findById(community.topics[i]);
+        if (topic) {
+          await Topic.updateOne(
+            { _id: topic._id },
+            {
+              $pull: { members: user._id, notifications: { id: user._id } },
+              $inc: { memberscount: -1 },
+            }
+          );
         }
-      );
+        await User.updateMany(
+          { _id: userId },
+          {
+            $pull: { topicsjoined: topic._id },
+            $inc: { totaltopics: -1 },
+          }
+        );
+      }
+
       res.status(200).json({ success: true });
     }
   } catch (e) {
@@ -615,6 +621,14 @@ exports.compostfeed = async (req, res) => {
     let formattedDate = `${day}/${month}/${year}`;
     const incrementValue = 1;
 
+    //muted and unmuted topics
+    let muted = null;
+    if (community?.notifications?.length > 0) {
+      muted = community?.notifications?.filter((f, i) => {
+        return f.id?.toString() === user._id.toString();
+      });
+    }
+
     if (user && community) {
       //visitor count
       if (
@@ -764,6 +778,23 @@ exports.compostfeed = async (req, res) => {
         dps.push(a);
       }
 
+      let canvote = [];
+      posts?.some((p) => {
+        p?.votedby?.some((o) => {
+          canvote.push(o?.toString() === user._id.toString());
+        });
+      });
+
+      let votes = [];
+      posts?.some((p) => {
+        let v = [];
+        p?.options?.some((o) => {
+          let percentage = (o?.strength / p?.totalvotes) * 100;
+          v.push(percentage);
+        });
+        votes.push(v);
+      });
+
       //mergeing all the data
       const urlData = urls;
       const postData = posts;
@@ -779,9 +810,12 @@ exports.compostfeed = async (req, res) => {
         posts: postData[i],
         totalcomments: commentscount[i],
         comments: commentdata[i],
+        canvote: canvote[i],
+        votes: votes[i],
       }));
 
       res.status(200).json({
+        muted,
         mergedData,
         index,
         dp,
@@ -811,12 +845,24 @@ exports.gettopicmessages = async (req, res) => {
     const topic = await Topic.findById(topicId);
     const community = await Community.find({ topics: { $in: [topic._id] } });
     if (community && topic && user) {
-      const msg = await Message.find({ topicId: topicId })
+      const msg = await Message.find({
+        topicId: topicId,
+        // status: "active",
+        deletedfor: { $nin: [user._id.toString()] },
+      })
         .limit(20)
         .sort({ createdAt: -1 })
         .populate("sender", "profilepic fullname isverified");
 
       const messages = msg.reverse();
+
+      //muted and unmuted topics
+      let muted = null;
+      if (topic?.notifications?.length > 0) {
+        muted = topic?.notifications?.filter((f, i) => {
+          return f.id?.toString() === user._id.toString();
+        });
+      }
 
       if (!community[0].members.includes(user._id)) {
         res.status(203).json({
@@ -830,6 +876,7 @@ exports.gettopicmessages = async (req, res) => {
           topic.members.some((memberId) => memberId.equals(user?._id))
         ) {
           res.status(200).json({
+            muted,
             messages,
             success: true,
             topicjoined: true,
@@ -846,13 +893,8 @@ exports.gettopicmessages = async (req, res) => {
             topic?.type === "paid" &&
             topic.purchased.some((memberId) => memberId.id.equals(user?._id))
           ) {
-            console.log(
-              topic?.type === "paid" &&
-                topic.purchased.some((memberId) =>
-                  memberId.id.equals(user?._id)
-                )
-            );
             res.status(200).json({
+              muted,
               messages,
               success: true,
               topicjoined: true,
@@ -893,6 +935,7 @@ exports.loadmoremessages = async (req, res) => {
       const messages = await Message.find({
         topicId: topicId,
         sequence: { $gte: lt, $lte: gt },
+        deletedfor: { $nin: [user._id.toString()] },
       })
         .limit(20)
         .sort({ sequence: 1 })
@@ -1158,17 +1201,35 @@ exports.getallmembers = async (req, res) => {
     if (!user) {
       res.status(404).json({ message: "User not found", success: false });
     } else {
-      const community = await Community.findById(comId).populate({
-        path: "members",
-        select: "fullname pic isverified username profilepic",
-        options: { limit: 150 },
-      });
+      const community = await Community.findById(comId)
+        .populate({
+          path: "members",
+          select: "fullname pic isverified username profilepic",
+          options: { limit: 150 },
+        })
+        .populate({
+          path: "admins",
+          select: "fullname pic isverified username profilepic",
+        })
+        .populate({
+          path: "blocked",
+          select: "fullname pic isverified username profilepic",
+        });
       if (!community) {
         res
           .status(404)
           .json({ message: "Community not found", success: false });
       } else {
-        const dps = [];
+        let dps = [];
+
+        let isadmin =
+          community.admins[0]._id?.toString === user._id?.toString();
+
+        let admindp = await generatePresignedUrl(
+          "images",
+          community.admins[0].profilepic.toString(),
+          60 * 60
+        );
 
         for (let j = 0; j < community?.members?.length; j++) {
           const a = await generatePresignedUrl(
@@ -1178,15 +1239,147 @@ exports.getallmembers = async (req, res) => {
           );
           dps.push(a);
         }
-        const members = community.members?.map((c, i) => ({
+
+        let block = [];
+        community?.members?.some((blockedId) =>
+          community.blocked?.some((b, i) => {
+            block.push(blockedId?._id?.toString() === b?._id?.toString());
+          })
+        );
+
+        const nonBlockedMembers = community.members?.map((c, i) => ({
           c,
           dp: dps[i],
+          blocked: block[i],
         }));
-        res.status(200).json({ success: true, members });
+
+        const members = nonBlockedMembers?.filter(
+          (member) => member.c._id?.toString() !== community.creator.toString()
+        );
+
+        res.status(200).json({
+          success: true,
+          members,
+          admin: community?.admins[0],
+          admindp,
+          isadmin,
+        });
       }
     }
   } catch (e) {
     console.log(e);
     res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+//mute topics/community
+exports.mutecom = async (req, res) => {
+  try {
+    const { id, comId } = req.params;
+    const user = await User.findById(id);
+    const com = await Community.findById(comId);
+
+    if (!user || !com) {
+      return res
+        .status(404)
+        .json({ message: "User or Community not found", success: false });
+    }
+
+    //muting the whole community
+    if (com.notifications?.length > 0) {
+      const notificationIndex = com.notifications.findIndex(
+        (notification) => notification.id.toString() === user._id.toString()
+      );
+
+      if (notificationIndex !== -1) {
+        com.notifications[notificationIndex].muted =
+          !com.notifications[notificationIndex].muted;
+        await com.save();
+      }
+    }
+
+    //muting topics individually
+    for (let i = 0; i < com.topics.length; i++) {
+      const topic = await Topic.findById(com.topics[i]);
+
+      if (topic) {
+        const notificationIndex = topic.notifications.findIndex(
+          (notification) => notification.id.toString() === user._id.toString()
+        );
+
+        if (notificationIndex !== -1) {
+          topic.notifications[notificationIndex].muted =
+            !topic.notifications[notificationIndex].muted;
+          await topic.save();
+        }
+      }
+    }
+
+    res.status(200).json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+//block people from community
+exports.blockpcom = async (req, res) => {
+  try {
+    const { id, comId } = req.params;
+    const user = await User.findById(id);
+    const com = await Community.findById(comId);
+
+    if (!user || !com) {
+      return res
+        .status(404)
+        .json({ message: "User or Community not found", success: false });
+    }
+
+    if (com.blocked.includes(user._id)) {
+      await Community.updateOne(
+        { _id: com._id },
+        {
+          $pull: {
+            blocked: user._id,
+          },
+        }
+      );
+    } else {
+      await Community.updateOne(
+        { _id: com._id },
+        {
+          $push: {
+            blocked: user._id,
+          },
+        }
+      );
+    }
+    res.status(200).json({ success: true });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//vote in community poll
+exports.votenowpoll = async (req, res) => {
+  try {
+    const { id, postId, opId } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ success: false, message: "User not found" });
+    } else {
+      await Post.updateOne(
+        { _id: postId, "options._id": opId },
+        {
+          $inc: { "options.$.strength": 1, totalvotes: 1 },
+          $addToSet: { "options.$.votedby": user._id, votedby: user._id },
+        }
+      );
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
   }
 };

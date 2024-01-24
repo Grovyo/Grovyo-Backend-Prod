@@ -2265,7 +2265,7 @@ exports.loadmorechatmsgs = async (req, res) => {
         sequence: { $gte: lt, $lte: gt },
         deletedfor: { $nin: [user._id] },
         hidden: { $nin: [user._id.toString()] },
-        status: "active",
+        //status: "active",
       })
         .limit(20)
         .sort({ sequence: 1 })
@@ -2733,5 +2733,33 @@ exports.updatenotificationdel = async (req, res) => {
     }
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+//for deleting messsages from chats
+exports.deletemessagestopic = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { topicId, msgIds, action } = req.body;
+    const user = await User.findById(id);
+    if (user) {
+      if (action === "everyone") {
+        await Message.updateMany(
+          { mesId: { $in: msgIds }, topicId: topicId },
+          { $set: { status: "deleted" } }
+        );
+      } else {
+        await Message.updateMany(
+          { mesId: { $in: msgIds }, topicId: topicId },
+          { $push: { deletedfor: user._id } }
+        );
+      }
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ message: "User not found!", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
   }
 };

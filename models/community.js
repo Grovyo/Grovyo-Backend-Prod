@@ -36,11 +36,23 @@ const communitySchema = new mongoose.Schema(
       default: "Unblock",
       enum: ["Unblock", "Block"],
     },
+    blocked: [
+      {
+        type: ObjectId,
+        ref: "User",
+      },
+    ],
     moderators: [
       {
         type: ObjectId,
         ref: "User",
         // required: true
+      },
+    ],
+    notifications: [
+      {
+        id: { type: ObjectId, ref: "User" },
+        muted: { type: Boolean, default: false },
       },
     ],
     admins: [

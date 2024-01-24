@@ -11,6 +11,7 @@ const {
   checkLastMessage,
   createtopicporder,
   finalisetopicorder,
+  delenutopic,
 } = require("../controllers/topic");
 
 // router.post("/createtopic/:userId/:comId", create);
@@ -25,6 +26,9 @@ router.post("/newmessage/:topicId", newmessage);
 router.post("/initiatetopic/:topicId", initiatetopic);
 
 router.post("/jointopic/:topicId/:id/:comId/:orderId", jointopic);
+
+//delete topics wihtout communities
+router.post("/delenutopic", delenutopic);
 
 // ad code
 // router.get("/fetchtopic/:id/:comId", fetchtopic);

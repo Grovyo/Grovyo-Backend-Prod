@@ -13,6 +13,8 @@ const {
   gettopicmessages,
   loadmoremessages,
   getallmembers,
+  mutecom,
+  blockpcom,
 } = require("../controllers/community");
 
 const storage = multer.memoryStorage();
@@ -39,5 +41,11 @@ router.get("/v1/loadmoremessages/:id/:topicId/:sequence", loadmoremessages);
 
 //fetch all community members
 router.get("/v1/getallmembers/:id/:comId", getallmembers);
+
+//muting and unmuting community/topics
+router.post("/v1/mutecom/:id/:comId", mutecom);
+
+//blcoking people from community
+router.post("/v1/blockpcom/:id/:comId", blockpcom);
 
 module.exports = router;
