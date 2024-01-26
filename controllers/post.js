@@ -692,7 +692,7 @@ exports.fetchmore = async (req, res) => {
   }
 };
 
-//joined community content list
+//joined community content list of 24 hours
 exports.joinedcom = async (req, res) => {
   const { userId } = req.params;
   const user = await User.findById(userId);
@@ -703,7 +703,7 @@ exports.joinedcom = async (req, res) => {
     })
       .populate("members", "profilepic")
       .populate("creator", "fullname");
-
+    const ownedcoms = await Community.find({ creator: user._id.toString() });
     if (!communities || communities.length === 0) {
       res.status(200).json({ message: "No communities found", success: true });
       return;
@@ -726,6 +726,7 @@ exports.joinedcom = async (req, res) => {
     for (const community of communities) {
       const post = await Post.find({
         community: community._id,
+        type: "Poll",
       })
         .populate("sender", "fullname")
         .sort({ createdAt: -1 })
@@ -800,6 +801,124 @@ exports.joinedcom = async (req, res) => {
       mergedData,
       communitycreated: user?.communitycreated?.length,
       success: true,
+      cancreate: ownedcoms?.length >= 2 ? false : true,
+    });
+  } catch (e) {
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+//joined community content list new without 24 hours
+exports.joinedcomnew = async (req, res) => {
+  const { userId } = req.params;
+  const user = await User.findById(userId);
+
+  try {
+    const communities = await Community.find({
+      members: { $in: user._id },
+    })
+      .populate("members", "profilepic")
+      .populate("creator", "fullname");
+
+    const ownedcoms = await Community.find({ creator: user._id.toString() });
+
+    if (!communities || communities.length === 0) {
+      res.status(200).json({ message: "No communities found", success: true });
+      return;
+    }
+
+    const dps = [];
+    const urls = [];
+    const posts = [];
+    const liked = [];
+    let current = [];
+    const memdps = [];
+
+    // Sort communities based on whether they have a post and the latest post first
+    communities.sort((a, b) => {
+      const postA = a.posts.length > 0 ? a.posts[0].createdAt : 0;
+      const postB = b.posts.length > 0 ? b.posts[0].createdAt : 0;
+      return postB - postA;
+    });
+
+    for (const community of communities) {
+      const post = await Post.find({
+        community: community._id,
+        type: "Post",
+      })
+        .populate("sender", "fullname")
+        .sort({ createdAt: -1 })
+        .limit(1);
+      posts.push(post);
+
+      for (let j = 0; j < Math.min(4, community.members.length); j++) {
+        const a = await generatePresignedUrl(
+          "images",
+          community.members[j].profilepic.toString(),
+          60 * 60
+        );
+        current.push(a);
+      }
+
+      memdps.push(current);
+      current = [];
+
+      if (post.length > 0) {
+        const like = post[0]?.likedby?.includes(user._id);
+        liked.push(like);
+      } else {
+        liked.push(false);
+      }
+
+      let ur = [];
+      for (let j = 0; j < post[0]?.post?.length; j++) {
+        const a = await generatePresignedUrl(
+          "posts",
+          post[0].post[j].content?.toString(),
+          60 * 60
+        );
+
+        ur.push({ content: a, type: post[0].post[j]?.type });
+      }
+
+      urls.push(ur);
+
+      const a = await generatePresignedUrl(
+        "images",
+        community.dp.toString(),
+        60 * 60
+      );
+      dps.push(a);
+    }
+
+    const dpData = dps;
+    const memdpData = memdps;
+    const urlData = urls;
+    const postData = posts;
+    const communityData = communities;
+    const likeData = liked;
+
+    const mergedData = communityData.map((c, i) => ({
+      dps: dpData[i],
+      memdps: memdpData[i],
+      urls: urlData[i],
+      liked: likeData[i],
+      community: c,
+      posts: postData[i],
+    }));
+
+    //arrange acc ot latest post first
+    mergedData.sort((a, b) => {
+      const timeA = a?.posts[0]?.createdAt || 0;
+      const timeB = b?.posts[0]?.createdAt || 0;
+
+      return timeB - timeA;
+    });
+
+    res.status(200).json({
+      mergedData,
+      success: true,
+      cancreate: ownedcoms?.length >= 2 ? false : true,
     });
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });
@@ -1568,6 +1687,7 @@ exports.createpollcom = async (req, res) => {
         post: pos,
         tags: tag,
         kind: "poll",
+        type: "Poll",
       });
 
       const savedpost = await poll.save();

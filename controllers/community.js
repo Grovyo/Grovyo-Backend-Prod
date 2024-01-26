@@ -289,48 +289,196 @@ exports.joinmember = async (req, res) => {
             }
           );
         }
-        let updateQuery = {};
-        //increase demographics and location
-        const dobString = user.DOB;
 
-        const dob = new Date(dobString);
+        const birthdateString = user.DOB;
+        const birthdate = new Date(
+          birthdateString.split("/").reverse().join("/")
+        );
 
-        const currentDate = new Date();
+        const currentDate = new Date(); // Current date
 
-        let age = currentDate.getFullYear() - dob.getFullYear();
+        // Calculate age
+        let age = currentDate.getFullYear() - birthdate.getFullYear();
 
+        // Adjust age based on the birthdate and current date
         if (
-          currentDate.getMonth() < dob.getMonth() ||
-          (currentDate.getMonth() === dob.getMonth() &&
-            currentDate.getDate() < dob.getDate())
+          currentDate.getMonth() < birthdate.getMonth() ||
+          (currentDate.getMonth() === birthdate.getMonth() &&
+            currentDate.getDate() < birthdate.getDate())
         ) {
           age--;
         }
 
-        // if (user.gender === "male") {
-        //   updateQuery.$inc = { "demographics.gender.male": 1 };
-        // } else if (user.gender === "female") {
-        //   updateQuery.$inc = { "demographics.gender.female": 1 };
-        // }
+        // Update age range & Update gender
+        if (user.gender === "Male") {
+          if (age >= 18 && age <= 24) {
+            await Community.updateOne(
+              { _id: community._id },
+              {
+                $inc: {
+                  "demographics.gender.male": 1,
+                  "demographics.age.18-24": 1,
+                },
+              },
+              {
+                new: true,
+              }
+            );
+          } else if (age >= 25 && age <= 34) {
+            await Community.updateOne(
+              { _id: community._id },
+              {
+                $inc: {
+                  "demographics.gender.male": 1,
+                  "demographics.age.25-34": 1,
+                },
+              },
+              {
+                new: true,
+              }
+            );
+          } else if (age >= 35 && age <= 44) {
+            await Community.updateOne(
+              { _id: community._id },
+              {
+                $inc: {
+                  "demographics.gender.male": 1,
+                  "demographics.age.35-44": 1,
+                },
+              },
+              {
+                new: true,
+              }
+            );
+          } else if (age >= 45 && age <= 64) {
+            await Community.updateOne(
+              { _id: community._id },
+              {
+                $inc: {
+                  "demographics.gender.male": 1,
+                  "demographics.age.45-64": 1,
+                },
+              },
+              {
+                new: true,
+              }
+            );
+          } else if (age >= 65) {
+            await Community.updateOne(
+              { _id: community._id },
+              {
+                $inc: {
+                  "demographics.gender.male": 1,
+                  "demographics.age.65+": 1,
+                },
+              },
+              {
+                new: true,
+              }
+            );
+          }
+        } else if (user.gender === "Female") {
+          if (age >= 18 && age <= 24) {
+            await Community.updateOne(
+              { _id: community._id },
+              {
+                $inc: {
+                  "demographics.gender.female": 1,
+                  "demographics.age.18-24": 1,
+                },
+              },
+              {
+                new: true,
+              }
+            );
+          } else if (age >= 25 && age <= 34) {
+            await Community.updateOne(
+              { _id: community._id },
+              {
+                $inc: {
+                  "demographics.gender.female": 1,
+                  "demographics.age.25-34": 1,
+                },
+              },
+              {
+                new: true,
+              }
+            );
+          } else if (age >= 35 && age <= 44) {
+            await Community.updateOne(
+              { _id: community._id },
+              {
+                $inc: {
+                  "demographics.gender.female": 1,
+                  "demographics.age.35-44": 1,
+                },
+              },
+              {
+                new: true,
+              }
+            );
+          } else if (age >= 45 && age <= 64) {
+            await Community.updateOne(
+              { _id: community._id },
+              {
+                $inc: {
+                  "demographics.gender.female": 1,
+                  "demographics.age.45-64": 1,
+                },
+              },
+              {
+                new: true,
+              }
+            );
+          } else if (age >= 65) {
+            await Community.updateOne(
+              { _id: community._id },
+              {
+                $inc: {
+                  "demographics.gender.female": 1,
+                  "demographics.age.65+": 1,
+                },
+              },
+              {
+                new: true,
+              }
+            );
+          }
+        }
 
-        // // Update age range
-        // if (age >= 18 && age <= 24) {
-        //   updateQuery.$inc["demographics.age.18-24"] = 1;
-        // } else if (age >= 25 && age <= 34) {
-        //   updateQuery.$inc["demographics.age.25-34"] = 1;
-        // } else if (age >= 35 && age <= 44) {
-        //   updateQuery.$inc["demographics.age.35-44"] = 1;
-        // } else if (age >= 45 && age <= 64) {
-        //   updateQuery.$inc["demographics.age.45-64"] = 1;
-        // } else if (age >= 65) {
-        //   updateQuery.$inc["demographics.age.65+"] = 1;
-        // }
+        //member count inc per day
 
-        // await Community.updateOne({ _id: community._id }, updateQuery);
-
-        let notif = { id: user._id, muted: false };
+        if (
+          community?.stats?.length > 0 &&
+          community.stats[0]?.X === formattedDate
+        ) {
+          await Community.updateOne(
+            { _id: community._id, "stats.X": formattedDate },
+            {
+              $inc: {
+                "stats.$.Y1": 1,
+              },
+            }
+          );
+        } else {
+          let d = {
+            X: formattedDate,
+            Y1: 1,
+            Y2: 0,
+          };
+          await Community.updateOne(
+            { _id: community._id },
+            {
+              $push: {
+                stats: d,
+              },
+            }
+          );
+        }
 
         //other updations
+        let notif = { id: user._id, muted: false };
+
         await Community.updateOne(
           { _id: comId },
           {
@@ -353,23 +501,6 @@ exports.joinmember = async (req, res) => {
           }
         );
 
-        // await Topic.updateOne(
-        //   { _id: publictopic[0]._id },
-        //   { $push: { members: user._id }, $inc: { memberscount: 1 } }
-        // );
-        // await Topic.updateOne(
-        //   { _id: publictopic[0]._id },
-        //   { $push: { notifications: user._id } }
-        // );
-        // await Topic.updateOne(
-        //   { _id: publictopic[1]._id },
-        //   { $push: { notifications: user._id } }
-        // );
-        // await Topic.updateOne(
-        //   { _id: publictopic[1]._id },
-        //   { $push: { members: user._id }, $inc: { memberscount: 1 } }
-        // );
-
         await User.updateMany(
           { _id: userId },
           {
@@ -377,13 +508,7 @@ exports.joinmember = async (req, res) => {
             $inc: { totaltopics: 2 },
           }
         );
-        // await User.updateMany(
-        //   { _id: userId },
-        //   {
-        //     $push: { topicsjoined: [publictopic[0]?._id, publictopic[1]?._id] },
-        //     $inc: { totaltopics: 2 },
-        //   }
-        // );
+
         res.status(200).json({ success: true });
       }
     } catch (e) {
@@ -607,6 +732,7 @@ exports.compostfeed = async (req, res) => {
   try {
     const { id, comId } = req.params;
     const { postId } = req.body;
+
     const user = await User.findById(id);
     const community = await Community.findById(comId)
       .populate("topics", "title type price")
@@ -778,23 +904,6 @@ exports.compostfeed = async (req, res) => {
         dps.push(a);
       }
 
-      let canvote = [];
-      posts?.some((p) => {
-        p?.votedby?.some((o) => {
-          canvote.push(o?.toString() === user._id.toString());
-        });
-      });
-
-      let votes = [];
-      posts?.some((p) => {
-        let v = [];
-        p?.options?.some((o) => {
-          let percentage = (o?.strength / p?.totalvotes) * 100;
-          v.push(percentage);
-        });
-        votes.push(v);
-      });
-
       //mergeing all the data
       const urlData = urls;
       const postData = posts;
@@ -810,8 +919,6 @@ exports.compostfeed = async (req, res) => {
         posts: postData[i],
         totalcomments: commentscount[i],
         comments: commentdata[i],
-        canvote: canvote[i],
-        votes: votes[i],
       }));
 
       res.status(200).json({
@@ -934,7 +1041,7 @@ exports.loadmoremessages = async (req, res) => {
 
       const messages = await Message.find({
         topicId: topicId,
-        sequence: { $gte: lt, $lte: gt },
+        sequence: { $gte: lt >= 1 ? lt : 1, $lte: gt },
         deletedfor: { $nin: [user._id.toString()] },
       })
         .limit(20)

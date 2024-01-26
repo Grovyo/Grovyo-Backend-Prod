@@ -2262,7 +2262,7 @@ exports.loadmorechatmsgs = async (req, res) => {
 
       const msg = await Message.find({
         conversationId: convId,
-        sequence: { $gte: lt, $lte: gt },
+        sequence: { $gte: lt >= 1 ? lt : 1, $lte: gt },
         deletedfor: { $nin: [user._id] },
         hidden: { $nin: [user._id.toString()] },
         //status: "active",

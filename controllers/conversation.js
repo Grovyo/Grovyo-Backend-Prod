@@ -273,7 +273,6 @@ exports.fetchallmsgreqs = async (req, res) => {
     } else {
       let dps = [];
       for (let i = 0; i < user.messagerequests.length; i++) {
-        console.log(user?.messagerequests?.id);
         let pic = await generatePresignedUrl(
           "images",
           user?.messagerequests[i].id?.profilepic?.toString(),

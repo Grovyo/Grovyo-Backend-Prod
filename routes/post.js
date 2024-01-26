@@ -19,6 +19,7 @@ const {
   newfetchfeed,
   delenu,
   createpollcom,
+  joinedcomnew,
 } = require("../controllers/post");
 const { votenowpoll } = require("../controllers/community");
 
@@ -33,6 +34,7 @@ router.get("/v1/getfeed/:userId", newfetchfeed);
 router.get("/fetchmore/:userId", fetchmore);
 router.get("/fetchonepost/:postId", fetchonepost);
 router.get("/getfollowingfeed/:userId", joinedcom);
+router.get("/v1/getfollowingfeed/:userId", joinedcomnew);
 router.get("/getallposts/:comId/:userId/:postId", getallposts);
 router.get("/getpost/:userId", getpost);
 router.post("/likepost/:userId/:postId", likepost);

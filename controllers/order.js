@@ -748,6 +748,7 @@ exports.createrzporder = async (req, res) => {
       );
 
       let pids = JSON.stringify(productId);
+
       //creatign a rzp order
       instance.orders.create(
         {
@@ -816,15 +817,255 @@ exports.finaliseorder = async (req, res) => {
           { $unset: { cart: [], cartproducts: [] } }
         );
 
-        // geta({
-        //   customer: {
-        //     latitude: user.address.coordinates.latitude,
-        //     longitude: user.address.coordinates.longitude,
-        //   },
-        //   store:{
-        //     latitude:
-        //   }
-        // });
+        const order = await Order.findOne({ orderId: oid });
+        const user = await User.findById(id);
+        const store = await User.findById({ _id: order.pr });
+        if (user && store) {
+          //checking if user and store are under 20 km range
+          const check = geolib.isPointWithinRadius(
+            {
+              latitude: user?.address?.coordinates?.latitude,
+              longitude: user?.address?.coordinates?.longitude,
+            },
+            {
+              latitude: store?.address?.coordinates?.latitude,
+              longitude: store?.address?.coordinates?.longitude,
+            },
+            20000
+          );
+
+          if (check) {
+            //This part will run when customer and store are under 20kms range
+            // const locs = await Locations.find();
+            // const custcity = user.address.city;
+            // let result;
+
+            // //finding city of customer
+            // for (let i = 0; i < locs.length; i++) {
+            //   const titleArray = Array.isArray(locs[i]?.title)
+            //     ? locs[i]?.title
+            //     : [locs[i]?.title];
+            //   result = findBestMatch(
+            //     custcity.toLowerCase().trim() || custcity.toLowerCase(),
+            //     titleArray
+            //   );
+            // }
+            let eligibledriver = [];
+            //for now delivery will be assigfned to any person
+            // for (let i = 0; i < store?.deliverypartners?.length; i++) {
+            const deliverypartner = await Deluser.findOne({
+              accounttype: "partner",
+            });
+
+            if (
+              deliverypartner &&
+              deliverypartner.accstatus !== "banned" &&
+              deliverypartner.accstatus !== "review" &&
+              deliverypartner.deliveries?.length < 21 &&
+              deliverypartner.totalbalance < 3000
+            ) {
+              let driverloc = {
+                latitude: deliverypartner.currentlocation?.latitude,
+                longitude: deliverypartner.currentlocation?.longitude,
+                id: deliverypartner?._id,
+              };
+              eligibledriver.push(driverloc);
+            }
+            // }
+
+            if (eligibledriver?.length > 0) {
+              const nearestpartner = geolib.findNearest(
+                {
+                  latitude: deliverypartner.currentlocation?.latitude,
+                  longitude: deliverypartner.currentlocation?.longitude,
+                },
+                eligibledriver
+              );
+
+              if (nearestpartner) {
+                const driver = await Deluser?.findById(nearestpartner?.id);
+
+                const newDeliveries = new Delivery({
+                  title: user?.fullname,
+                  amount: total,
+                  orderId: oid,
+                  pickupaddress: store?.storeAddress,
+                  partner: driver?._id,
+                  droppingaddress: user?.address,
+                  phonenumber: user.phone,
+                  //mode: order.paymentMode ? order?.paymentMode : "Cash",
+                });
+                await newDeliveries.save();
+
+                //pushing delivery for driver
+                await Deluser.updateOne(
+                  { _id: driver._id },
+                  { $push: { deliveries: newDeliveries._id } }
+                );
+                const msg = {
+                  notification: {
+                    title: "A new order has arrived.",
+                    body: `From ${user?.fullname} OrderId ₹${oid}`,
+                  },
+                  data: {},
+                  tokens: [
+                    user?.notificationtoken,
+                    driver?.notificationtoken,
+                    store?.notificationtoken, //person who selles this item
+                  ],
+                };
+
+                await admin
+                  .messaging()
+                  .sendEachForMulticast(msg)
+                  .then((response) => {
+                    console.log("Successfully sent message");
+                  })
+                  .catch((error) => {
+                    console.log("Error sending message:", error);
+                  });
+              }
+              res.status(200).json({ success: true });
+            } else {
+              console.log("No delivery partner is available at the moment!");
+              res.status(203).json({ success: false });
+            }
+          } else {
+            //This Part will run when we still have to deliver more than 20kms
+            const locs = await Locations.find();
+            const custcity = user.address.city;
+            let result;
+
+            //finding city of customer
+            for (let i = 0; i < locs.length; i++) {
+              const titleArray = Array.isArray(locs[i]?.title)
+                ? locs[i]?.title
+                : [locs[i]?.title];
+              result = findBestMatch(
+                custcity.toLowerCase().trim() || custcity.toLowerCase(),
+                titleArray
+              );
+            }
+
+            //finding nearest store
+            let storedlocs = [];
+            const cityofcust = await Locations.findOne({
+              title: result?.bestMatch,
+            });
+            for (let i = 0; i < cityofcust.stores.length; i++) {
+              storedlocs.push({
+                latitude: cityofcust.stores[i].address.coordinates.latitude,
+                longitude: cityofcust.stores[i].address.coordinates.longitude,
+                storeid: cityofcust.stores[i].storeid,
+              });
+            }
+
+            const a = geolib.findNearest(
+              {
+                latitude: user?.address?.coordinates?.latitude,
+                longitude: user?.address?.coordinates?.longitude,
+              },
+              storedlocs
+            );
+
+            //finding nearest driver
+            const storeuser = await Deluser.findById(a?.storeid);
+            let eligibledriver = [];
+
+            for (let i = 0; i < storeuser?.deliverypartners?.length; i++) {
+              const deliverypartner = await Deluser.findById(
+                storeuser?.deliverypartners[i]?.id
+              );
+
+              if (
+                deliverypartner &&
+                deliverypartner.accstatus !== "banned" &&
+                deliverypartner.accstatus !== "review" &&
+                deliverypartner.deliveries?.length < 21
+              ) {
+                let driverloc = {
+                  latitude: deliverypartner.currentlocation?.latitude,
+                  longitude: deliverypartner.currentlocation?.longitude,
+                  id: deliverypartner?._id,
+                };
+                eligibledriver.push(driverloc);
+              }
+            }
+
+            if (eligibledriver?.length > 0) {
+              const nearestpartner = geolib.findNearest(
+                {
+                  latitude: eligibledriver?.latitude,
+                  longitude: eligibledriver?.longitude,
+                },
+                eligibledriver
+              );
+
+              if (nearestpartner) {
+                const driver = await Deluser?.findById(nearestpartner?.id);
+
+                const newDeliveries = new Delivery({
+                  title: user?.fullname,
+                  amount: total,
+                  orderId: oid,
+                  pickupaddress: store?.storeAddress,
+                  partner: driver?._id,
+                  droppingaddress: user?.address,
+                  phonenumber: user.phone,
+                  mode: order.paymentMode,
+                });
+                await newDeliveries.save();
+                //pushing delivery to driver
+                await Deluser.updateOne(
+                  { _id: driver._id },
+                  { $push: { deliveries: newDeliveries._id } }
+                );
+
+                //pushing order to store
+                await Deluser.updateOne(
+                  { _id: storeuser._id },
+                  {
+                    $push: {
+                      deliveries: newDeliveries._id,
+                      pickup: newDeliveries._id,
+                    },
+                  }
+                );
+                const msg = {
+                  notification: {
+                    title: "A new order has arrived.",
+                    body: `From ${user?.fullname} OrderId ₹${oid}`,
+                  },
+                  data: {},
+                  tokens: [
+                    user?.notificationtoken,
+                    driver?.notificationtoken,
+                    storeuser?.notificationtoken, //person who is affiliate
+                    store.notificationtoken, //person who sells this item
+                  ],
+                };
+
+                await admin
+                  .messaging()
+                  .sendEachForMulticast(msg)
+                  .then((response) => {
+                    console.log("Successfully sent message");
+                  })
+                  .catch((error) => {
+                    console.log("Error sending message:", error);
+                  });
+              }
+              res.status(200).json({ success: true });
+            } else {
+              res.status(203).json({ success: false });
+              console.log("No delivery partner is available at the moment!");
+            }
+          }
+        } else {
+          res
+            .status(404)
+            .json({ message: "Something not found...", success: false });
+        }
         res.status(200).json({ success: true });
       } else {
         await Order.updateOne(
@@ -892,7 +1133,7 @@ exports.removecartorder = async (req, res) => {
   try {
     const { id, cartId, productId } = req.params;
     const user = await User.findById(id);
-    console.log(id, cartId, productId);
+
     if (!user) {
       return res.status(404).json({ message: "User or Product not found" });
     } else {
@@ -995,7 +1236,7 @@ exports.deliverycreate = async (req, res) => {
               partner: driver?._id,
               droppingaddress: user?.address,
               phonenumber: user.phone,
-              mode: order.paymentMode,
+              //mode: order.paymentMode ? order?.paymentMode : "Cash",
             });
             await newDeliveries.save();
 
@@ -1185,6 +1426,17 @@ exports.scannedqr = async (req, res) => {
     const delivery = await Delivery.findById(delid);
     const flash = await User.findById(flashid);
 
+    const senderpic = await generatePresignedUrl(
+      "images",
+      flash.profilepic.toString(),
+      60 * 60
+    );
+    const recpic = await generatePresignedUrl(
+      "images",
+      user.profilepic.toString(),
+      60 * 60
+    );
+
     //generating otp
     function generateOTP() {
       return Math.floor(100000 + Math.random() * 900000);
@@ -1205,6 +1457,7 @@ exports.scannedqr = async (req, res) => {
       const convs = await Conversation.findOne({
         members: { $all: [user?._id, flash._id] },
       });
+
       if (convs) {
         let data = {
           conversationId: convs._id,
@@ -1222,29 +1475,31 @@ exports.scannedqr = async (req, res) => {
             },
           }
         );
-        //end user gets the otp
-        await User.updateOne(
-          { _id: user?._id },
-          {
-            $push: {
-              conversations: convs?._id,
-            },
-          }
-        );
-        // await User.updateOne(
-        //   { _id: flash._id },
-        //   {
-        //     $push: {
-        //       conversations: convs?._id,
-        //     },
-        //   }
-        // );
+
+        const timestamp = `${new Date()}`;
         const msg = {
           notification: {
             title: `Grovyo Flash`,
             body: `Your Otp for confirmation of receiving your order is ${otp}. This Otp is valid for 10 mins, please share it with our partner.`,
           },
-          data: {},
+          data: {
+            screen: "Conversation",
+            sender_fullname: `${user?.fullname}`,
+            sender_id: `${user?._id}`,
+            text: `Your Otp for confirmation of receiving your order is ${otp}. This Otp is valid for 10 mins, please share it with our partner.`,
+            convId: `${convs?._id}`,
+            createdAt: `${timestamp}`,
+            mesId: `${mesId}`,
+            typ: `message`,
+            senderuname: `${user?.username}`,
+            senderverification: `${user.isverified}`,
+            senderpic: `${recpic}`,
+            reciever_fullname: `${flash.fullname}`,
+            reciever_username: `${flash.username}`,
+            reciever_isverified: `${flash.isverified}`,
+            reciever_pic: `${senderpic}`,
+            reciever_id: `${flash._id}`,
+          },
           token: user?.notificationtoken,
         };
 
@@ -1286,14 +1541,14 @@ exports.scannedqr = async (req, res) => {
             },
           }
         );
-        // await User.updateOne(
-        //   { _id: flash._id },
-        //   {
-        //     $push: {
-        //       conversations: conv?._id,
-        //     },
-        //   }
-        // );
+        await User.updateOne(
+          { _id: flash._id },
+          {
+            $push: {
+              conversations: conv?._id,
+            },
+          }
+        );
         const msg = {
           notification: {
             title: `Grovyo Flash`,

@@ -101,7 +101,7 @@ exports.fetchorders = async (req, res) => {
         }
       }
 
-      const merge = orders.map((orders, i) => ({
+      const merge = orders?.reverse()?.map((orders, i) => ({
         orders,
         image: image[i],
       }));

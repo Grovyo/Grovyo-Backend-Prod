@@ -81,9 +81,9 @@ const userSchema = new mongoose.Schema(
     notifications: [{ type: ObjectId, ref: "Notification" }],
     notificationscount: { type: Number, default: 0 },
     purchasestotal: { type: Number, default: 0 },
-    // gender: {
-    //   type: "String",
-    // },
+    gender: {
+      type: "String",
+    },
     // CHANGED BY AD
     age: {
       type: Number,
