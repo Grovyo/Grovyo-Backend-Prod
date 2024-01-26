@@ -26,8 +26,8 @@ const {
 } = require("razorpay/dist/utils/razorpay-utils");
 
 const instance = new Razorpay({
-  key_id: "rzp_test_jXDMq8a2wN26Ss",
-  key_secret: "bxyQhbzS0bHNBnalbBg9QTDo",
+  key_id: "rzp_live_Ms5I8V8VffSpYq",
+  key_secret: "Sy04bmraRqV9RjLRj81MX0g7",
 });
 
 const minioClient = new Minio.Client({
@@ -807,7 +807,7 @@ exports.finaliseorder = async (req, res) => {
       const isValid = validatePaymentVerification(
         { order_id: razorpay_order_id, payment_id: razorpay_payment_id },
         razorpay_signature,
-        "bxyQhbzS0bHNBnalbBg9QTDo"
+        "Sy04bmraRqV9RjLRj81MX0g7"
       );
 
       if (isValid) {
