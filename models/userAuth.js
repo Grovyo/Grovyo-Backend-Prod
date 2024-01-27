@@ -45,6 +45,8 @@ const userSchema = new mongoose.Schema(
     insta: { type: String },
     snap: { type: String },
     x: { type: String },
+    yt: { type: String },
+    linkdin: { type: String },
     interest: {
       type: [String],
       default: [],
