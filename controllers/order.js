@@ -876,7 +876,7 @@ exports.finaliseorder = async (req, res) => {
             reciever_pic: `${senderpic}`,
             reciever_id: `${flash._id}`,
           },
-          token: user?.notificationtoken,
+          token: mainuser?.notificationtoken,
         };
 
         await admin
@@ -1002,7 +1002,7 @@ exports.createnewproductorder = async (req, res) => {
           reciever_pic: `${senderpic}`,
           reciever_id: `${flash._id}`,
         },
-        token: user?.notificationtoken,
+        token: mainuser?.notificationtoken,
       };
 
       await admin
