@@ -1215,6 +1215,9 @@ exports.updateaccount = async (req, res) => {
       device,
       type,
       loc,
+      snap,
+      insta,
+      x,
     } = req.body;
     const user = await User.findById(id);
     const uuidString = uuid();
@@ -1253,6 +1256,9 @@ exports.updateaccount = async (req, res) => {
               email: email,
               desc: bio,
               profilepic: objectName,
+              snap: snap,
+              x: x,
+              insta: insta,
             },
             $push: {
               links: social,

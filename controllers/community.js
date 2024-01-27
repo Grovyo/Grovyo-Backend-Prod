@@ -931,6 +931,7 @@ exports.compostfeed = async (req, res) => {
         subs,
         canedit,
         canpost,
+        category: community?.category,
         success: true,
       });
     } else {

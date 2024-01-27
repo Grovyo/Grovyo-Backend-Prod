@@ -42,6 +42,9 @@ const userSchema = new mongoose.Schema(
     prositepic: { type: String },
     links: { type: [String] },
     linkstype: { type: [String] },
+    insta: { type: String },
+    snap: { type: String },
+    x: { type: String },
     interest: {
       type: [String],
       default: [],
