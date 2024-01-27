@@ -729,7 +729,7 @@ exports.createrzporder = async (req, res) => {
     } else {
       //a new order is created
       const ord = new Order({
-        buyerId: id,
+        buyerId: user._id,
         productId: productId,
         quantity: quantity,
         total: total,
@@ -748,9 +748,6 @@ exports.createrzporder = async (req, res) => {
       );
 
       let pids = JSON.stringify(productId);
-
-      const { id, pickupid } = req.params;
-      const { oid, total } = req.body;
 
       //creatign a rzp order
       instance.orders.create(
