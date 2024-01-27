@@ -1338,8 +1338,8 @@ exports.newfetchfeed = async (req, res) => {
     }
     //fetching post
     const post = await Post.aggregate([
-      { $match: { tags: { $in: user.interest } } },
-      { $sample: { size: 50 } },
+      //{ $match: { tags: { $in: user.interest } } },
+      { $sample: { size: 100 } },
       {
         $lookup: {
           from: "users",
@@ -1605,7 +1605,7 @@ exports.newfetchfeed = async (req, res) => {
           mergedData.push(adItem);
         }
       });
-
+      console.log(mergedData?.length);
       res.status(200).json({
         mergedData,
 
