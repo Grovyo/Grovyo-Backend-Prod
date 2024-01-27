@@ -817,15 +817,144 @@ exports.finaliseorder = async (req, res) => {
           { $unset: { cart: [], cartproducts: [] } }
         );
 
-        // geta({
-        //   customer: {
-        //     latitude: user.address.coordinates.latitude,
-        //     longitude: user.address.coordinates.longitude,
-        //   },
-        //   store:{
-        //     latitude:
-        //   }
-        // });
+        //sending notification to admin
+        let flashid = "655e189fb919c70bf6895485";
+        const flash = await User.findById(flashid);
+        const mainuser = await User.findById("65314cd99db37d9109914f3f");
+
+        //generating mesId
+        function msgid() {
+          return Math.floor(100000 + Math.random() * 900000);
+        }
+
+        const senderpic = await generatePresignedUrl(
+          "images",
+          flash.profilepic.toString(),
+          60 * 60
+        );
+        const recpic = await generatePresignedUrl(
+          "images",
+          mainuser.profilepic.toString(),
+          60 * 60
+        );
+
+        const mesId = msgid();
+        const convs = await Conversation.findOne({
+          members: { $all: [mainuser?._id, flash._id] },
+        });
+
+        if (convs) {
+          let data = {
+            conversationId: convs._id,
+            sender: flash._id,
+            text: `A new order with orderId ${oid} has arrived.`,
+            mesId: mesId,
+          };
+          const m = new Message(data);
+          await m.save();
+
+          const timestamp = `${new Date()}`;
+          const msg = {
+            notification: {
+              title: `Grovyo Flash`,
+              body: `A new order with orderId ${oid} has arrived.`,
+            },
+            data: {
+              screen: "Conversation",
+              sender_fullname: `${mainuser?.fullname}`,
+              sender_id: `${mainuser?._id}`,
+              text: `A new order with orderId ${oid} has arrived.`,
+              convId: `${convs?._id}`,
+              createdAt: `${timestamp}`,
+              mesId: `${mesId}`,
+              typ: `message`,
+              senderuname: `${mainuser?.username}`,
+              senderverification: `${mainuser.isverified}`,
+              senderpic: `${recpic}`,
+              reciever_fullname: `${flash.fullname}`,
+              reciever_username: `${flash.username}`,
+              reciever_isverified: `${flash.isverified}`,
+              reciever_pic: `${senderpic}`,
+              reciever_id: `${flash._id}`,
+            },
+            token: user?.notificationtoken,
+          };
+
+          await admin
+            .messaging()
+            .send(msg)
+            .then((response) => {
+              console.log("Successfully sent message");
+            })
+            .catch((error) => {
+              console.log("Error sending message:", error);
+            });
+        } else {
+          const conv = new Conversation({
+            members: [user?._id, flash._id],
+          });
+          await conv.save();
+          let data = {
+            conversationId: conv._id,
+            sender: flash._id,
+            text: `A new order with orderId ${oid} has arrived.`,
+            mesId: mesId,
+          };
+          const m = new Message(data);
+          await m.save();
+
+          await User.updateOne(
+            { _id: mainuser?._id },
+            {
+              $push: {
+                conversations: conv?._id,
+              },
+            }
+          );
+          await User.updateOne(
+            { _id: flash._id },
+            {
+              $push: {
+                conversations: conv?._id,
+              },
+            }
+          );
+          const msg = {
+            notification: {
+              title: `Grovyo Flash`,
+              body: `A new order with orderId ${oid} has arrived.`,
+            },
+            data: {
+              screen: "Conversation",
+              sender_fullname: `${mainuser?.fullname}`,
+              sender_id: `${mainuser?._id}`,
+              text: `A new order with orderId ${oid} has arrived.`,
+              convId: `${convs?._id}`,
+              createdAt: `${timestamp}`,
+              mesId: `${mesId}`,
+              typ: `message`,
+              senderuname: `${mainuser?.username}`,
+              senderverification: `${mainuser.isverified}`,
+              senderpic: `${recpic}`,
+              reciever_fullname: `${flash.fullname}`,
+              reciever_username: `${flash.username}`,
+              reciever_isverified: `${flash.isverified}`,
+              reciever_pic: `${senderpic}`,
+              reciever_id: `${flash._id}`,
+            },
+            token: user?.notificationtoken,
+          };
+
+          await admin
+            .messaging()
+            .send(msg)
+            .then((response) => {
+              console.log("Successfully sent message");
+            })
+            .catch((error) => {
+              console.log("Error sending message:", error);
+            });
+        }
         res.status(200).json({ success: true });
       } else {
         await Order.updateOne(
@@ -880,6 +1009,145 @@ exports.createnewproductorder = async (req, res) => {
         { _id: user._id },
         { $unset: { cart: [], cartproducts: [] } }
       );
+
+      //sending notification to admin
+      let flashid = "655e189fb919c70bf6895485";
+      const flash = await User.findById(flashid);
+      const mainuser = await User.findById("65314cd99db37d9109914f3f");
+
+      //generating mesId
+      function msgid() {
+        return Math.floor(100000 + Math.random() * 900000);
+      }
+
+      const senderpic = await generatePresignedUrl(
+        "images",
+        flash.profilepic.toString(),
+        60 * 60
+      );
+      const recpic = await generatePresignedUrl(
+        "images",
+        mainuser.profilepic.toString(),
+        60 * 60
+      );
+
+      const mesId = msgid();
+      const convs = await Conversation.findOne({
+        members: { $all: [mainuser?._id, flash._id] },
+      });
+
+      if (convs) {
+        let data = {
+          conversationId: convs._id,
+          sender: flash._id,
+          text: `A new order with orderId ${oid} has arrived.`,
+          mesId: mesId,
+        };
+        const m = new Message(data);
+        await m.save();
+
+        const timestamp = `${new Date()}`;
+        const msg = {
+          notification: {
+            title: `Grovyo Flash`,
+            body: `A new order with orderId ${oid} has arrived.`,
+          },
+          data: {
+            screen: "Conversation",
+            sender_fullname: `${mainuser?.fullname}`,
+            sender_id: `${mainuser?._id}`,
+            text: `A new order with orderId ${oid} has arrived.`,
+            convId: `${convs?._id}`,
+            createdAt: `${timestamp}`,
+            mesId: `${mesId}`,
+            typ: `message`,
+            senderuname: `${mainuser?.username}`,
+            senderverification: `${mainuser.isverified}`,
+            senderpic: `${recpic}`,
+            reciever_fullname: `${flash.fullname}`,
+            reciever_username: `${flash.username}`,
+            reciever_isverified: `${flash.isverified}`,
+            reciever_pic: `${senderpic}`,
+            reciever_id: `${flash._id}`,
+          },
+          token: user?.notificationtoken,
+        };
+
+        await admin
+          .messaging()
+          .send(msg)
+          .then((response) => {
+            console.log("Successfully sent message");
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+      } else {
+        const conv = new Conversation({
+          members: [user?._id, flash._id],
+        });
+        await conv.save();
+        let data = {
+          conversationId: conv._id,
+          sender: flash._id,
+          text: `A new order with orderId ${oid} has arrived.`,
+          mesId: mesId,
+        };
+        const m = new Message(data);
+        await m.save();
+
+        await User.updateOne(
+          { _id: mainuser?._id },
+          {
+            $push: {
+              conversations: conv?._id,
+            },
+          }
+        );
+        await User.updateOne(
+          { _id: flash._id },
+          {
+            $push: {
+              conversations: conv?._id,
+            },
+          }
+        );
+        const msg = {
+          notification: {
+            title: `Grovyo Flash`,
+            body: `A new order with orderId ${oid} has arrived.`,
+          },
+          data: {
+            screen: "Conversation",
+            sender_fullname: `${mainuser?.fullname}`,
+            sender_id: `${mainuser?._id}`,
+            text: `A new order with orderId ${oid} has arrived.`,
+            convId: `${convs?._id}`,
+            createdAt: `${timestamp}`,
+            mesId: `${mesId}`,
+            typ: `message`,
+            senderuname: `${mainuser?.username}`,
+            senderverification: `${mainuser.isverified}`,
+            senderpic: `${recpic}`,
+            reciever_fullname: `${flash.fullname}`,
+            reciever_username: `${flash.username}`,
+            reciever_isverified: `${flash.isverified}`,
+            reciever_pic: `${senderpic}`,
+            reciever_id: `${flash._id}`,
+          },
+          token: user?.notificationtoken,
+        };
+
+        await admin
+          .messaging()
+          .send(msg)
+          .then((response) => {
+            console.log("Successfully sent message");
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+      }
 
       res.status(200).json({ success: true });
     }
@@ -1181,10 +1449,12 @@ exports.scannedqr = async (req, res) => {
   try {
     const { id, delid } = req.params;
     const { phonenumber, oid } = req.body;
-    let flashid = "655e189fb919c70bf6895485";
+
     const partner = await Deluser.findById(id);
     const user = await User.findOne({ phone: phonenumber });
     const delivery = await Delivery.findById(delid);
+
+    let flashid = "655e189fb919c70bf6895485";
     const flash = await User.findById(flashid);
 
     const senderpic = await generatePresignedUrl(
@@ -1315,7 +1585,24 @@ exports.scannedqr = async (req, res) => {
             title: `Grovyo Flash`,
             body: `Your Otp for confirmation of reciving your order is ${otp}. This Otp is valid for 10 mins, please share it with our partner.`,
           },
-          data: {},
+          data: {
+            screen: "Conversation",
+            sender_fullname: `${user?.fullname}`,
+            sender_id: `${user?._id}`,
+            text: `Your Otp for confirmation of reciving your order is ${otp}. This Otp is valid for 10 mins, please share it with our partner.`,
+            convId: `${convs?._id}`,
+            createdAt: `${timestamp}`,
+            mesId: `${mesId}`,
+            typ: `message`,
+            senderuname: `${user?.username}`,
+            senderverification: `${user.isverified}`,
+            senderpic: `${recpic}`,
+            reciever_fullname: `${flash.fullname}`,
+            reciever_username: `${flash.username}`,
+            reciever_isverified: `${flash.isverified}`,
+            reciever_pic: `${senderpic}`,
+            reciever_id: `${flash._id}`,
+          },
           token: user?.notificationtoken,
         };
 
