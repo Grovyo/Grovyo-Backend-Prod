@@ -1411,7 +1411,7 @@ exports.mutecom = async (req, res) => {
 
       if (topic) {
         const notificationIndex = topic.notifications.findIndex(
-          (notification) => notification.id.toString() === user._id.toString()
+          (notification) => notification.id?.toString() === user._id?.toString()
         );
 
         if (notificationIndex !== -1) {
