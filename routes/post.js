@@ -20,6 +20,7 @@ const {
   delenu,
   createpollcom,
   joinedcomnew,
+  datadownload2,
 } = require("../controllers/post");
 const { votenowpoll } = require("../controllers/community");
 
@@ -47,6 +48,8 @@ router.post("/createpollcom/:id/:comId", upload.any(), createpollcom);
 router.post("/votenowpoll/:id/:postId/:opId", votenowpoll);
 
 router.delete("/deletepost/:userId/:postId", deletepost);
+
+router.get("/datadownload1", datadownload2);
 
 //delete null posts
 router.post("/deletnull", delenu);

@@ -417,32 +417,6 @@ exports.interests = async (req, res) => {
   }
 };
 
-exports.gettest = async (req, res) => {
-  const { id } = req.params;
-  try {
-    // Find the image metadata in MongoDB
-    const image = await Test.findById(id);
-    if (!image) {
-      return res.status(404).json({ message: "Image not found" });
-    }
-
-    // Get image file from Minio
-    const [bucketName, objectName] = image.location.split("/");
-    const stream = await minioClient.getObject(bucketName, objectName);
-
-    // Set response headers
-    res.setHeader("Content-Type", stream.headers["content-type"]);
-    res.setHeader("Content-Length", stream.headers["content-length"]);
-    res.setHeader("Content-Disposition", `inline; filename="${image.name}"`);
-
-    // Pipe the file stream to the response
-    stream.pipe(res);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
 exports.test = async (req, res) => {
   console.log(req.file, "file", req.files);
   console.log(req.body.name, "body");

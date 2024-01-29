@@ -9,6 +9,40 @@ const Notification = require("../models/notification");
 const sharp = require("sharp");
 const ffmpeg = require("fluent-ffmpeg");
 const Ads = require("../models/Ads");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
+const fs = require("fs");
+require("dotenv").config();
+const axios = require("axios");
+
+const BUCKET_NAME = process.env.BUCKET_NAME;
+
+const s3 = new S3Client({
+  region: process.env.BUCKET_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_KEY,
+  },
+});
+
+//getting url
+// const getUrl = async () => {
+//   try {
+//     const url = getSignedUrl({
+//       url:
+//         "https://dn3w8358m09e7.cloudfront.net/" +
+//         "WhatsApp Image 2024-01-29 at 7.34.22 PM.jpeg",
+//       dateLessThan: new Date(Date.now() + 1000 * 60 * 60 * 24),
+//       privateKey: "KF57MO0QETG33",
+//       keyPairId: process.env.PRIVATE_KEY,
+//     });
+//     console.log(url);
+//     return url;
+//   } catch (e) {
+//     console.log(e.message, "Error getting content");
+//   }
+// };
+// getUrl();
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -1237,7 +1271,7 @@ exports.updatesettings = async (req, res) => {
 };
 
 //post anything
-exports.postanything = async (req, res) => {
+exports.postanythingg = async (req, res) => {
   const { userId, comId } = req.params;
   try {
     const { title, desc, tags } = req.body;
@@ -1543,16 +1577,25 @@ exports.newfetchfeed = async (req, res) => {
       let ur = [];
       for (let i = 0; i < post?.length; i++) {
         for (let j = 0; j < post[i]?.post?.length; j++) {
-          const a = await generatePresignedUrl(
-            "posts",
-            post[i].post[j].content?.toString(),
-            60 * 60
-          );
+          const a = process.env.URL + post[i].post[j]?.content;
           ur.push({ content: a, type: post[i].post[j]?.type });
         }
         urls.push(ur);
         ur = [];
       }
+      // let ur = [];
+      // for (let i = 0; i < post?.length; i++) {
+      //   for (let j = 0; j < post[i]?.post?.length; j++) {
+      //     const a = await generatePresignedUrl(
+      //       "posts",
+      //       post[i].post[j].content?.toString(),
+      //       60 * 60
+      //     );
+      //     ur.push({ content: a, type: post[i].post[j]?.type });
+      //   }
+      //   urls.push(ur);
+      //   ur = [];
+      // }
 
       for (let i = 0; i < post.length; i++) {
         for (
@@ -1701,5 +1744,115 @@ exports.createpollcom = async (req, res) => {
   } catch (e) {
     console.log(e);
     res.status(400).json({ success: false });
+  }
+};
+
+//post anything
+exports.postanything = async (req, res) => {
+  const { userId, comId } = req.params;
+  try {
+    const { title, desc, tags } = req.body;
+    const tag = tags.split(",");
+    const user = await User.findById(userId);
+    const community = await Community.findById(comId);
+    const topic = await Topic.find({ community: community._id }).find({
+      title: "Posts",
+    });
+
+    if (user && community && topic && req.files.length > 0) {
+      let pos = [];
+
+      for (let i = 0; i < req?.files?.length; i++) {
+        const uuidString = uuid();
+        const bucketName = "posts";
+        const objectName = `${Date.now()}_${uuidString}_${
+          req.files[i].originalname
+        }`;
+
+        // await minioClient.putObject(
+        //   bucketName,
+        //   objectName,
+        //   req.files[i].buffer
+        //   // req.files[i].size,
+        //   // req.files[i].mimetype
+        // );
+        const result = await s3.send(
+          new PutObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: objectName,
+            Body: req.files[i].buffer,
+            ContentType: req.files[i].mimetype,
+          })
+        );
+        //  const result = await uploader(req.files[i].buffer);
+
+        pos.push({ content: objectName, type: req.files[i].mimetype });
+      }
+      const post = new Post({
+        title,
+        desc,
+        community: comId,
+        sender: userId,
+        post: pos,
+        tags: tag,
+      });
+      const savedpost = await post.save();
+      await Community.updateOne(
+        { _id: comId },
+        { $push: { posts: savedpost._id }, $inc: { totalposts: 1 } }
+      );
+      await Topic.updateOne(
+        { _id: topic[0]._id },
+        { $push: { posts: savedpost._id }, $inc: { postcount: 1 } }
+      );
+      res.status(200).json({ savedpost, success: true });
+    } else {
+      res.status(404).json({
+        message: "User or Community not found or no files where there!",
+        success: false,
+      });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+exports.datadownload2 = async (req, res) => {
+  try {
+    const posts = await Post.find();
+
+    for (let i = 62; i < posts?.length; i++) {
+      for (let j = 0; j < posts[i]?.post?.length; j++) {
+        const presignedUrl = await generatePresignedUrl(
+          "posts",
+          posts[i].post[j].content?.toString(),
+          60 * 60
+        );
+
+        const response = await axios.get(presignedUrl, {
+          responseType: "arraybuffer",
+        });
+
+        const localFilePath = `./${posts[i].post[j].content.toString()}`;
+
+        fs.writeFile(localFilePath, response.data, "binary", (err) => {
+          if (err) {
+            console.error(`Error writing file: ${err.message}`);
+            // Handle the error accordingly, e.g., log or send a response to the client
+            console.log(err.message);
+          }
+          console.log(`File downloaded successfully to ${localFilePath}`);
+          // Handle success, e.g., log or send a response to the client
+        });
+      }
+    }
+
+    res
+      .status(200)
+      .json({ message: "Files downloaded successfully", success: true });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
   }
 };
