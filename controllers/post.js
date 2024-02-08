@@ -1574,28 +1574,27 @@ exports.newfetchfeed = async (req, res) => {
         dps.push(a);
       }
 
-      let ur = [];
-      for (let i = 0; i < post?.length; i++) {
-        for (let j = 0; j < post[i]?.post?.length; j++) {
-          const a = process.env.URL + post[i].post[j]?.content;
-          ur.push({ content: a, type: post[i].post[j]?.type });
-        }
-        urls.push(ur);
-        ur = [];
-      }
       // let ur = [];
       // for (let i = 0; i < post?.length; i++) {
       //   for (let j = 0; j < post[i]?.post?.length; j++) {
-      //     const a = await generatePresignedUrl(
-      //       "posts",
-      //       post[i].post[j].content?.toString(),
-      //       60 * 60
-      //     );
+      //     const a = process.env.URL + post[i].post[j]?.content;
       //     ur.push({ content: a, type: post[i].post[j]?.type });
       //   }
       //   urls.push(ur);
       //   ur = [];
-      // }
+    }
+    let ur = [];
+    for (let i = 0; i < post?.length; i++) {
+      for (let j = 0; j < post[i]?.post?.length; j++) {
+        const a = await generatePresignedUrl(
+          "posts",
+          post[i].post[j].content?.toString(),
+          60 * 60
+        );
+        ur.push({ content: a, type: post[i].post[j]?.type });
+      }
+      urls.push(ur);
+      ur = [];
 
       for (let i = 0; i < post.length; i++) {
         for (
@@ -1747,8 +1746,49 @@ exports.createpollcom = async (req, res) => {
   }
 };
 
+exports.datadownload2 = async (req, res) => {
+  try {
+    const posts = await Post.find();
+
+    for (let i = 62; i < posts?.length; i++) {
+      for (let j = 0; j < posts[i]?.post?.length; j++) {
+        const presignedUrl = await generatePresignedUrl(
+          "posts",
+          posts[i].post[j].content?.toString(),
+          60 * 60
+        );
+
+        const response = await axios.get(presignedUrl, {
+          responseType: "arraybuffer",
+        });
+
+        const localFilePath = `./${posts[i].post[j].content.toString()}`;
+
+        fs.writeFile(localFilePath, response.data, "binary", (err) => {
+          if (err) {
+            console.error(`Error writing file: ${err.message}`);
+            // Handle the error accordingly, e.g., log or send a response to the client
+            console.log(err.message);
+          }
+          console.log(`File downloaded successfully to ${localFilePath}`);
+          // Handle success, e.g., log or send a response to the client
+        });
+      }
+    }
+
+    res
+      .status(200)
+      .json({ message: "Files downloaded successfully", success: true });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//s3 bucket
+
 //post anything
-exports.postanything = async (req, res) => {
+exports.postanythings3 = async (req, res) => {
   const { userId, comId } = req.params;
   try {
     const { title, desc, tags } = req.body;
@@ -1818,41 +1858,397 @@ exports.postanything = async (req, res) => {
   }
 };
 
-exports.datadownload2 = async (req, res) => {
+//new for you
+exports.newfetchfeeds3 = async (req, res) => {
   try {
-    const posts = await Post.find();
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    const dps = [];
+    let current = [];
+    const memdps = [];
+    const subs = [];
+    const liked = [];
+    const ads = [];
+    const urls = [];
+    const content = [];
+    const addp = [];
 
-    for (let i = 62; i < posts?.length; i++) {
-      for (let j = 0; j < posts[i]?.post?.length; j++) {
-        const presignedUrl = await generatePresignedUrl(
-          "posts",
-          posts[i].post[j].content?.toString(),
-          60 * 60
-        );
+    //checking and removing posts with no communities
+    const p = await Post.find();
 
-        const response = await axios.get(presignedUrl, {
-          responseType: "arraybuffer",
-        });
+    for (let i = 0; i < p.length; i++) {
+      const com = await Community.findById(p[i].community);
+      if (!com) {
+        p[i].remove();
+      }
+    }
+    //fetching post
+    const post = await Post.aggregate([
+      //{ $match: { tags: { $in: user.interest } } },
+      { $sample: { size: 100 } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "sender",
+          foreignField: "_id",
+          as: "sender",
+        },
+      },
+      {
+        $lookup: {
+          from: "communities",
+          localField: "community",
+          foreignField: "_id",
+          as: "community",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "community.members",
+          foreignField: "_id",
+          as: "members",
+        },
+      },
+      {
+        $addFields: {
+          sender: { $arrayElemAt: ["$sender", 0] },
+          community: { $arrayElemAt: ["$community", 0] },
+        },
+      },
+      {
+        $addFields: {
+          "community.members": {
+            $map: {
+              input: { $slice: ["$members", 0, 4] },
+              as: "member",
+              in: {
+                _id: "$$member._id",
+                fullname: "$$member.fullname",
+                profilepic: "$$member.profilepic",
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          createdAt: 1,
+          status: 1,
+          likedby: 1,
+          likes: 1,
+          dislike: 1,
+          comments: 1,
+          totalcomments: 1,
+          tags: 1,
+          view: 1,
+          desc: 1,
+          isverified: 1,
+          post: 1,
+          contenttype: 1,
+          date: 1,
+          sharescount: 1,
+          sender: {
+            _id: 1,
+            fullname: 1,
+            profilepic: 1,
+          },
+          community: {
+            _id: 1,
+            title: 1,
+            dp: 1,
+            members: 1,
+            memberscount: 1,
+            isverified: 1,
+          },
+        },
+      },
+    ]);
 
-        const localFilePath = `./${posts[i].post[j].content.toString()}`;
-
-        fs.writeFile(localFilePath, response.data, "binary", (err) => {
-          if (err) {
-            console.error(`Error writing file: ${err.message}`);
-            // Handle the error accordingly, e.g., log or send a response to the client
-            console.log(err.message);
-          }
-          console.log(`File downloaded successfully to ${localFilePath}`);
-          // Handle success, e.g., log or send a response to the client
-        });
+    for (let i = 0; i < post.length; i++) {
+      if (
+        post[i].likedby?.some((id) => id.toString() === user._id.toString())
+      ) {
+        liked.push(true);
+      } else {
+        liked.push(false);
       }
     }
 
-    res
-      .status(200)
-      .json({ message: "Files downloaded successfully", success: true });
+    for (let k = 0; k < post.length; k++) {
+      const coms = await Community.findById(post[k].community);
+
+      if (coms?.members?.includes(user._id)) {
+        subs.push("subscribed");
+      } else {
+        subs.push("unsubscribed");
+      }
+    }
+
+    if (!post) {
+      res.status(201).json({ message: "No post found", success: false });
+    } else {
+      //fetching ad
+      const birthdateString = user.DOB;
+      const [birthDay, birthMonth, birthYear] = birthdateString
+        .split("/")
+        .map(Number);
+
+      // Get the current date
+      const currentDate = new Date();
+
+      // Get the current day, month, and year
+      const currentDay = currentDate.getDate();
+      const currentMonth = currentDate.getMonth() + 1; // Month is zero-based
+      const currentYear = currentDate.getFullYear();
+
+      // Calculate the age
+      let age = currentYear - birthYear;
+      if (
+        currentMonth < birthMonth ||
+        (currentMonth === birthMonth && currentDay < birthDay)
+      ) {
+        age--;
+      }
+
+      //ads
+      const ad = await Ads.aggregate([
+        {
+          $match: {
+            tags: { $in: user.interest },
+            // location: { $eq: user.location },
+            status: { $eq: "Active" },
+          },
+        },
+        {
+          $lookup: {
+            from: "users", // Assuming the collection name for users is "users"
+            localField: "creator", // Assuming the field storing the creator ObjectId is "creator"
+            foreignField: "_id",
+            as: "creator",
+          },
+        },
+        {
+          $addFields: {
+            creatorName: { $arrayElemAt: ["$creator.fullname", 0] },
+            creatorProfilePic: { $arrayElemAt: ["$creator.profilepic", 0] },
+            isverified: { $arrayElemAt: ["$creator.isverified", 0] },
+          },
+        },
+        {
+          $project: {
+            creator: 0, // Exclude the creator field if needed
+          },
+        },
+        { $sample: { size: 1 } },
+      ]);
+
+      for (let i = 0; i < ad.length; i++) {
+        if (ad[i].ageup > age && ad[i].agedown < age) {
+          ads.push(ad[i]);
+        }
+      }
+
+      for (let i = 0; i < ads.length; i++) {
+        const dp = process.env.URL + ads[i].content;
+
+        content.push(dp);
+      }
+
+      for (let i = 0; i < ads.length; i++) {
+        const dp = process.env.URL + ads[i].creatorProfilePic;
+
+        addp.push(dp);
+      }
+
+      //ad data
+      const admerge = ads.map((a, i) => ({
+        ad: a,
+        content: content[i],
+        dp: addp[i],
+      }));
+
+      //post
+      for (let i = 0; i < post.length; i++) {
+        const a = process.env.URL + post[i].community.dp;
+        dps.push(a);
+      }
+
+      let ur = [];
+      for (let i = 0; i < post?.length; i++) {
+        for (let j = 0; j < post[i]?.post?.length; j++) {
+          const a = process.env.URL + post[i].post[j]?.content;
+          ur.push({ content: a, type: post[i].post[j]?.type });
+        }
+        urls.push(ur);
+        ur = [];
+      }
+
+      for (let i = 0; i < post.length; i++) {
+        for (
+          let j = 0;
+          j < Math.min(4, post[i].community.members.length);
+          j++
+        ) {
+          const a =
+            process.env.URL + post[i]?.community?.members[j]?.profilepic;
+          current.push(a);
+        }
+
+        memdps.push(current);
+        current = [];
+      }
+
+      //post data
+      const dpData = dps;
+      const memdpData = memdps;
+      const urlData = urls;
+      const postData = post;
+      const subData = subs;
+      const likeData = liked;
+
+      const postsData = urlData.map((u, i) => ({
+        dps: dpData[i],
+        memdps: memdpData[i],
+        urls: u,
+        liked: likeData[i],
+        subs: subData[i],
+        posts: postData[i],
+      }));
+
+      //merging ad and post
+      let mergedData = [];
+
+      if (admerge.length > 0) {
+        const firstAdItem = admerge.shift();
+        mergedData.push(firstAdItem);
+      }
+
+      postsData.forEach((postItem, i) => {
+        mergedData.push(postItem);
+
+        if ((i + 1) % 10 === 0 && admerge.length > 0) {
+          const adItem = admerge.shift();
+          mergedData.push(adItem);
+        }
+      });
+
+      res.status(200).json({
+        mergedData,
+
+        success: true,
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: err, success: false });
+  }
+};
+
+//community feed
+exports.joinedcomnews3 = async (req, res) => {
+  const { userId } = req.params;
+  const user = await User.findById(userId);
+
+  try {
+    const communities = await Community.find({
+      members: { $in: user._id },
+    })
+      .populate("members", "profilepic")
+      .populate("creator", "fullname");
+
+    const ownedcoms = await Community.find({ creator: user._id.toString() });
+
+    if (!communities || communities.length === 0) {
+      res.status(200).json({ message: "No communities found", success: true });
+      return;
+    }
+
+    const dps = [];
+    const urls = [];
+    const posts = [];
+    const liked = [];
+    let current = [];
+    const memdps = [];
+
+    // Sort communities based on whether they have a post and the latest post first
+    communities.sort((a, b) => {
+      const postA = a.posts.length > 0 ? a.posts[0].createdAt : 0;
+      const postB = b.posts.length > 0 ? b.posts[0].createdAt : 0;
+      return postB - postA;
+    });
+
+    for (const community of communities) {
+      const post = await Post.find({
+        community: community._id,
+        type: "Post",
+      })
+        .populate("sender", "fullname")
+        .sort({ createdAt: -1 })
+        .limit(1);
+      posts.push(post);
+
+      for (let j = 0; j < Math.min(4, community.members.length); j++) {
+        const a = process.env.URL + community.members[j].profilepic;
+
+        current.push(a);
+      }
+
+      memdps.push(current);
+      current = [];
+
+      if (post.length > 0) {
+        const like = post[0]?.likedby?.includes(user._id);
+        liked.push(like);
+      } else {
+        liked.push(false);
+      }
+
+      let ur = [];
+      for (let j = 0; j < post[0]?.post?.length; j++) {
+        const a = process.env.URL + post[0].post[j].content;
+
+        ur.push({ content: a, type: post[0].post[j]?.type });
+      }
+
+      urls.push(ur);
+      const a = process.env.URL + community.dp;
+
+      dps.push(a);
+    }
+
+    const dpData = dps;
+    const memdpData = memdps;
+    const urlData = urls;
+    const postData = posts;
+    const communityData = communities;
+    const likeData = liked;
+
+    const mergedData = communityData.map((c, i) => ({
+      dps: dpData[i],
+      memdps: memdpData[i],
+      urls: urlData[i],
+      liked: likeData[i],
+      community: c,
+      posts: postData[i],
+    }));
+
+    //arrange acc ot latest post first
+    mergedData.sort((a, b) => {
+      const timeA = a?.posts[0]?.createdAt || 0;
+      const timeB = b?.posts[0]?.createdAt || 0;
+
+      return timeB - timeA;
+    });
+
+    res.status(200).json({
+      mergedData,
+      success: true,
+      cancreate: ownedcoms?.length >= 2 ? false : true,
+    });
   } catch (e) {
-    console.log(e);
-    res.status(400).json({ message: "Something went wrong", success: false });
+    res.status(400).json({ message: e.message, success: false });
   }
 };

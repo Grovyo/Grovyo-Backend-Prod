@@ -21,6 +21,9 @@ const {
   createpollcom,
   joinedcomnew,
   datadownload2,
+  newfetchfeeds3,
+  joinedcomnews3,
+  postanythings3,
 } = require("../controllers/post");
 const { votenowpoll } = require("../controllers/community");
 
@@ -53,5 +56,16 @@ router.get("/datadownload1", datadownload2);
 
 //delete null posts
 router.post("/deletnull", delenu);
+
+//s3 routes
+
+//new for you
+router.get("/v2/getfeed/:userId", newfetchfeeds3);
+
+//get community feed
+router.get("/v2/getfollowingfeed/:userId", joinedcomnews3);
+
+//post anything
+router.post("/v1/postanything/:userId/:comId", upload.any(), postanythings3);
 
 module.exports = router;
