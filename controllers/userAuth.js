@@ -12,6 +12,20 @@ const Message = require("../models/message");
 const aesjs = require("aes-js");
 const Community = require("../models/community");
 const Topic = require("../models/topic");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
+const fs = require("fs");
+require("dotenv").config();
+
+const BUCKET_NAME = process.env.BUCKET_NAME;
+
+const s3 = new S3Client({
+  region: process.env.BUCKET_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_KEY,
+  },
+});
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -148,11 +162,7 @@ exports.signupmobile = async (req, res) => {
     const user = await User.findOne({ phone: phone });
 
     if (user) {
-      const a = await generatePresignedUrl(
-        "images",
-        user.profilepic.toString(),
-        60 * 60 * 24
-      );
+      let a = process.env.URL + user.profilepic;
       const newEditCount = {
         time: time,
         deviceinfo: device,
@@ -380,11 +390,8 @@ exports.returnuser = async (req, res) => {
     const { id } = req.params;
     const user = await User.findById(id);
     if (user) {
-      const dp = await generatePresignedUrl(
-        "images",
-        user.profilepic,
-        60 * 60 * 24
-      );
+      const dp = process.env.URL + user.profilepic;
+
       res.status(200).json({ user, dp, success: true });
     } else {
       res.status(404).json({ message: e.message, success: false });
@@ -521,16 +528,14 @@ exports.createnewaccount = async (req, res) => {
     try {
       const bucketName = "images";
       const objectName = `${Date.now()}_${uuidString}_${req.file.originalname}`;
-      await sharp(req.file.buffer)
-        .jpeg({ quality: 50 })
-        .toBuffer()
-        .then(async (data) => {
-          await minioClient.putObject(bucketName, objectName, data);
+      const result = await s3.send(
+        new PutObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: objectName,
+          Body: req.file.buffer,
+          ContentType: req.file.mimetype,
         })
-        .catch((err) => {
-          console.log(err.message, "-Sharp error");
-        });
-
+      );
       const user = new User({
         fullname: fullname,
         username: username,
@@ -588,11 +593,7 @@ exports.createnewaccount = async (req, res) => {
           $inc: { totaltopics: 2 },
         }
       );
-      let pic = await generatePresignedUrl(
-        "images",
-        user.profilepic.toString(),
-        60 * 60
-      );
+      let pic = process.env.URL + user.profilepic;
 
       res.status(200).json({
         message: "Account created successfully",
@@ -628,11 +629,7 @@ exports.createnewaccount = async (req, res) => {
           $set: { notificationtoken: token },
         }
       );
-      let pic = await generatePresignedUrl(
-        "images",
-        user.profilepic.toString(),
-        60 * 60
-      );
+      let pic = process.env.URL + user.profilepic;
 
       //joining community by default of Grovyo
       let comId = "65a66eb9e953a4573e6c8f44";
@@ -845,15 +842,14 @@ exports.createnewaccountemail = async (req, res) => {
     try {
       const bucketName = "images";
       const objectName = `${Date.now()}_${uuidString}_${req.file.originalname}`;
-      await sharp(req.file.buffer)
-        .jpeg({ quality: 50 })
-        .toBuffer()
-        .then(async (data) => {
-          await minioClient.putObject(bucketName, objectName, data);
+      const result = await s3.send(
+        new PutObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: objectName,
+          Body: req.file.buffer,
+          ContentType: req.file.mimetype,
         })
-        .catch((err) => {
-          console.log(err.message, "-Sharp error");
-        });
+      );
 
       const user = new User({
         fullname: fullname,
@@ -875,11 +871,8 @@ exports.createnewaccountemail = async (req, res) => {
           $set: { notificationtoken: token },
         }
       );
-      let pic = await generatePresignedUrl(
-        "images",
-        user.profilepic.toString(),
-        60 * 60
-      );
+      let pic = process.env.URL + user.profilepic;
+
       //joining community by default of Grovyo
       let comId = "65a66eb9e953a4573e6c8f44";
       let publictopic = [];
@@ -952,11 +945,8 @@ exports.createnewaccountemail = async (req, res) => {
           $set: { notificationtoken: token },
         }
       );
-      let pic = await generatePresignedUrl(
-        "images",
-        user.profilepic.toString(),
-        60 * 60
-      );
+      let pic = process.env.URL + user.profilepic;
+
       //joining community by default of Grovyo
       let comId = "65a66eb9e953a4573e6c8f44";
       let publictopic = [];
@@ -1028,11 +1018,7 @@ exports.checkemail = async (req, res) => {
     } else {
       const pass = decryptaes(user?.passw) || null;
       if (password === pass.toString()) {
-        let pic = await generatePresignedUrl(
-          "images",
-          user.profilepic.toString(),
-          60 * 60
-        );
+        let pic = process.env.URL + user.profilepic;
 
         const newEditCount = {
           time: time,
@@ -1078,11 +1064,7 @@ exports.getdetails = async (req, res) => {
     if (!user) {
       res.status(203).json({ message: "User not found", success: true });
     } else {
-      let pic = await generatePresignedUrl(
-        "images",
-        user.profilepic.toString(),
-        60 * 60
-      );
+      const pic = process.env.URL + user.profilepic;
       res.status(200).json({ user, pic, success: true });
     }
   } catch (e) {
@@ -1206,15 +1188,14 @@ exports.updateaccount = async (req, res) => {
         const objectName = `${Date.now()}_${uuidString}_${
           req.file.originalname
         }`;
-        await sharp(req.file.buffer)
-          .jpeg({ quality: 50 })
-          .toBuffer()
-          .then(async (data) => {
-            await minioClient.putObject(bucketName, objectName, data);
+        const result = await s3.send(
+          new PutObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: objectName,
+            Body: req.file.buffer,
+            ContentType: req.file.mimetype,
           })
-          .catch((err) => {
-            console.log(err.message, "-Sharp error");
-          });
+        );
 
         const newEditCount = {
           time: time,
@@ -1245,11 +1226,7 @@ exports.updateaccount = async (req, res) => {
             },
           }
         );
-        const dp = await generatePresignedUrl(
-          "images",
-          objectName,
-          60 * 60 * 24
-        );
+        const dp = process.env.URL + objectName;
 
         res.status(200).json({ dp, success: true });
       } else {
@@ -1354,11 +1331,8 @@ exports.fetchblocklist = async (req, res) => {
     } else {
       let dp = [];
       for (let i = 0; i < user.blockedpeople.length; i++) {
-        const a = await generatePresignedUrl(
-          "images",
-          user.blockedpeople[i].id.profilepic.toString(),
-          60 * 60 * 24
-        );
+        const a = process.env.URL + user.blockedpeople[i].id.profilepic;
+
         dp.push(a);
       }
 
@@ -2121,11 +2095,7 @@ exports.fetchconvs = async (req, res) => {
         msg[i].typ === "doc" ||
         msg[i].typ === "glimpse"
       ) {
-        const url = await generatePresignedUrl(
-          "messages",
-          msg[i]?.content?.uri?.toString(),
-          60 * 60
-        );
+        const url = process.env.URL + msg[i]?.content?.uri;
 
         messages.push({ ...msg[i].toObject(), url });
       } else {

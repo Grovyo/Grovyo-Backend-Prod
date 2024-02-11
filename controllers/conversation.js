@@ -744,11 +744,8 @@ exports.fetchallchatsnew = async (req, res) => {
 
         for (let j = 0; j < convs.members.length; j++) {
           if (convs.members[j]._id?.toString() !== user._id.toString()) {
-            let pi = await generatePresignedUrl(
-              "images",
-              convs?.members[j]?.profilepic?.toString(),
-              60 * 60
-            );
+            const pi = process.env.URL + convs?.members[j]?.profilepic;
+
             //checking the blocking
             let isblocked = false;
             let other = await User.findById(convs.members[j]._id?.toString());

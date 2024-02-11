@@ -6,6 +6,7 @@ const Product = require("../models/product");
 const Order = require("../models/orders");
 const Cart = require("../models/Cart");
 const Subscriptions = require("../models/Subscriptions");
+require("dotenv").config();
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -92,11 +93,8 @@ exports.fetchorders = async (req, res) => {
       const image = [];
       if (orders) {
         for (let j = 0; j < orders.length; j++) {
-          const a = await generatePresignedUrl(
-            "products",
-            orders[j].productId[0].images[0].content.toString(),
-            60 * 60
-          );
+          const a = process.env.URL + orders[j].productId[0].images[0].content;
+
           image.push(a);
         }
       }
@@ -136,11 +134,8 @@ exports.fetchcart = async (req, res) => {
 
       if (user) {
         for (let j = 0; j < user.cart.length; j++) {
-          const a = await generatePresignedUrl(
-            "products",
-            user.cart[j].product.images[0].content.toString(),
-            60 * 60
-          );
+          const a = process.env.URL + user.cart[j].product.images[0].content;
+
           image.push(a);
         }
       }

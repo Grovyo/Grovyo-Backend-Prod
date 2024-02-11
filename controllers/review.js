@@ -4,6 +4,7 @@ const uuid = require("uuid").v4;
 const Minio = require("minio");
 const { response } = require("express");
 const Product = require("../models/product");
+require("dotenv").config();
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -164,21 +165,15 @@ exports.getreviews = async (req, res) => {
     } else {
       let dps = [];
       for (let i = 0; i < review.length; i++) {
-        const a = await generatePresignedUrl(
-          "images",
-          review[i].senderId.profilepic.toString(),
-          60 * 60
-        );
+        const a = process.env.URL + review[i].senderId.profilepic;
+
         dps.push(a);
       }
       let reviewpics = [];
       for (let i = 0; i < review.length; i++) {
         if (review[i].content != null) {
-          const a = await generatePresignedUrl(
-            "review",
-            review[i].content.toString(),
-            60 * 60
-          );
+          const a = process.env.URL + review[i].content;
+
           reviewpics.push(a);
         }
       }

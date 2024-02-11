@@ -7,6 +7,7 @@ const Minio = require("minio");
 const Post = require("../models/post");
 const Prosite = require("../models/prosite");
 const sharp = require("sharp");
+require("dotenv").config();
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -118,11 +119,7 @@ exports.fetchproducts = async (req, res) => {
 
       for (let i = 0; i < product.length; i++) {
         for (let j = 0; j < product[i].images.length; j++) {
-          const a = await generatePresignedUrl(
-            "products",
-            product[i].images[j].content.toString(),
-            60 * 60
-          );
+          const a = process.env.URL + product[i].images[j].content;
 
           ur.push({ content: a, type: product[i].images[j].type });
         }
@@ -214,11 +211,8 @@ exports.getcommunities = async (req, res) => {
 
         for (let i = 0; i < community.length; i++) {
           for (let j = 0; j < community[i].members.length; j++) {
-            const a = await generatePresignedUrl(
-              "images",
-              community[i].members[j].profilepic.toString(),
-              60 * 60
-            );
+            const a = process.env.URL + community[i].members[j].profilepic;
+
             current.push(a);
           }
           memdps.push(current);
@@ -239,20 +233,14 @@ exports.getcommunities = async (req, res) => {
         }
 
         for (let i = 0; i < post.length; i++) {
-          const a = await generatePresignedUrl(
-            "posts",
-            post[i].post.toString(),
-            60 * 60
-          );
+          const a = process.env.URL + post[i].post;
+
           urls.push(a);
         }
       }
       for (let i = 0; i < community.length; i++) {
-        const a = await generatePresignedUrl(
-          "images",
-          community[i].dp.toString(),
-          60 * 60
-        );
+        const a = process.env.URL + community[i].dp;
+
         dps.push(a);
       }
 

@@ -9,7 +9,19 @@ const Revenue = require("../models/revenue");
 const Advertiser = require("../models/Advertiser");
 const DelUser = require("../models/deluser");
 const Approvals = require("../models/Approvals");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const Minio = require("minio");
+require("dotenv").config();
+
+const BUCKET_NAME = process.env.BUCKET_NAME;
+
+const s3 = new S3Client({
+  region: process.env.BUCKET_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_KEY,
+  },
+});
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -396,11 +408,7 @@ exports.getdp = async (req, res) => {
   try {
     const user = await User.findById(userId);
     if (user) {
-      const dp = await generatePresignedUrl(
-        "images",
-        user.profilepic.toString(),
-        60 * 60
-      );
+      const dp = process.env.URL + user.profilepic.toString();
       let isbanned = false;
       if (user.status === "Block") {
         isbanned = true;

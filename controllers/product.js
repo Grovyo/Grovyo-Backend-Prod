@@ -300,22 +300,16 @@ exports.getaproduct = async (req, res) => {
       }
       for (let i = 0; i < product.images.length; i++) {
         if (product.images[i] !== null) {
-          const a = await generatePresignedUrl(
-            "products",
-            product.images[i].content.toString(),
-            60 * 60
-          );
+          const a = process.env.URL + product.images[i].content;
+
           urls.push(a);
         }
       }
       if (product?.reviews?.length > 0) {
         for (let i = 0; i < product.reviews.length; i++) {
           if (product.reviews[i] !== null) {
-            const a = await generatePresignedUrl(
-              "images",
-              product.reviews[i].dp.toString(),
-              60 * 60
-            );
+            const a = process.env.URL + product.reviews[i].dp;
+
             review.push({ review: product.reviews[i], dp: a });
           }
         }

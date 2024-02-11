@@ -1271,7 +1271,7 @@ exports.updatesettings = async (req, res) => {
 };
 
 //post anything
-exports.postanythingg = async (req, res) => {
+exports.postanything = async (req, res) => {
   const { userId, comId } = req.params;
   try {
     const { title, desc, tags } = req.body;

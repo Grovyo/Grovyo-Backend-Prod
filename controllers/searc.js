@@ -3,6 +3,8 @@ const Community = require("../models/community");
 const User = require("../models/userAuth");
 const Minio = require("minio");
 
+require("dotenv").config();
+
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
 
@@ -66,11 +68,8 @@ exports.searchcoms = async (req, res) => {
         dps.push(a);
       }
       for (let i = 0; i < coms.length; i++) {
-        const a = await generatePresignedUrl(
-          "images",
-          coms[i].creator.profilepic.toString(),
-          60 * 60
-        );
+        const a = process.env.URL + coms[i].creator.profilepic;
+
         creatordps.push(a);
       }
       res.status(200).json({ data: { coms, dps, creatordps }, success: true });
@@ -93,11 +92,8 @@ exports.searchpros = async (req, res) => {
         fullname: { $regex: `.*${query}.*`, $options: "i" },
       }).exec();
       for (let i = 0; i < pros.length; i++) {
-        const a = await generatePresignedUrl(
-          "images",
-          pros[i].profilepic.toString(),
-          60 * 60
-        );
+        const a = process.env.URL + pros[i].profilepic;
+
         dps.push(a);
       }
       res.status(200).json({ data: { pros, dps, success: true } });

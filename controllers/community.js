@@ -7,6 +7,7 @@ const sharp = require("sharp");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
 const Message = require("../models/message");
+require("dotenv").config();
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -795,11 +796,7 @@ exports.compostfeed = async (req, res) => {
       );
 
       //creator data
-      const creatordp = await generatePresignedUrl(
-        "images",
-        community.creator.profilepic.toString(),
-        60 * 60
-      );
+      const creatordp = process.env.URL + community.creator.profilepic;
 
       //community data
       const subs =
@@ -817,12 +814,7 @@ exports.compostfeed = async (req, res) => {
       const canpost =
         community.admins.includes(user._id) ||
         community.moderators.includes(user._id);
-
-      const dp = await generatePresignedUrl(
-        "images",
-        community.dp.toString(),
-        60 * 60
-      );
+      const dp = process.env.URL + community.dp;
 
       //post data
       const posts = await Post.find({ community: community._id }).populate(
@@ -883,11 +875,8 @@ exports.compostfeed = async (req, res) => {
       let ur = [];
       for (let i = 0; i < posts?.length; i++) {
         for (let j = 0; j < posts[i]?.post?.length; j++) {
-          const a = await generatePresignedUrl(
-            "posts",
-            posts[i].post[j].content?.toString(),
-            60 * 60
-          );
+          const a = process.env.URL + posts[i].post[j].content;
+
           ur.push({ content: a, type: posts[i].post[j]?.type });
         }
         urls.push(ur);
@@ -896,11 +885,8 @@ exports.compostfeed = async (req, res) => {
 
       //dp of the sender
       for (let i = 0; i < posts.length; i++) {
-        const a = await generatePresignedUrl(
-          "images",
-          posts[i].sender.profilepic.toString(),
-          60 * 60
-        );
+        const a = process.env.URL + posts[i].sender.profilepic;
+
         dps.push(a);
       }
 
@@ -1332,19 +1318,11 @@ exports.getallmembers = async (req, res) => {
 
         let isadmin =
           community.admins[0]._id?.toString === user._id?.toString();
-
-        let admindp = await generatePresignedUrl(
-          "images",
-          community.admins[0].profilepic.toString(),
-          60 * 60
-        );
+        const admindp = process.env.URL + community.admins[0].profilepic;
 
         for (let j = 0; j < community?.members?.length; j++) {
-          const a = await generatePresignedUrl(
-            "images",
-            community.members[j].profilepic.toString(),
-            60 * 60
-          );
+          const a = process.env.URL + community.members[j].profilepic;
+
           dps.push(a);
         }
 

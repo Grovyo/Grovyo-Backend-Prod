@@ -24,6 +24,7 @@ const {
   validatePaymentVerification,
   validateWebhookSignature,
 } = require("razorpay/dist/utils/razorpay-utils");
+require("dotenv").config();
 
 const instance = new Razorpay({
   key_id: "rzp_live_Ms5I8V8VffSpYq",
@@ -788,7 +789,7 @@ exports.createrzporder = async (req, res) => {
 //finalising the product order(UPI)
 exports.finaliseorder = async (req, res) => {
   try {
-    const { id, ordId } = req.params;
+    const { id, ordId, total, pickupid } = req.params;
     const {
       oid,
       razorpay_order_id,
@@ -817,7 +818,6 @@ exports.finaliseorder = async (req, res) => {
           { $unset: { cart: [], cartproducts: [] } }
         );
 
-        //sending notification to admin
         //sending notification to admin
         let flashid = "655e189fb919c70bf6895485";
         const flash = await User.findById(flashid);
@@ -898,6 +898,8 @@ exports.finaliseorder = async (req, res) => {
 
         res.status(200).json({ success: true });
       }
+      //creating and assigning deliveries
+      credeli({ id, pickupid, oid, total });
     }
   } catch (e) {
     console.log(e);
@@ -908,7 +910,7 @@ exports.finaliseorder = async (req, res) => {
 //create a new product order(cod)
 exports.createnewproductorder = async (req, res) => {
   const { userId } = req.params;
-  const { quantity, deliverycharges, productId, total } = req.body;
+  const { quantity, deliverycharges, productId, total, pickupid } = req.body;
 
   try {
     const user = await User.findById(userId);
@@ -1016,6 +1018,9 @@ exports.createnewproductorder = async (req, res) => {
         });
 
       res.status(200).json({ success: true });
+
+      //creating and assigning deliveries
+      credeli({ id, pickupid, oid, total });
     }
   } catch (e) {
     console.log(e);
@@ -1759,5 +1764,263 @@ exports.resenotpflash = async (req, res) => {
     res
       .status(400)
       .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//Code generation for nexo
+// exports.nexogen=async(req,res)=>{
+//   try{
+//     const { }
+//     const otp = generateOTP();
+//     const mesId = msgid();
+//     let finalotp = {
+//       otp: otp,
+//       timing: Date.now().toString(),
+//     };
+//     const convs = await Conversation.findOne({
+//       members: { $all: [user?._id, flash._id] },
+//     });
+
+//     if (convs) {
+//       let data = {
+//         conversationId: convs._id,
+//         sender: flash._id,
+//         text: `Your Otp for verification of Nexo is ${otp}. This Otp is valid for 10 mins.`,
+//         mesId: mesId,
+//       };
+//       const m = new Message(data);
+//       await m.save();
+//       await Deluser.updateOne(
+//         { _id: partner._id },
+//         {
+//           $set: {
+//             currentotp: finalotp,
+//           },
+//         }
+//       );
+
+//       const timestamp = `${new Date()}`;
+//       const msg = {
+//         notification: {
+//           title: `Grovyo Flash`,
+//           text: `Your Otp for verification of Nexo is ${otp}. This Otp is valid for 10 mins.`,
+//         },
+//         data: {
+//           screen: "Conversation",
+//           sender_fullname: `${user?.fullname}`,
+//           sender_id: `${user?._id}`,
+//           text: `Your Otp for confirmation of receiving your order is ${otp}. This Otp is valid for 10 mins, please share it with our partner.`,
+//           convId: `${convs?._id}`,
+//           createdAt: `${timestamp}`,
+//           mesId: `${mesId}`,
+//           typ: `message`,
+//           senderuname: `${user?.username}`,
+//           senderverification: `${user.isverified}`,
+//           senderpic: `${recpic}`,
+//           reciever_fullname: `${flash.fullname}`,
+//           reciever_username: `${flash.username}`,
+//           reciever_isverified: `${flash.isverified}`,
+//           reciever_pic: `${senderpic}`,
+//           reciever_id: `${flash._id}`,
+//         },
+//         token: user?.notificationtoken,
+//       };
+
+//       await admin
+//         .messaging()
+//         .send(msg)
+//         .then((response) => {
+//           console.log("Successfully sent message");
+//         })
+//         .catch((error) => {
+//           console.log("Error sending message:", error);
+//         });
+//     } else {
+//       const conv = new Conversation({
+//         members: [user?._id, flash._id],
+//       });
+//       await conv.save();
+//       let data = {
+//         conversationId: conv._id,
+//         sender: flash._id,
+//         text: `Your Otp for confirmation of reciving your order is ${otp}. This Otp is valid for 10 mins, please share it with our partner.`,
+//         mesId: mesId,
+//       };
+//       const m = new Message(data);
+//       await m.save();
+//       await Deluser.updateOne(
+//         { _id: partner._id },
+//         {
+//           $set: {
+//             currentotp: finalotp,
+//           },
+//         }
+//       );
+//       await User.updateOne(
+//         { _id: user?._id },
+//         {
+//           $push: {
+//             conversations: conv?._id,
+//           },
+//         }
+//       );
+//       await User.updateOne(
+//         { _id: flash._id },
+//         {
+//           $push: {
+//             conversations: conv?._id,
+//           },
+//         }
+//       );
+//       const msg = {
+//         notification: {
+//           title: `Grovyo Flash`,
+//           body: `Your Otp for confirmation of reciving your order is ${otp}. This Otp is valid for 10 mins, please share it with our partner.`,
+//         },
+//         data: {
+//           screen: "Conversation",
+//           sender_fullname: `${user?.fullname}`,
+//           sender_id: `${user?._id}`,
+//           text: `Your Otp for confirmation of reciving your order is ${otp}. This Otp is valid for 10 mins, please share it with our partner.`,
+//           convId: `${convs?._id}`,
+//           createdAt: `${timestamp}`,
+//           mesId: `${mesId}`,
+//           typ: `message`,
+//           senderuname: `${user?.username}`,
+//           senderverification: `${user.isverified}`,
+//           senderpic: `${recpic}`,
+//           reciever_fullname: `${flash.fullname}`,
+//           reciever_username: `${flash.username}`,
+//           reciever_isverified: `${flash.isverified}`,
+//           reciever_pic: `${senderpic}`,
+//           reciever_id: `${flash._id}`,
+//         },
+//         token: user?.notificationtoken,
+//       };
+
+//       await admin
+//         .messaging()
+//         .send(msg)
+//         .then((response) => {
+//           console.log("Successfully sent message");
+//         })
+//         .catch((error) => {
+//           console.log("Error sending message:", error);
+//         });
+//     }
+//   }catch(e){
+//     console.log(e)
+//     res.status(400).json({message: "Something went wrong...", success: false})
+//   }
+// }
+
+//create delivery function
+const credeli = async ({ id, pickupid, oid, total }) => {
+  try {
+    const user = await User.findById(id);
+    const store = await User.findById(pickupid);
+    //const order = await Order.findOne({ orderId: oid });
+    if (user && store) {
+      //checking if user and store are under 20 km range
+      const check = geolib.isPointWithinRadius(
+        {
+          latitude: user?.address?.coordinates?.latitude,
+          longitude: user?.address?.coordinates?.longitude,
+        },
+        {
+          latitude: store?.address?.coordinates?.latitude,
+          longitude: store?.address?.coordinates?.longitude,
+        },
+        20000
+      );
+
+      let eligibledriver = [];
+      //for now delivery will be assigfned to any person
+      // for (let i = 0; i < store?.deliverypartners?.length; i++) {
+      const deliverypartner = await Deluser.findOne({
+        accounttype: "partner",
+      });
+
+      if (
+        deliverypartner &&
+        deliverypartner.accstatus !== "banned" &&
+        deliverypartner.accstatus !== "review" &&
+        deliverypartner.deliveries?.length < 21 &&
+        deliverypartner.totalbalance < 3000
+      ) {
+        let driverloc = {
+          latitude: deliverypartner.currentlocation?.latitude,
+          longitude: deliverypartner.currentlocation?.longitude,
+          id: deliverypartner?._id,
+        };
+        eligibledriver.push(driverloc);
+      }
+      // }
+
+      if (eligibledriver?.length > 0) {
+        const nearestpartner = geolib.findNearest(
+          {
+            latitude: deliverypartner.currentlocation?.latitude,
+            longitude: deliverypartner.currentlocation?.longitude,
+          },
+          eligibledriver
+        );
+
+        if (nearestpartner) {
+          const driver = await Deluser?.findById(nearestpartner?.id);
+
+          const newDeliveries = new Delivery({
+            title: user?.fullname,
+            amount: total,
+            orderId: oid,
+            pickupaddress: store?.storeAddress,
+            partner: driver?._id,
+            droppingaddress: user?.address,
+            phonenumber: user.phone,
+            //mode: order.paymentMode ? order?.paymentMode : "Cash",
+          });
+          await newDeliveries.save();
+
+          //pushing delivery for driver
+          await Deluser.updateOne(
+            { _id: driver._id },
+            { $push: { deliveries: newDeliveries._id } }
+          );
+          const msg = {
+            notification: {
+              title: "A new order has arrived.",
+              body: `From ${user?.fullname} OrderId #${oid}`,
+            },
+            data: {},
+            tokens: [
+              user?.notificationtoken,
+              driver?.notificationtoken,
+              store?.notificationtoken, //person who selles this item
+            ],
+          };
+
+          await admin
+            .messaging()
+            .sendEachForMulticast(msg)
+            .then((response) => {
+              console.log("Successfully sent message");
+            })
+            .catch((error) => {
+              console.log("Error sending message:", error);
+            });
+        }
+        res.status(200).json({ success: true });
+      } else {
+        console.log("No delivery partner is available at the moment!");
+        res.status(203).json({ success: false });
+      }
+    } else {
+      res
+        .status(404)
+        .json({ message: "Something not found...", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
   }
 };
