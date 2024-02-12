@@ -983,22 +983,33 @@ exports.gettopicmessages = async (req, res) => {
             members: topic?.memberscount,
             name: topic?.title,
           };
-          if (
-            topic?.type === "paid" &&
-            topic.purchased.some((memberId) => memberId.id.equals(user?._id))
-          ) {
+          console.log(
+            topic.purchased.some((memberId) => console.log(memberId))
+          );
+          if (topic?.type === "paid") {
+            if (
+              topic.purchased.some((memberId) => memberId.id.equals(user?._id))
+            ) {
+              res.status(200).json({
+                muted,
+                messages,
+                success: true,
+                topicjoined: true,
+              });
+            } else {
+              res.status(203).json({
+                messages: "Not joined",
+                success: true,
+                topicjoined: false,
+                topic: topicdetail,
+              });
+            }
+          } else {
             res.status(200).json({
               muted,
               messages,
               success: true,
               topicjoined: true,
-            });
-          } else {
-            res.status(203).json({
-              messages: "Not joined",
-              success: true,
-              topicjoined: false,
-              topic: topicdetail,
             });
           }
         }

@@ -2218,7 +2218,7 @@ exports.sendchatfile = async (req, res) => {
 
     const result = await s3.send(
       new PutObjectCommand({
-        Bucket: Msgbucket,
+        Bucket: BUCKET_NAME,
         Key: objectName,
         Body: req.files[0].buffer,
         ContentType: req.files[0].mimetype,
