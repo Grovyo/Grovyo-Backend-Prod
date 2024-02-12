@@ -7,7 +7,21 @@ const sharp = require("sharp");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
 const Message = require("../models/message");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
+const fs = require("fs");
 require("dotenv").config();
+const axios = require("axios");
+
+const BUCKET_NAME = process.env.BUCKET_NAME;
+
+const s3 = new S3Client({
+  region: process.env.BUCKET_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_KEY,
+  },
+});
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -1099,11 +1113,19 @@ exports.create = async (req, res) => {
       const bucketName = "images";
       const objectName = `${Date.now()}_${uuidString}_${image.originalname}`;
       a = objectName;
-      await minioClient.putObject(
-        bucketName,
-        objectName,
-        image.buffer,
-        image.buffer.length
+      // await minioClient.putObject(
+      //   bucketName,
+      //   objectName,
+      //   image.buffer,
+      //   image.buffer.length
+      // );
+      const result = await s3.send(
+        new PutObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: objectName,
+          Body: image.buffer,
+          ContentType: image.mimetype,
+        })
       );
       const community = new Community({
         title,
@@ -1171,49 +1193,7 @@ exports.create = async (req, res) => {
           { $push: { topicsjoined: topicIdToStore } }
         );
       }
-      // await Community.updateMany(
-      //   { _id: savedcom._id },
-      //   {
-      //     $push: { topics: [topic1._id, topic2._id, topic3._id] },
-      //     $inc: { totaltopics: 1 },
-      //   }
-      // );
 
-      // await Topic.updateOne(
-      //   { _id: topic1._id },
-      //   { $push: { members: user._id }, $inc: { memberscount: 1 } }
-      // );
-      // await Topic.updateOne(
-      //   { _id: topic2._id },
-      //   { $push: { members: user._id }, $inc: { memberscount: 1 } }
-      // );
-      // await Topic.updateOne(
-      //   { _id: topic3._id },
-      //   { $push: { members: user._id }, $inc: { memberscount: 1 } }
-      // );
-      // await Topic.updateOne(
-      //   { _id: topic1._id },
-      //   { $push: { notifications: user._id } }
-      // );
-      // await Topic.updateOne(
-      //   { _id: topic2._id },
-      //   { $push: { notifications: user._id } }
-      // );
-      // await Topic.updateOne(
-      //   { _id: topic3._id },
-      //   { $push: { notifications: user._id } }
-      // );
-
-      // await User.updateMany(
-      //   { _id: userId },
-      //   {
-      //     $push: {
-      //       topicsjoined: [topic1._id, topic2._id, topic3._id],
-      //       communityjoined: savedcom._id,
-      //     },
-      //     $inc: { totaltopics: 3, totalcom: 1 },
-      //   }
-      // );
       res.status(200).json({ community: savedcom, success: true });
     } catch (e) {
       console.log(e);
@@ -1225,11 +1205,19 @@ exports.create = async (req, res) => {
       const bucketName = "images";
       const objectName = `${Date.now()}_${uuidString}_${image.originalname}`;
       a = objectName;
-      await minioClient.putObject(
-        bucketName,
-        objectName,
-        image.buffer,
-        image.buffer.length
+      // await minioClient.putObject(
+      //   bucketName,
+      //   objectName,
+      //   image.buffer,
+      //   image.buffer.length
+      // );
+      const result = await s3.send(
+        new PutObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: objectName,
+          Body: image.buffer,
+          ContentType: image.mimetype,
+        })
       );
       const community = new Community({
         title,
