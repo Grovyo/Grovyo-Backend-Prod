@@ -1748,32 +1748,30 @@ exports.createpollcom = async (req, res) => {
 
 exports.datadownload2 = async (req, res) => {
   try {
-    const posts = await Post.find();
+    const posts = await User.find();
 
-    for (let i = 62; i < posts?.length; i++) {
-      for (let j = 0; j < posts[i]?.post?.length; j++) {
-        const presignedUrl = await generatePresignedUrl(
-          "posts",
-          posts[i].post[j].content?.toString(),
-          60 * 60
-        );
+    for (let i = 12; i < posts?.length; i++) {
+      const presignedUrl = await generatePresignedUrl(
+        "images",
+        posts[i].profilepic.toString(),
+        60 * 60
+      );
 
-        const response = await axios.get(presignedUrl, {
-          responseType: "arraybuffer",
-        });
+      const response = await axios.get(presignedUrl, {
+        responseType: "arraybuffer",
+      });
+      console.log(i, "count");
+      const localFilePath = `./${posts[i].profilepic.toString()}`;
 
-        const localFilePath = `./${posts[i].post[j].content.toString()}`;
-
-        fs.writeFile(localFilePath, response.data, "binary", (err) => {
-          if (err) {
-            console.error(`Error writing file: ${err.message}`);
-            // Handle the error accordingly, e.g., log or send a response to the client
-            console.log(err.message);
-          }
-          console.log(`File downloaded successfully to ${localFilePath}`);
-          // Handle success, e.g., log or send a response to the client
-        });
-      }
+      fs.writeFile(localFilePath, response.data, "binary", (err) => {
+        if (err) {
+          console.error(`Error writing file: ${err.message}`);
+          // Handle the error accordingly, e.g., log or send a response to the client
+          console.log(err.message);
+        }
+        console.log(`File downloaded successfully to ${localFilePath}`);
+        // Handle success, e.g., log or send a response to the client
+      });
     }
 
     res

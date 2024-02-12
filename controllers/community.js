@@ -889,7 +889,7 @@ exports.compostfeed = async (req, res) => {
 
         dps.push(a);
       }
-
+      console.log(dps);
       //mergeing all the data
       const urlData = urls;
       const postData = posts;
@@ -1463,6 +1463,33 @@ exports.votenowpoll = async (req, res) => {
         }
       );
       res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//remove the community along posts
+exports.removecomwithposts = async (req, res) => {
+  try {
+    const { id, comId } = req.params;
+    const user = await User.findById(id);
+    if (user) {
+      const community = await Community.findById(comId);
+      if (community) {
+        for (let i = 0; i < community.posts.length; i++) {
+          const post = await Post.findById(community.posts[i]);
+          if (post) {
+            post.remove();
+          }
+        }
+        //)
+        community.remove();
+      }
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ message: "User not found!", success: false });
     }
   } catch (e) {
     console.log(e);

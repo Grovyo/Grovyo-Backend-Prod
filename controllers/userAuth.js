@@ -18,6 +18,7 @@ const fs = require("fs");
 require("dotenv").config();
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
+const Msgbucket = process.env.MSG_BUCKET;
 
 const s3 = new S3Client({
   region: process.env.BUCKET_REGION,
@@ -2123,7 +2124,7 @@ exports.fetchconvs = async (req, res) => {
 };
 
 //send any file
-exports.sendchatfile = async (req, res) => {
+exports.sendchatfileold = async (req, res) => {
   try {
     const data = JSON.parse(req.body.data);
 
@@ -2203,6 +2204,56 @@ exports.sendchatfile = async (req, res) => {
   }
 };
 
+//send any file s3
+exports.sendchatfile = async (req, res) => {
+  try {
+    const data = JSON.parse(req.body.data);
+
+    let pos = {};
+    const uuidString = uuid();
+    const bucketName = "messages";
+    const objectName = `${Date.now()}_${uuidString}_${
+      req.files[0].originalname
+    }`;
+
+    const result = await s3.send(
+      new PutObjectCommand({
+        Bucket: Msgbucket,
+        Key: objectName,
+        Body: req.files[0].buffer,
+        ContentType: req.files[0].mimetype,
+      })
+    );
+    pos.uri = objectName;
+    pos.type = req.files[0].mimetype;
+    pos.name = data?.content?.name;
+    pos.size = req.files[0].size;
+
+    const message = new Message({
+      text: data?.text,
+      sender: data?.sender_id,
+      conversationId: data?.convId,
+      typ: data?.typ,
+      mesId: data?.mesId,
+      reply: data?.reply,
+      dissapear: data?.dissapear,
+      isread: data?.isread,
+      sequence: data?.sequence,
+      timestamp: data?.timestamp,
+      content: pos,
+    });
+    await message.save();
+    const a = process.env.URL + message?.content?.uri;
+
+    res.status(200).json({ success: true, link: a });
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
 //load more messages
 exports.loadmorechatmsgs = async (req, res) => {
   try {
@@ -2233,12 +2284,7 @@ exports.loadmorechatmsgs = async (req, res) => {
           msg[i].typ === "video" ||
           msg[i].typ === "doc"
         ) {
-          const url = await generatePresignedUrl(
-            "messages",
-            msg[i]?.content?.uri?.toString(),
-            60 * 60
-          );
-
+          const url = process.env.URL + msg[i]?.content?.uri;
           messages.push({ ...msg[i].toObject(), url });
         } else {
           messages.push(msg[i].toObject());
@@ -2311,11 +2357,7 @@ exports.fetchhiddenconv = async (req, res) => {
           msg[i].typ === "doc" ||
           msg[i].typ === "glimpse"
         ) {
-          const url = await generatePresignedUrl(
-            "messages",
-            msg[i]?.content?.uri?.toString(),
-            60 * 60
-          );
+          const url = process.env.URL + msg[i]?.content?.uri;
 
           messages.push({ ...msg[i].toObject(), url });
         } else {
@@ -2363,12 +2405,7 @@ exports.fetchmorehiddenconv = async (req, res) => {
           msg[i].typ === "video" ||
           msg[i].typ === "doc"
         ) {
-          const url = await generatePresignedUrl(
-            "messages",
-            msg[i]?.content?.uri?.toString(),
-            60 * 60
-          );
-
+          const url = process.env.URL + msg[i]?.content?.uri;
           messages.push({ ...msg[i].toObject(), url });
         } else {
           messages.push(msg[i].toObject());
