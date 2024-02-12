@@ -1964,7 +1964,7 @@ exports.newfetchfeeds3 = async (req, res) => {
     //     },
     //   },
     // ]);
-    const post = await Post.find();
+    const post = await Post.find().populate("community", "title members");
 
     for (let i = 0; i < post.length; i++) {
       if (
