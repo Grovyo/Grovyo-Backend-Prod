@@ -24,6 +24,8 @@ const {
   newfetchfeeds3,
   joinedcomnews3,
   postanythings3,
+  fetchinterest,
+  reseteverycart,
 } = require("../controllers/post");
 const { votenowpoll } = require("../controllers/community");
 
@@ -67,5 +69,11 @@ router.get("/v2/getfollowingfeed/:userId", joinedcomnews3);
 
 //post anything
 router.post("/v1/postanything/:userId/:comId", upload.any(), postanythings3);
+
+//fetchinterests
+router.post("/v1/fetchinterest", fetchinterest);
+
+//reseteverycart
+router.post("/v1/reseteverycart", reseteverycart);
 
 module.exports = router;

@@ -889,7 +889,7 @@ exports.compostfeed = async (req, res) => {
       let ur = [];
       for (let i = 0; i < posts?.length; i++) {
         for (let j = 0; j < posts[i]?.post?.length; j++) {
-          const a = process.env.URL + posts[i].post[j].content;
+          const a = process.env.POST_URL + posts[i].post[j].content;
 
           ur.push({ content: a, type: posts[i].post[j]?.type });
         }

@@ -9,6 +9,7 @@ const Notification = require("../models/notification");
 const sharp = require("sharp");
 const ffmpeg = require("fluent-ffmpeg");
 const Ads = require("../models/Ads");
+const Interest = require("../models/Interest");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 const fs = require("fs");
@@ -16,6 +17,7 @@ require("dotenv").config();
 const axios = require("axios");
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
+const POST_BUCKET = process.env.POST_BUCKET;
 
 const s3 = new S3Client({
   region: process.env.BUCKET_REGION,
@@ -1816,7 +1818,7 @@ exports.postanythings3 = async (req, res) => {
         // );
         const result = await s3.send(
           new PutObjectCommand({
-            Bucket: BUCKET_NAME,
+            Bucket: POST_BUCKET,
             Key: objectName,
             Body: req.files[i].buffer,
             ContentType: req.files[i].mimetype,
@@ -1989,86 +1991,6 @@ exports.newfetchfeeds3 = async (req, res) => {
     if (!post) {
       res.status(201).json({ message: "No post found", success: false });
     } else {
-      //fetching ad
-      const birthdateString = user.DOB;
-      const [birthDay, birthMonth, birthYear] = birthdateString
-        .split("/")
-        .map(Number);
-
-      // Get the current date
-      const currentDate = new Date();
-
-      // Get the current day, month, and year
-      const currentDay = currentDate.getDate();
-      const currentMonth = currentDate.getMonth() + 1; // Month is zero-based
-      const currentYear = currentDate.getFullYear();
-
-      // Calculate the age
-      let age = currentYear - birthYear;
-      if (
-        currentMonth < birthMonth ||
-        (currentMonth === birthMonth && currentDay < birthDay)
-      ) {
-        age--;
-      }
-
-      //ads
-      const ad = await Ads.aggregate([
-        {
-          $match: {
-            tags: { $in: user.interest },
-            // location: { $eq: user.location },
-            status: { $eq: "Active" },
-          },
-        },
-        {
-          $lookup: {
-            from: "users", // Assuming the collection name for users is "users"
-            localField: "creator", // Assuming the field storing the creator ObjectId is "creator"
-            foreignField: "_id",
-            as: "creator",
-          },
-        },
-        {
-          $addFields: {
-            creatorName: { $arrayElemAt: ["$creator.fullname", 0] },
-            creatorProfilePic: { $arrayElemAt: ["$creator.profilepic", 0] },
-            isverified: { $arrayElemAt: ["$creator.isverified", 0] },
-          },
-        },
-        {
-          $project: {
-            creator: 0, // Exclude the creator field if needed
-          },
-        },
-        { $sample: { size: 1 } },
-      ]);
-
-      for (let i = 0; i < ad.length; i++) {
-        if (ad[i].ageup > age && ad[i].agedown < age) {
-          ads.push(ad[i]);
-        }
-      }
-
-      for (let i = 0; i < ads.length; i++) {
-        const dp = process.env.URL + ads[i].content;
-
-        content.push(dp);
-      }
-
-      for (let i = 0; i < ads.length; i++) {
-        const dp = process.env.URL + ads[i].creatorProfilePic;
-
-        addp.push(dp);
-      }
-
-      //ad data
-      const admerge = ads.map((a, i) => ({
-        ad: a,
-        content: content[i],
-        dp: addp[i],
-      }));
-
       //post
       for (let i = 0; i < post.length; i++) {
         const a = process.env.URL + post[i].community.dp;
@@ -2078,7 +2000,7 @@ exports.newfetchfeeds3 = async (req, res) => {
       let ur = [];
       for (let i = 0; i < post?.length; i++) {
         for (let j = 0; j < post[i]?.post?.length; j++) {
-          const a = process.env.URL + post[i].post[j]?.content;
+          const a = process.env.POST_URL + post[i].post[j]?.content;
           ur.push({ content: a, type: post[i].post[j]?.type });
         }
         urls.push(ur);
@@ -2108,7 +2030,7 @@ exports.newfetchfeeds3 = async (req, res) => {
       const subData = subs;
       const likeData = liked;
 
-      const postsData = urlData.map((u, i) => ({
+      const mergedData = urlData.map((u, i) => ({
         dps: dpData[i],
         memdps: memdpData[i],
         urls: u,
@@ -2117,26 +2039,8 @@ exports.newfetchfeeds3 = async (req, res) => {
         posts: postData[i],
       }));
 
-      //merging ad and post
-      let mergedData = [];
-
-      if (admerge.length > 0) {
-        const firstAdItem = admerge.shift();
-        mergedData.push(firstAdItem);
-      }
-
-      postsData.forEach((postItem, i) => {
-        mergedData.push(postItem);
-
-        if ((i + 1) % 10 === 0 && admerge.length > 0) {
-          const adItem = admerge.shift();
-          mergedData.push(adItem);
-        }
-      });
-
       res.status(200).json({
         mergedData,
-
         success: true,
       });
     }
@@ -2207,7 +2111,7 @@ exports.joinedcomnews3 = async (req, res) => {
 
       let ur = [];
       for (let j = 0; j < post[0]?.post?.length; j++) {
-        const a = process.env.URL + post[0].post[j].content;
+        const a = process.env.POST_URL + post[0].post[j].content;
 
         ur.push({ content: a, type: post[0].post[j]?.type });
       }
@@ -2249,5 +2153,49 @@ exports.joinedcomnews3 = async (req, res) => {
     });
   } catch (e) {
     res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+//fetching the interests
+exports.fetchinterest = async (req, res) => {
+  try {
+    const interest = await Interest.find();
+    let finals = [];
+    for (let i = 0; i < interest.length; i++) {
+      if (interest[0].count > 0) {
+        finals.push(interest);
+      }
+    }
+    res.status(200).json({ success: true, interests: finals });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: e.message, success: false });
+  }
+};
+
+//reset everyones cart
+exports.reseteverycart = async (req, res) => {
+  try {
+    const user = await User.find();
+    for (let i = 0; i < user.length; i++) {
+      await User.updateOne(
+        { _id: user[i]._id },
+        {
+          $unset: {
+            puchase_history: [],
+            puchase_products: [],
+            cart: [],
+            cart_history: [],
+            cartproducts: [],
+          },
+        }
+      );
+    }
+    res.status(200).json({ success: true });
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
   }
 };
