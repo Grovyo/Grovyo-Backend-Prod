@@ -2096,7 +2096,7 @@ exports.fetchconvs = async (req, res) => {
         msg[i].typ === "doc" ||
         msg[i].typ === "glimpse"
       ) {
-        const url = process.env.URL + msg[i]?.content?.uri;
+        const url = process.env.MSG_URL + msg[i]?.content?.uri;
 
         messages.push({ ...msg[i].toObject(), url });
       } else {
@@ -2218,7 +2218,7 @@ exports.sendchatfile = async (req, res) => {
 
     const result = await s3.send(
       new PutObjectCommand({
-        Bucket: BUCKET_NAME,
+        Bucket: Msgbucket,
         Key: objectName,
         Body: req.files[0].buffer,
         ContentType: req.files[0].mimetype,
@@ -2284,7 +2284,7 @@ exports.loadmorechatmsgs = async (req, res) => {
           msg[i].typ === "video" ||
           msg[i].typ === "doc"
         ) {
-          const url = process.env.URL + msg[i]?.content?.uri;
+          const url = process.env.MSG_URL + msg[i]?.content?.uri;
           messages.push({ ...msg[i].toObject(), url });
         } else {
           messages.push(msg[i].toObject());
@@ -2357,7 +2357,7 @@ exports.fetchhiddenconv = async (req, res) => {
           msg[i].typ === "doc" ||
           msg[i].typ === "glimpse"
         ) {
-          const url = process.env.URL + msg[i]?.content?.uri;
+          const url = process.env.MSG_URL + msg[i]?.content?.uri;
 
           messages.push({ ...msg[i].toObject(), url });
         } else {
@@ -2405,7 +2405,7 @@ exports.fetchmorehiddenconv = async (req, res) => {
           msg[i].typ === "video" ||
           msg[i].typ === "doc"
         ) {
-          const url = process.env.URL + msg[i]?.content?.uri;
+          const url = process.env.MSG_URL + msg[i]?.content?.uri;
           messages.push({ ...msg[i].toObject(), url });
         } else {
           messages.push(msg[i].toObject());

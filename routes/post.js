@@ -30,7 +30,7 @@ const {
 const { votenowpoll } = require("../controllers/community");
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage, limits: { fileSize: 100000000 } });
 
 // router.post("/createphoto/:userId/:commId", upload.any(), createPhoto);
 router.post("/postanything/:userId/:comId", upload.any(), postanythings3);
@@ -71,7 +71,7 @@ router.get("/v2/getfollowingfeed/:userId", joinedcomnews3);
 router.post("/v1/postanything/:userId/:comId", upload.any(), postanythings3);
 
 //fetchinterests
-router.post("/v1/fetchinterest", fetchinterest);
+router.get("/v1/fetchinterest", fetchinterest);
 
 //reseteverycart
 router.post("/v1/reseteverycart", reseteverycart);

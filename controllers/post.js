@@ -9,6 +9,7 @@ const Notification = require("../models/notification");
 const sharp = require("sharp");
 const ffmpeg = require("fluent-ffmpeg");
 const Ads = require("../models/Ads");
+const Tag = require("../models/Tags");
 const Interest = require("../models/Interest");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
@@ -1791,8 +1792,9 @@ exports.datadownload2 = async (req, res) => {
 exports.postanythings3 = async (req, res) => {
   const { userId, comId } = req.params;
   try {
-    const { title, desc, tags } = req.body;
+    const { title, desc, tags, category } = req.body;
     const tag = tags.split(",");
+
     const user = await User.findById(userId);
     const community = await Community.findById(comId);
     const topic = await Topic.find({ community: community._id }).find({
@@ -1837,6 +1839,43 @@ exports.postanythings3 = async (req, res) => {
         tags: tag,
       });
       const savedpost = await post.save();
+
+      //updating tags and interests
+      const int = await Interest.findOne({ title: category });
+
+      for (let i = 0; i < tag?.length; i++) {
+        const t = await Tag.findOne({ title: tag[i].toLowerCase() });
+
+        if (t) {
+          await Tag.updateOne(
+            { _id: t._id },
+            { $inc: { count: 1 }, $addToSet: { post: post._id } }
+          );
+          if (int) {
+            await Interest.updateOne(
+              { _id: int._id },
+              { $inc: { count: 1 }, $addToSet: { post: post._id, tags: t._id } }
+            );
+          }
+        } else {
+          const newtag = new Tag({
+            title: tag[i].toLowerCase(),
+            post: post._id,
+            count: 1,
+          });
+          await newtag.save();
+          if (int) {
+            await Interest.updateOne(
+              { _id: int._id },
+              {
+                $inc: { count: 1 },
+                $addToSet: { post: post._id, tags: newtag._id },
+              }
+            );
+          }
+        }
+      }
+
       await Community.updateOne(
         { _id: comId },
         { $push: { posts: savedpost._id }, $inc: { totalposts: 1 } }
@@ -2038,7 +2077,7 @@ exports.newfetchfeeds3 = async (req, res) => {
         subs: subData[i],
         posts: postData[i],
       }));
-
+      console.log(mergedData);
       res.status(200).json({
         mergedData,
         success: true,
@@ -2161,12 +2200,19 @@ exports.fetchinterest = async (req, res) => {
   try {
     const interest = await Interest.find();
     let finals = [];
+    let dps = [];
     for (let i = 0; i < interest.length; i++) {
-      if (interest[0].count > 0) {
-        finals.push(interest);
-      }
+      finals.push(interest[i].title);
+      let a = process.env.URL + interest[i].pic + ".png";
+
+      dps.push(a);
     }
-    res.status(200).json({ success: true, interests: finals });
+    let merged = finals.map((f, i) => ({
+      f,
+      dp: dps[i],
+    }));
+
+    res.status(200).json({ success: true, interests: merged });
   } catch (e) {
     console.log(e);
     res.status(400).json({ message: e.message, success: false });
