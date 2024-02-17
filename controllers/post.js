@@ -1922,90 +1922,93 @@ exports.newfetchfeeds3 = async (req, res) => {
       }
     }
     //fetching post
-    // const post = await Post.aggregate([
-    //   //{ $match: { tags: { $in: user.interest } } },
-    //   { $sample: { size: 100 } },
-    //   {
-    //     $lookup: {
-    //       from: "users",
-    //       localField: "sender",
-    //       foreignField: "_id",
-    //       as: "sender",
-    //     },
-    //   },
-    //   {
-    //     $lookup: {
-    //       from: "communities",
-    //       localField: "community",
-    //       foreignField: "_id",
-    //       as: "community",
-    //     },
-    //   },
-    //   {
-    //     $lookup: {
-    //       from: "users",
-    //       localField: "community.members",
-    //       foreignField: "_id",
-    //       as: "members",
-    //     },
-    //   },
-    //   {
-    //     $addFields: {
-    //       sender: { $arrayElemAt: ["$sender", 0] },
-    //       community: { $arrayElemAt: ["$community", 0] },
-    //     },
-    //   },
-    //   {
-    //     $addFields: {
-    //       "community.members": {
-    //         $map: {
-    //           input: { $slice: ["$members", 0, 4] },
-    //           as: "member",
-    //           in: {
-    //             _id: "$$member._id",
-    //             fullname: "$$member.fullname",
-    //             profilepic: "$$member.profilepic",
-    //           },
-    //         },
-    //       },
-    //     },
-    //   },
-    //   {
-    //     $project: {
-    //       _id: 1,
-    //       title: 1,
-    //       createdAt: 1,
-    //       status: 1,
-    //       likedby: 1,
-    //       likes: 1,
-    //       dislike: 1,
-    //       comments: 1,
-    //       totalcomments: 1,
-    //       tags: 1,
-    //       view: 1,
-    //       desc: 1,
-    //       isverified: 1,
-    //       post: 1,
-    //       contenttype: 1,
-    //       date: 1,
-    //       sharescount: 1,
-    //       sender: {
-    //         _id: 1,
-    //         fullname: 1,
-    //         profilepic: 1,
-    //       },
-    //       community: {
-    //         _id: 1,
-    //         title: 1,
-    //         dp: 1,
-    //         members: 1,
-    //         memberscount: 1,
-    //         isverified: 1,
-    //       },
-    //     },
-    //   },
-    // ]);
-    const post = await Post.find().populate("community", "title members");
+
+    // const post = await Post.find()
+    //   .populate("community", "title members")
+    //   .populate("members", "profilepic fullname");
+    const post = await Post.aggregate([
+      //{ $match: { tags: { $in: user.interest } } },
+      { $sample: { size: 100 } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "sender",
+          foreignField: "_id",
+          as: "sender",
+        },
+      },
+      {
+        $lookup: {
+          from: "communities",
+          localField: "community",
+          foreignField: "_id",
+          as: "community",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "community.members",
+          foreignField: "_id",
+          as: "members",
+        },
+      },
+      {
+        $addFields: {
+          sender: { $arrayElemAt: ["$sender", 0] },
+          community: { $arrayElemAt: ["$community", 0] },
+        },
+      },
+      {
+        $addFields: {
+          "community.members": {
+            $map: {
+              input: { $slice: ["$members", 0, 4] },
+              as: "member",
+              in: {
+                _id: "$$member._id",
+                fullname: "$$member.fullname",
+                profilepic: "$$member.profilepic",
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          createdAt: 1,
+          status: 1,
+          likedby: 1,
+          likes: 1,
+          dislike: 1,
+          comments: 1,
+          totalcomments: 1,
+          tags: 1,
+          view: 1,
+          desc: 1,
+          isverified: 1,
+          post: 1,
+          contenttype: 1,
+          date: 1,
+          sharescount: 1,
+          sender: {
+            _id: 1,
+            fullname: 1,
+            profilepic: 1,
+          },
+          community: {
+            _id: 1,
+            title: 1,
+            dp: 1,
+            members: 1,
+            memberscount: 1,
+            isverified: 1,
+          },
+        },
+      },
+    ]);
 
     for (let i = 0; i < post.length; i++) {
       if (
@@ -2077,7 +2080,7 @@ exports.newfetchfeeds3 = async (req, res) => {
         subs: subData[i],
         posts: postData[i],
       }));
-      console.log(mergedData);
+
       res.status(200).json({
         mergedData,
         success: true,
