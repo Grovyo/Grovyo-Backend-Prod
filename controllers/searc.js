@@ -151,6 +151,7 @@ exports.fetchingprosite = async (req, res) => {
     const userDetails = {
       bio: user.desc,
       phone: user.phone,
+      dp: process.env.URL + user.profilepic,
       username: user.username,
       fullname: user.fullname,
       email: user.email,
