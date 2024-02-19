@@ -206,6 +206,7 @@ const userSchema = new mongoose.Schema(
         bearing: { type: Number },
       },
     },
+    prosite_template: { type: String },
     storeAddress: {
       buildingno: { type: String },
       city: { type: String },
