@@ -2,6 +2,7 @@ const Post = require("../models/post");
 const Community = require("../models/community");
 const User = require("../models/userAuth");
 const Minio = require("minio");
+const Product = require("../models/product");
 
 require("dotenv").config();
 
@@ -146,8 +147,6 @@ exports.fetchingprosite = async (req, res) => {
         dp: productdps[index],
       };
     });
-
-    console.log(products);
 
     const userDetails = {
       bio: user.desc,
