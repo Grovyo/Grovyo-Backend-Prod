@@ -558,7 +558,7 @@ exports.createnewaccount = async (req, res) => {
       );
 
       //joining community by default of Grovyo
-      let comId = "65a66eb9e953a4573e6c8f44";
+      let comId = "65d313d46a4e4ae4c6eabd15";
       let publictopic = [];
       const community = await Community.findById(comId);
       for (let i = 0; i < community.topics.length; i++) {
@@ -633,7 +633,7 @@ exports.createnewaccount = async (req, res) => {
       let pic = process.env.URL + user.profilepic;
 
       //joining community by default of Grovyo
-      let comId = "65a66eb9e953a4573e6c8f44";
+      let comId = "65d313d46a4e4ae4c6eabd15";
       let publictopic = [];
       const community = await Community.findById(comId);
       for (let i = 0; i < community.topics.length; i++) {
@@ -875,7 +875,7 @@ exports.createnewaccountemail = async (req, res) => {
       let pic = process.env.URL + user.profilepic;
 
       //joining community by default of Grovyo
-      let comId = "65a66eb9e953a4573e6c8f44";
+      let comId = "65d313d46a4e4ae4c6eabd15";
       let publictopic = [];
       const community = await Community.findById(comId);
       for (let i = 0; i < community.topics.length; i++) {
@@ -949,7 +949,7 @@ exports.createnewaccountemail = async (req, res) => {
       let pic = process.env.URL + user.profilepic;
 
       //joining community by default of Grovyo
-      let comId = "65a66eb9e953a4573e6c8f44";
+      let comId = "65d313d46a4e4ae4c6eabd15";
       let publictopic = [];
       const community = await Community.findById(comId);
       for (let i = 0; i < community.topics.length; i++) {
@@ -2752,5 +2752,21 @@ exports.deletemessagestopic = async (req, res) => {
   } catch (e) {
     console.log(e);
     res.status(400).json({ success: false });
+  }
+};
+
+//creating invoices
+exports.createinvoice = async (req, res) => {
+  try {
+    const { id } = req.body;
+    const user = await User.findById(id);
+    if (user) {
+    } else {
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ success: false, message: "Something went wrong..." });
   }
 };
