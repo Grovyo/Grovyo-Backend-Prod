@@ -19,6 +19,7 @@ const {
   findandblock,
   allapprovals,
   approvalactions,
+  trnsfrcommems,
 } = require("../controllers/admin");
 const router = express.Router();
 
@@ -43,5 +44,6 @@ router.get("/getalldata/:id", getalldata);
 router.post("/findandblock/:userId", findandblock);
 router.get("/allapprovals/:userId", allapprovals);
 router.post("/approvalactions/:userId", approvalactions);
+router.post("/trnsfrcommems/:id", trnsfrcommems);
 
 module.exports = router;
