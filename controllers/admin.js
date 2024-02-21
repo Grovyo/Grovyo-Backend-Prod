@@ -8,6 +8,7 @@ const Job = require("../models/jobs");
 const Revenue = require("../models/revenue");
 const Advertiser = require("../models/Advertiser");
 const DelUser = require("../models/deluser");
+const Topic = require("../models/topic");
 const Approvals = require("../models/Approvals");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const Minio = require("minio");
@@ -511,6 +512,67 @@ exports.approvalactions = async (req, res) => {
       res.status(200).json({ success: true });
     } else {
       res.status(404).json({ message: "User not found", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+exports.trnsfrcommems = async (req, res) => {
+  try {
+    const { comId } = req.params;
+
+    const community = await Community.findById(comId);
+    const user = await User.find({ email: { $exists: true } });
+
+    if (community) {
+      let publictopic = [];
+      for (let i = 0; i < community.topics.length; i++) {
+        const topic = await Topic.findById({ _id: community.topics[i] });
+
+        if (topic.type === "free") {
+          publictopic.push(topic);
+        }
+      }
+      //other updations
+      for (let i = 0; i < user.length; i++) {
+        let notif = { id: user[i]._id, muted: false };
+
+        await Community.updateOne(
+          { _id: comId },
+          {
+            $addToSet: { members: user[i]._id, notifications: notif },
+            $inc: { memberscount: 1 },
+          }
+        );
+        await User.updateOne(
+          { _id: user[i]._id },
+          {
+            $addToSet: { communityjoined: community._id },
+            $inc: { totalcom: 1 },
+          }
+        );
+
+        const topicIds = publictopic.map((topic) => topic._id);
+
+        await Topic.updateMany(
+          { _id: { $in: topicIds } },
+          {
+            $addToSet: { members: user[i]._id, notifications: notif },
+            $inc: { memberscount: 1 },
+          }
+        );
+
+        await User.updateMany(
+          { _id: user[i]._id },
+          {
+            $addToSet: { topicsjoined: topicIds },
+            $inc: { totaltopics: 2 },
+          }
+        );
+      }
+      res.status(200).json({ success: true });
     }
   } catch (e) {
     console.log(e);
