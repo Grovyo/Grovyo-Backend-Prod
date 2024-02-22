@@ -186,9 +186,10 @@ exports.fetchingprosite = async (req, res) => {
         .json({ success: false, message: "User Not Found" });
     }
     const community = [];
-    for (let i = 0; i < user.communitycreated.length; i++) {
-      const id = user.communitycreated[i];
-      comm = await Community.findById(id).populate("members", "dp");
+    const com = await Community.find({ creator: id });
+    for (let i = 0; i < com.length; i++) {
+      const id = com[i];
+      let comm = await Community.findById(id).populate("members", "dp");
       community.push(comm);
     }
 
@@ -212,8 +213,6 @@ exports.fetchingprosite = async (req, res) => {
         return dps;
       })
     );
-
-    console.log(membersdp);
 
     const communitywithDps = community.map((f, i) => {
       return { ...f.toObject(), dps: communityDps[i], membersdp: membersdp[i] };

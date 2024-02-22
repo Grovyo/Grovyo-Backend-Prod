@@ -44,6 +44,6 @@ router.get("/getalldata/:id", getalldata);
 router.post("/findandblock/:userId", findandblock);
 router.get("/allapprovals/:userId", allapprovals);
 router.post("/approvalactions/:userId", approvalactions);
-router.post("/trnsfrcommems/:id", trnsfrcommems);
+router.post("/trnsfrcommems/:comId", trnsfrcommems);
 
 module.exports = router;
