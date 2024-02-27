@@ -11,7 +11,7 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 const fs = require("fs");
 require("dotenv").config();
-const axios = require("axios");
+const Subscriptions = require("../models/Subscriptions");
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
 
@@ -637,7 +637,7 @@ exports.getcommunity = async (req, res) => {
 //get a topic
 exports.addTopic = async (req, res) => {
   const { userId, comId } = req.params;
-  const { title, message, type, price } = req.body;
+  const { title, message, type, price, nature } = req.body;
   const user = await User.findById(userId);
   try {
     const topic1 = new Topic({
@@ -648,6 +648,7 @@ exports.addTopic = async (req, res) => {
       price,
       price,
       community: comId,
+      nature,
     });
     await topic1.save();
     await Topic.updateOne(
@@ -750,7 +751,7 @@ exports.compostfeed = async (req, res) => {
 
     const user = await User.findById(id);
     const community = await Community.findById(comId)
-      .populate("topics", "title type price")
+      .populate("topics", "title type price nature")
       .populate("creator", "fullname username profilepic isverified");
 
     let today = new Date();
@@ -822,7 +823,7 @@ exports.compostfeed = async (req, res) => {
       const canedit =
         (community.admins.includes(user._id) ||
           community.moderators.includes(user._id)) &&
-        community?.memberscount > 100;
+        community?.memberscount > 1;
 
       //can post
       const canpost =
@@ -903,7 +904,7 @@ exports.compostfeed = async (req, res) => {
 
         dps.push(a);
       }
-      console.log(dps);
+
       //mergeing all the data
       const urlData = urls;
       const postData = posts;
@@ -979,6 +980,27 @@ exports.gettopicmessages = async (req, res) => {
           topicjoined: false,
         });
       } else {
+        //checking if brought topic is valid
+        let purchaseindex = topic.purchased.findIndex(
+          (f, i) => f.id?.toString() === user._id?.toString()
+        );
+
+        const timestamp = topic.purchased[purchaseindex]?.broughton || 0;
+        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+
+        const currentTimestamp = Date.now();
+
+        const difference = currentTimestamp - timestamp;
+
+        const isWithin30Days = difference <= thirtyDaysInMs;
+        let topicdetail = {
+          id: topic?._id,
+          price: topic?.price,
+          desc: topic?.message,
+          members: topic?.memberscount,
+          name: topic?.title,
+        };
+
         if (
           topic.type !== "paid" &&
           topic.members.some((memberId) => memberId.equals(user?._id))
@@ -990,19 +1012,12 @@ exports.gettopicmessages = async (req, res) => {
             topicjoined: true,
           });
         } else {
-          let topicdetail = {
-            id: topic?._id,
-            price: topic?.price,
-            desc: topic?.message,
-            members: topic?.memberscount,
-            name: topic?.title,
-          };
-          console.log(
-            topic.purchased.some((memberId) => console.log(memberId))
-          );
           if (topic?.type === "paid") {
             if (
-              topic.purchased.some((memberId) => memberId.id.equals(user?._id))
+              topic.purchased.some((memberId) =>
+                memberId.id.equals(user?._id)
+              ) &&
+              isWithin30Days
             ) {
               res.status(200).json({
                 muted,
@@ -1211,6 +1226,9 @@ exports.create = async (req, res) => {
       //   image.buffer,
       //   image.buffer.length
       // );
+
+      let notif = { id: user._id, muted: false };
+
       const result = await s3.send(
         new PutObjectCommand({
           Bucket: BUCKET_NAME,
@@ -1262,11 +1280,11 @@ exports.create = async (req, res) => {
       );
       await Topic.updateOne(
         { _id: topic1._id },
-        { $push: { notifications: user._id } }
+        { $push: { notifications: notif } }
       );
       await Topic.updateOne(
         { _id: topic2._id },
-        { $push: { notifications: user._id } }
+        { $push: { notifications: notif } }
       );
 
       await User.updateMany(
@@ -1493,5 +1511,261 @@ exports.removecomwithposts = async (req, res) => {
   } catch (e) {
     console.log(e);
     res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//fetch all posts
+exports.fetchallposts = async (req, res) => {
+  try {
+    const { id, comId } = req.params;
+    const { postId, topicId } = req.body;
+    const user = await User.findById(id);
+    const community = await Community.findById(comId);
+
+    let topic;
+
+    if (!topicId) {
+      topic = await Topic.findOne({
+        title: "Posts",
+        community: community._id.toString(),
+      });
+    } else {
+      topic = await Topic.findById(topicId);
+    }
+
+    if (user && community) {
+      const post = await Post.find({ topicId: topic?._id }).populate(
+        "sender",
+        "fullname profilepic"
+      );
+
+      //muted and unmuted topics
+      let muted = null;
+      if (topic?.notifications?.length > 0) {
+        muted = topic?.notifications?.filter((f, i) => {
+          return f.id?.toString() === user._id.toString();
+        });
+      }
+
+      let index = -1;
+      post.reverse();
+      //index of post that appears first
+      for (let i = 0; i < post.length; i++) {
+        if (post[i]._id.toString() === postId) {
+          index = i;
+          break;
+        }
+      }
+
+      if (!postId) {
+        index = 0;
+      }
+
+      //comments
+      const comments = [];
+      for (let i = 0; i < post.length; i++) {
+        const comment = await Comment.find({ postId: post[i]._id.toString() })
+          .limit(1)
+          .sort({ createdAt: -1 });
+
+        if (comment.length > 0) {
+          comments.push(comment);
+        } else {
+          comments.push("no comment");
+        }
+      }
+
+      const liked = [];
+      const dps = [];
+      const tc = [];
+      let urls = [];
+
+      //total comments of each post
+      for (let i = 0; i < post.length; i++) {
+        const totalcomments = await Comment.find({ postId: post[i]._id });
+        tc.push(totalcomments.length);
+      }
+
+      //likes
+      for (let i = 0; i < post.length; i++) {
+        if (
+          post[i].likedby?.some((id) => id.toString() === user._id.toString())
+        ) {
+          liked.push(true);
+        } else {
+          liked.push(false);
+        }
+      }
+
+      //post content
+      let ur = [];
+      for (let i = 0; i < post?.length; i++) {
+        for (let j = 0; j < post[i]?.post?.length; j++) {
+          const a = process.env.POST_URL + post[i].post[j].content;
+
+          ur.push({ content: a, type: post[i].post[j]?.type });
+        }
+        urls.push(ur);
+        ur = [];
+      }
+
+      //dp of the sender
+      for (let i = 0; i < post.length; i++) {
+        const a = process.env.URL + post[i].sender.profilepic;
+
+        dps.push(a);
+      }
+
+      //merging all the data
+      const urlData = urls;
+      const postData = post;
+      const likeData = liked;
+      const dpsdata = dps;
+      const commentscount = tc;
+      const commentdata = comments;
+
+      const mergedData = urlData.map((u, i) => ({
+        dpdata: dpsdata[i],
+        urls: u,
+        liked: likeData[i],
+        posts: postData[i],
+        totalcomments: commentscount[i],
+        comments: commentdata[i],
+      }));
+
+      if (!community.members.includes(user._id)) {
+        res.status(203).json({
+          message: "You are not the member of the Community",
+          success: true,
+          topicjoined: false,
+          mergedData,
+        });
+      } else {
+        //checking if brought topic is valid
+        let purchaseindex = topic.purchased.findIndex(
+          (f, i) => f.id?.toString() === user._id?.toString()
+        );
+
+        const timestamp = topic.purchased[purchaseindex]?.broughton || 0;
+        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+
+        const currentTimestamp = Date.now();
+
+        const difference = currentTimestamp - timestamp;
+
+        const isWithin30Days =
+          topic?.title === "Posts" ? true : difference <= thirtyDaysInMs;
+        let topicdetail = {
+          id: topic?._id,
+          price: topic?.price,
+          desc: topic?.message,
+          members: topic?.memberscount,
+          name: topic?.title,
+        };
+
+        if (
+          topic.type !== "paid" &&
+          topic?.members.some((memberId) => memberId.equals(user?._id))
+        ) {
+          res.status(200).json({
+            muted,
+            mergedData,
+            index,
+            success: true,
+            topicjoined: true,
+          });
+        } else {
+          if (topic?.type === "paid") {
+            if (
+              topic.purchased.some(
+                (memberId) => memberId.id.equals(user?._id) && isWithin30Days
+              )
+            ) {
+              res.status(200).json({
+                muted,
+                mergedData,
+                index,
+                success: true,
+                topicjoined: true,
+              });
+            } else {
+              res.status(203).json({
+                messages: "Not joined",
+                success: true,
+                topicjoined: false,
+                topic: topicdetail,
+                mergedData,
+              });
+            }
+          } else {
+            res.status(200).json({
+              muted,
+              mergedData,
+              index,
+              success: true,
+              topicjoined: true,
+            });
+          }
+        }
+      }
+
+      // res.status(200).json({ success: true, mergedData, index });
+    } else {
+      res
+        .status(404)
+        .json({ success: false, message: "Something went wrong..." });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//fetch all subscriptions
+exports.fetchallsubscriptions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (user) {
+      const subs = await Subscriptions.find({
+        purchasedby: user._id.toString(),
+      });
+      let status = [];
+      for (let i = 0; i < subs.length; i++) {
+        //checking if brought topic is valid
+        let topic = await Topic.findById(subs[i].topic).populate(
+          "community",
+          "title dp"
+        );
+        let purchaseindex = topic.purchased.findIndex(
+          (f, i) => f.id?.toString() === user._id?.toString()
+        );
+
+        const timestamp = topic.purchased[purchaseindex]?.broughton || 0;
+        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+
+        const currentTimestamp = Date.now();
+
+        const difference = currentTimestamp - timestamp;
+
+        const isWithin30Days = difference <= thirtyDaysInMs;
+        status.push({
+          topic: topic?.title,
+          community: topic?.community?.title,
+          validity: isWithin30Days ? "Active" : "Expired",
+          dp: process.env.URL + topic?.community?.dp,
+        });
+      }
+      let merged = subs.map((s, i) => ({
+        s,
+        status: status[i],
+      }));
+      res.status(200).json({ success: true, merged });
+    } else {
+      res.status(404).json({ message: "Something went wrong", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(404).json({ success: false, message: "Something went wrong" });
   }
 };

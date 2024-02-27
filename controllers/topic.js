@@ -5,6 +5,7 @@ const User = require("../models/userAuth");
 const Minio = require("minio");
 const Subscription = require("../models/Subscriptions");
 const Razorpay = require("razorpay");
+const fs = require("fs");
 const {
   validatePaymentVerification,
   validateWebhookSignature,
@@ -14,6 +15,10 @@ const instance = new Razorpay({
   key_id: "rzp_test_jXDMq8a2wN26Ss",
   key_secret: "bxyQhbzS0bHNBnalbBg9QTDo",
 });
+
+//for creating pdf bills
+const PDFDocument = require("pdfkit");
+const doc = new PDFDocument();
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -36,6 +41,14 @@ async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
     console.error(err);
     throw new Error("Failed to generate presigned URL");
   }
+}
+
+function formatDate(date) {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0"); // January is 0!
+  const year = String(date.getFullYear()).slice(-2);
+
+  return `${day}/${month}/${year}`;
 }
 
 //generate a random id
@@ -785,7 +798,7 @@ exports.finalisetopicorder = async (req, res) => {
         await Topic.updateOne(
           { _id: topic._id },
           {
-            $push: {
+            $addToSet: {
               purchased: purchase,
               members: user._id,
               notifications: user?._id,
@@ -801,21 +814,48 @@ exports.finalisetopicorder = async (req, res) => {
         //person who brought status update
         await User.updateOne(
           { _id: user._id },
-          { $push: { topicsjoined: topic._id }, $inc: { totaltopics: 1 } }
+          { $addToSet: { topicsjoined: topic._id }, $inc: { totaltopics: 1 } }
         );
         //person who created the topic gets money
         await User.updateOne(
           { _id: community.creator },
           {
             $inc: { moneyearned: topic.price },
-            $push: {
+            $addToSet: {
               earningtype: {
                 how: "Topic Purchase",
                 when: Date.now(),
               },
+              subscriptions: ordId,
             },
           }
         );
+
+        // const sub = await Subscription.countDocuments();
+
+        // const buyer = await User.findById(user._id);
+        // const seller = await User.findById(community.creator);
+
+        // let buyerdata = `${buyer.fullname}, ${buyer.address.streetaddress}, ${buyer.address.city}, ${buyer.address.landmark}, ${buyer.address.state}, ${buyer.address.country}`;
+        // let sellerdata = `${seller.fullname}, ${seller.storeAddress.streetaddress}, ${seller.storeAddress.city}, ${seller.storeAddress.landmark}, ${seller.storeAddress.state}, ${seller.storeAddress.country}`;
+
+        // let orderdata = {
+        //   hsn: "",
+        //   desc: `Topic Payment - ${topic?.title}`,
+        //   qty: 1,
+        //   disc: topic.message,
+        //   amt: topic.price,
+        // };
+
+        // createpdfs({
+        //   data: orderdata,
+        //   buyer: buyerdata,
+        //   seller: sellerdata,
+        //   mode: "online",
+        //   refno: `topic_${oid}`,
+        //   total: topic?.price,
+        //   billno: sub.length + 1,
+        // });
 
         res.status(200).json({ success: true });
       } else {
@@ -847,5 +887,130 @@ exports.delenutopic = async (req, res) => {
     res.status(200).send({ success: true });
   } catch (err) {
     console.log(ee);
+  }
+};
+
+const createpdfs = async ({
+  refno,
+  mode,
+  billno,
+  buyer,
+  seller,
+  data,
+  total,
+}) => {
+  try {
+    const currentDate = new Date();
+    const formattedDate = formatDate(currentDate);
+
+    const finaltotal = parseInt(total);
+
+    const pdfFileName = `${refno}.pdf`;
+    const writeStream = fs.createWriteStream(pdfFileName);
+    doc.pipe(writeStream);
+
+    doc.fontSize(17);
+    doc
+      .text(`Tax Invoice`, {
+        align: "center",
+      })
+      .moveUp(-1);
+
+    doc.fontSize(12);
+    doc.text("Grovyo Platforms Pvt Ltd", { align: "left" }).moveDown(0.5);
+    doc.text("+91 7318501865", { align: "left" }).moveDown(0.5);
+    doc
+      .text("37 A, Rampuram, Shyam Nagar, Kanpur, 208013", { align: "left" })
+      .moveDown(0.5);
+    doc.text("GSTIN - 09AAJCG9210A1ZV", { align: "left" }).moveDown(0.5);
+    doc
+      .text("State Name - Uttar Pradesh, Code: 09", { align: "left" })
+      .moveDown(1.5);
+
+    doc.text(`Reference No. ${refno}`, { align: "left" }).moveDown(0.5);
+    doc.text(`Dated on- ${formattedDate}`, { align: "left" }).moveDown(0.5);
+    doc.text(`Payment Mode- ${mode}`, { align: "left" }).moveDown(0.5);
+    doc.text(`Bill no.- ${billno}`, { align: "left" }).moveDown(2).fontSize(15);
+
+    //buyer details
+    doc.text(`Buyer (Bill To)`, { align: "left" }).moveDown(0.5).fontSize(12);
+    doc.text(`${buyer}`, { align: "left" }).moveDown(1).fontSize(15);
+
+    //seller details
+    doc.text(`Sold By (From)`, { align: "left" }).moveDown(0.5).fontSize(12);
+    doc.text(`${seller}`, { align: "left" }).moveDown(1.5).fontSize(15);
+
+    //details of products
+    doc
+      .text(`S No.  HSN/ASN   Description   Quantity   Discount   Amount`, {})
+      .moveDown(0.5);
+
+    doc
+      .text(
+        `${1}       ${data.hsn}       ${data.desc}       ${data.qty}      Rs ${
+          data.disc
+        }       Rs ${data.amt}`,
+        {}
+      )
+      .moveDown(0.5);
+
+    doc.fontSize(13).moveDown(1.5);
+    doc.text(`Total - Rs ${total}`, {}).moveDown(1.5).fontSize(15);
+    doc
+      .text(
+        `Total Taxable Value    Central Tax     State Tax    Total Tax Amount`,
+        {}
+      )
+      .moveDown(1)
+      .fontSize(13);
+    // doc
+    //   .text(
+    //     `Rs 30             9%  Rs 2.7             9%  Rs 2.7            Rs 5.4`,
+    //     {}
+    //   )
+    //   .moveDown(1);
+    doc
+      .text(`Total(After Round Off) - Rs ${finaltotal}`, {})
+      .moveDown(1.5)
+      .fontSize(15);
+    doc.text(`Declaration`, {}).moveDown(0.5).fontSize(11);
+    doc
+      .text(
+        `We declare that this invoice shows the actual price of the goods described and that all particullars are true and correct.`,
+        {}
+      )
+      .moveDown(1.5)
+      .fontSize(15);
+    doc
+      .text(`Authorised Signatory`, { align: "right" })
+      .moveDown(0.4)
+      .fontSize(11);
+    doc.text(`Grovyo Platforms Pvt Ltd`, { align: "right" }).moveDown(1);
+    doc
+      .text(`This is a computer generated invoice`, { align: "center" })
+      .moveDown(0.5);
+
+    doc.end();
+
+    // Upload PDF to Minio
+    writeStream.on("finish", async () => {
+      await minioClient.fPutObject(
+        "billing",
+        pdfFileName,
+        pdfFileName,
+        function (err, etag) {
+          if (err) {
+            console.log(err);
+            //res.status(400).json({ success: false });
+          } else {
+            // Delete local file after uploading
+            fs.unlinkSync(pdfFileName);
+            //res.status(200).json({ success: true });
+          }
+        }
+      );
+    });
+  } catch (e) {
+    console.log(e);
   }
 };

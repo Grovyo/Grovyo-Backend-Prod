@@ -48,7 +48,7 @@ router.post("/dislikepost/:userId/:postId", dislikepost);
 router.post("/test123", upload.single("video"), test);
 router.post("/updatesettings/:id", updatesettings);
 
-router.post("/createpollcom/:id/:comId", upload.any(), createpollcom);
+router.post("/createpollcom/:id/:comId/:topicId", upload.any(), createpollcom);
 
 router.post("/votenowpoll/:id/:postId/:opId", votenowpoll);
 
@@ -68,7 +68,11 @@ router.get("/v2/getfeed/:userId", newfetchfeeds3);
 router.get("/v2/getfollowingfeed/:userId", joinedcomnews3);
 
 //post anything
-router.post("/v1/postanything/:userId/:comId", upload.any(), postanythings3);
+router.post(
+  "/v1/postanything/:userId/:comId/:topicId",
+  upload.any(),
+  postanythings3
+);
 
 //fetchinterests
 router.get("/v1/fetchinterest", fetchinterest);

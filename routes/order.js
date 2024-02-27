@@ -18,6 +18,7 @@ const {
   removecartorder,
   deliverycreate,
   resenotpflash,
+  fetchanorder,
 } = require("../controllers/order");
 
 router.post("/neworder/:userId/:productId", create);
@@ -44,5 +45,8 @@ router.post("/enterotp/:id/:deliveryid", enterotp);
 
 //resenotpflash
 router.post("/resenotpflash/:id/:delid", resenotpflash);
+
+//fetchanorder
+router.post("/fetchanorder/:id/:ordid", fetchanorder);
 
 module.exports = router;

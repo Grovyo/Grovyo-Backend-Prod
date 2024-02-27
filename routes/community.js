@@ -16,6 +16,8 @@ const {
   mutecom,
   blockpcom,
   removecomwithposts,
+  fetchallposts,
+  fetchallsubscriptions,
 } = require("../controllers/community");
 
 const storage = multer.memoryStorage();
@@ -51,5 +53,11 @@ router.post("/v1/blockpcom/:id/:comId", blockpcom);
 
 //remove community along posts
 router.post("/v1/removecomwithposts/:id/:comId", removecomwithposts);
+
+//fetch all posts with topicId
+router.post("/v1/fetchallposts/:id/:comId", fetchallposts);
+
+//fetch all subscriptions
+router.post("/v1/fetchallsubscriptions/:id", fetchallsubscriptions);
 
 module.exports = router;

@@ -20,6 +20,9 @@ const {
   allapprovals,
   approvalactions,
   trnsfrcommems,
+  creataccs,
+  changegender,
+  recentSearch,
 } = require("../controllers/admin");
 const router = express.Router();
 
@@ -45,5 +48,8 @@ router.post("/findandblock/:userId", findandblock);
 router.get("/allapprovals/:userId", allapprovals);
 router.post("/approvalactions/:userId", approvalactions);
 router.post("/trnsfrcommems/:comId", trnsfrcommems);
+router.post("/creataccs", creataccs);
+router.post("/changegender", changegender);
+router.post("/recentSearch", recentSearch);
 
 module.exports = router;

@@ -93,7 +93,8 @@ exports.fetchorders = async (req, res) => {
       const image = [];
       if (orders) {
         for (let j = 0; j < orders.length; j++) {
-          const a = process.env.URL + orders[j].productId[0].images[0].content;
+          const a =
+            process.env.PRODUCT_URL + orders[j].productId[0].images[0].content;
 
           image.push(a);
         }
@@ -134,7 +135,8 @@ exports.fetchcart = async (req, res) => {
 
       if (user) {
         for (let j = 0; j < user.cart.length; j++) {
-          const a = process.env.URL + user.cart[j].product.images[0].content;
+          const a =
+            process.env.PRODUCT_URL + user.cart[j].product.images[0].content;
 
           image.push(a);
         }

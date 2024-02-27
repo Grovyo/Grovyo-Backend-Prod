@@ -10,6 +10,13 @@ const OrderSchema = new mongoose.Schema(
     quantity: { type: Number, min: 1 },
     total: { type: Number, min: 0 },
     customername: { type: String },
+    data: [
+      {
+        product: { type: ObjectId, ref: "Product" },
+        qty: { type: Number },
+        seller: { type: ObjectId, ref: "User" },
+      },
+    ],
     currentStatus: {
       type: String,
       enum: [
@@ -54,6 +61,7 @@ const OrderSchema = new mongoose.Schema(
     topicId: { type: String },
     timing: { type: String },
     finisheddeliveries: [{ type: ObjectId, ref: "DeliveriesSchema" }], //compeleted deliveries
+    orderno: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

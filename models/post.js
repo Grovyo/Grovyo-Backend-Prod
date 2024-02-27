@@ -26,6 +26,7 @@ const PostSchema = new mongoose.Schema(
         thumbnail: { type: String },
       },
     ],
+    topicId: { type: ObjectId, ref: "Topic" },
     options: [
       {
         title: String,

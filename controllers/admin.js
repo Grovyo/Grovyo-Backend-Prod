@@ -13,6 +13,39 @@ const Approvals = require("../models/Approvals");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const Minio = require("minio");
 require("dotenv").config();
+const aesjs = require("aes-js");
+
+const { faker } = require("@faker-js/faker/locale/en_IN");
+
+let k = [16, 12, 3, 7, 9, 5, 11, 6, 3, 2, 10, 1, 13, 3, 13, 4];
+
+//encryption
+const encryptaes = (data) => {
+  try {
+    const textBytes = aesjs.utils.utf8.toBytes(data);
+    const aesCtr = new aesjs.ModeOfOperation.ctr(k, new aesjs.Counter(5));
+    const encryptedBytes = aesCtr.encrypt(textBytes);
+    const encryptedHex = aesjs.utils.hex.fromBytes(encryptedBytes);
+    return encryptedHex;
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+const decryptaes = (data) => {
+  try {
+    const encryptedBytes = aesjs.utils.hex.toBytes(data);
+    const aesCtr = new aesjs.ModeOfOperation.ctr(
+      JSON.parse(process.env.key),
+      new aesjs.Counter(5)
+    );
+    const decryptedBytes = aesCtr.decrypt(encryptedBytes);
+    const decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
+    return decryptedText;
+  } catch (e) {
+    console.log(e);
+  }
+};
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
 
@@ -45,6 +78,34 @@ async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
     console.error(err);
     throw new Error("Failed to generate presigned URL");
   }
+}
+
+async function generateFakeIndianUser() {
+  const firstName = faker.name.firstName("male");
+  const lastName = faker.name.lastName();
+
+  const email = faker.internet
+    .email({ firstName, provider: "gmail.com", allowSpecialCharacters: true })
+    .toLowerCase();
+  const gender = "male";
+  const bio = faker.person.bio();
+  // const phoneNumber = faker.phone.number("+91##########");
+  // const address = {
+  //   street: faker.address.streetAddress({ useFullAddress: true }),
+  //   city: faker.address.city(),
+  //   state: faker.address.state(),
+  //   pincode: faker.address.zipCode(),
+  // };
+
+  return {
+    firstName,
+    lastName,
+    email,
+    bio,
+    //address,
+    gender,
+    // personImageUrl,
+  };
 }
 
 exports.getuserstotal = async (req, res) => {
@@ -577,5 +638,146 @@ exports.trnsfrcommems = async (req, res) => {
   } catch (e) {
     console.log(e);
     res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//create accs
+exports.creataccs = async (req, res) => {
+  try {
+    let users = [];
+    for (let i = 61; i < 340; i++) {
+      const user = await generateFakeIndianUser();
+      const personImageUrl = `dpsc (${i + 1}).jpg`;
+      let d = { user, personImageUrl };
+      function generateRandomNumber() {
+        let min = 100000000;
+        let max = 999999999;
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function generateRandomDOB() {
+        // Generate random day, month, and year
+        const day = String(Math.floor(Math.random() * 31) + 1).padStart(2, "0");
+        const month = String(Math.floor(Math.random() * 12) + 1).padStart(
+          2,
+          "0"
+        );
+        const year = String(Math.floor(Math.random() * (2003 - 1950)) + 1950);
+
+        return `${day}/${month}/${year}`;
+      }
+
+      let pass = await generateRandomNumber();
+
+      const encrptedpass = encryptaes(pass);
+
+      const us = new User({
+        fullname: user.firstName + " " + user.lastName,
+        username: user.firstName + generateRandomNumber() + `-${i}`,
+        email: user.email,
+        passw: encrptedpass,
+        profilepic: personImageUrl,
+        desc: user.bio,
+        // interest: individualInterests,
+        gender: user.gender,
+        DOB: generateRandomDOB(),
+      });
+      await us.save();
+
+      let comId = "65d313d46a4e4ae4c6eabd15";
+      let publictopic = [];
+      const community = await Community.findById(comId);
+      for (let i = 0; i < community.topics.length; i++) {
+        const topic = await Topic.findById({ _id: community.topics[i] });
+
+        if (topic.type === "free") {
+          publictopic.push(topic);
+        }
+      }
+
+      await Community.updateOne(
+        { _id: comId },
+        { $push: { members: user._id }, $inc: { memberscount: 1 } }
+      );
+      await User.updateOne(
+        { _id: user._id },
+        { $push: { communityjoined: community._id }, $inc: { totalcom: 1 } }
+      );
+
+      const topicIds = publictopic.map((topic) => topic._id);
+
+      await Topic.updateMany(
+        { _id: { $in: topicIds } },
+        {
+          $push: { members: user._id, notifications: user._id },
+          $inc: { memberscount: 1 },
+        }
+      );
+      await User.updateMany(
+        { _id: user._id },
+        {
+          $push: { topicsjoined: topicIds },
+          $inc: { totaltopics: 2 },
+        }
+      );
+
+      users.push(d);
+    }
+
+    res.json(users);
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+exports.changegender = async (req, res) => {
+  try {
+    const user = await User.find();
+    for (let i = 0; i < user.length; i++) {
+      const pastYearMs = 365 * 24 * 60 * 60 * 1000;
+      const randomTimestamp =
+        Date.now() - Math.floor(Math.random() * pastYearMs);
+
+      // Convert the random timestamp to a Date object
+      const date = new Date(randomTimestamp);
+
+      await User.updateOne({ _id: user[1]._id }, { $set: { createdAt: "" } });
+    }
+
+    res.status(200).json({ success: true });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+exports.recentSearch = async (req, res) => {
+  try {
+    const users = [];
+    if (req.body.length > 0) {
+      for (let i = 0; i < req.body.length; i++) {
+        const id = decryptaes(req.body[i]);
+        const userselect = await User.findById(id).select(
+          "profilepic fullname username"
+        );
+        const dp = process.env.URL + userselect.profilepic;
+
+        const user = {
+          dp,
+          fullname: userselect.fullname,
+          username: userselect.username,
+          id: userselect._id,
+        };
+        users.push(user);
+      }
+
+      res.status(200).json({ success: true, users });
+    } else {
+      res.status(400).json({ success: false, message: "No Recent Searchs!" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message, success: false });
+    console.log(error);
   }
 };

@@ -93,6 +93,7 @@ const userSchema = new mongoose.Schema(
     age: {
       type: Number,
     },
+    gr: { type: Number, default: 1 },
     // gender: {
     //   type: String,
     //   enum: ["MALE", "FEMALE"]
@@ -236,7 +237,7 @@ const userSchema = new mongoose.Schema(
     ],
     memberships: {
       membership: { type: ObjectId, ref: "membership" },
-      status: { type: Boolean, default: true },
+      status: { type: Boolean, default: false },
       ending: { type: String },
       paymentdetails: {
         mode: { type: String },
@@ -244,9 +245,10 @@ const userSchema = new mongoose.Schema(
         gstamount: { type: Number },
       },
     },
+    creation: { type: Number },
     passcode: { type: String },
   },
-  { timestamps: true }
+  { timestamps: false }
 );
 
 userSchema.index({ fullname: "text" });

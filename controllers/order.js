@@ -26,6 +26,10 @@ const {
 } = require("razorpay/dist/utils/razorpay-utils");
 require("dotenv").config();
 
+//for creating pdf bills
+const PDFDocument = require("pdfkit");
+const doc = new PDFDocument();
+
 const instance = new Razorpay({
   key_id: "rzp_live_Ms5I8V8VffSpYq",
   key_secret: "Sy04bmraRqV9RjLRj81MX0g7",
@@ -51,6 +55,20 @@ async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
     console.error(err);
     throw new Error("Failed to generate presigned URL");
   }
+}
+
+function generateRandomNumber() {
+  let min = 100000000;
+  let max = 999999999;
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function formatDate(date) {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0"); // January is 0!
+  const year = String(date.getFullYear()).slice(-2);
+
+  return `${day}/${month}/${year}`;
 }
 
 //string matching function
@@ -647,65 +665,131 @@ exports.updatecartorder = async (req, res) => {
 
 exports.createpdf = async (req, res) => {
   try {
-    let html = fs.readFileSync("./template.html", "utf8");
-    let options = {
-      format: "A4",
-      orientation: "portrait",
-      border: "10mm",
-      header: {
-        height: "30mm",
-        contents:
-          '<div style="text-align: center;  font-weight: 700;">Tax Invoice</div>',
-      },
-      footer: {
-        height: "28mm",
-        contents: {
-          first: "Cover page",
-          2: "Second page", // Any page number is working. 1-based index
-          default:
-            '<span style="color: #444;">{{page}}</span>/<span>{{pages}}</span>', // fallback value
-          last: "Last Page",
-        },
-      },
-    };
-    let users = [
-      {
-        name: "Shyam",
-        age: "26",
-      },
-      {
-        name: "Navjot",
-        age: "26",
-      },
-      {
-        name: "Vitthal",
-        age: "26",
-      },
-      {
-        name: "Vitthal",
-        age: "26",
-      },
-      {
-        name: "Vitthal",
-        age: "26",
-      },
+    const refno = generateRandomNumber();
+    const currentDate = new Date();
+    const formattedDate = formatDate(currentDate);
+    const mode = "Cash";
+    const billno = "0000007";
+
+    const buyer = "Divyasnh Shma , 6759042384782, ghsudhic873,d879";
+
+    const seller = "partyu bags ,56789, y7g89hujb, ghsudhic873,d879";
+
+    const data = [
+      { hsn: "456789", desc: "crackers", qty: "1", disc: "67", amt: "99" },
+      { hsn: "456289", desc: "crajckers", qty: "1", disc: "60", amt: "90" },
     ];
-    var document = {
-      html: html,
-      data: {
-        users: users,
-      },
-      path: "./output.pdf",
-      type: "",
-    };
-    Pdf.create(document, options)
-      .then((res) => {
-        console.log(res);
+
+    const total = "678";
+    const finaltotal = "456";
+
+    const pdfFileName = `${refno}.pdf`;
+    const writeStream = fs.createWriteStream(pdfFileName);
+    doc.pipe(writeStream);
+
+    doc.fontSize(17);
+    doc
+      .text(`Tax Invoice`, {
+        align: "center",
       })
-      .catch((error) => {
-        console.error(error);
-      });
-    res.status(200).json({ success: true });
+      .moveUp(-1);
+
+    doc.fontSize(12);
+    doc.text("Grovyo Platforms Pvt Ltd", { align: "left" }).moveDown(0.5);
+    doc.text("+91 7318501865", { align: "left" }).moveDown(0.5);
+    doc
+      .text("37 A, Rampuram, Shyam Nagar, Kanpur, 208013", { align: "left" })
+      .moveDown(0.5);
+    doc.text("GSTIN - 09AAJCG9210A1ZV", { align: "left" }).moveDown(0.5);
+    doc
+      .text("State Name - Uttar Pradesh, Code: 09", { align: "left" })
+      .moveDown(1.5);
+
+    doc.text(`Reference No. ${refno}`, { align: "left" }).moveDown(0.5);
+    doc.text(`Dated on- ${formattedDate}`, { align: "left" }).moveDown(0.5);
+    doc.text(`Payment Mode- ${mode}`, { align: "left" }).moveDown(0.5);
+    doc.text(`Bill no.- ${billno}`, { align: "left" }).moveDown(2).fontSize(15);
+
+    //buyer details
+    doc.text(`Buyer (Bill To)`, { align: "left" }).moveDown(0.5).fontSize(12);
+    doc.text(`${buyer}`, { align: "left" }).moveDown(1).fontSize(15);
+
+    //seller details
+    doc.text(`Sold By (From)`, { align: "left" }).moveDown(0.5).fontSize(12);
+    doc.text(`${seller}`, { align: "left" }).moveDown(1.5).fontSize(15);
+
+    //details of products
+    doc
+      .text(`S No.  HSN/ASN   Description   Quantity   Discount   Amount`, {})
+      .moveDown(0.5);
+
+    for (i = 0; i < data.length; i++) {
+      doc
+        .text(
+          `${i + 1}       ${data[i].hsn}       ${data[i].desc}       ${
+            data[i].qty
+          }      Rs ${data[i].disc}       Rs ${data[i].amt}`,
+          {}
+        )
+        .moveDown(0.5);
+    }
+
+    doc.fontSize(13).moveDown(1.5);
+    doc.text(`Total - Rs ${total}`, {}).moveDown(1.5).fontSize(15);
+    doc
+      .text(
+        `Total Taxable Value    Central Tax     State Tax    Total Tax Amount`,
+        {}
+      )
+      .moveDown(1)
+      .fontSize(13);
+    doc
+      .text(
+        `Rs 30             9%  Rs 2.7             9%  Rs 2.7            Rs 5.4`,
+        {}
+      )
+      .moveDown(1);
+    doc
+      .text(`Total(After Round Off) - Rs ${finaltotal}`, {})
+      .moveDown(1.5)
+      .fontSize(15);
+    doc.text(`Declaration`, {}).moveDown(0.5).fontSize(11);
+    doc
+      .text(
+        `We declare that this invoice shows the actual price of the goods described and that all particullars are true and correct.`,
+        {}
+      )
+      .moveDown(1.5)
+      .fontSize(15);
+    doc
+      .text(`Authorised Signatory`, { align: "right" })
+      .moveDown(0.4)
+      .fontSize(11);
+    doc.text(`Grovyo Platforms Pvt Ltd`, { align: "right" }).moveDown(1);
+    doc
+      .text(`This is a computer generated invoice`, { align: "center" })
+      .moveDown(0.5);
+
+    doc.end();
+
+    writeStream.on("finish", async () => {
+      // Upload PDF to Minio
+      await minioClient.fPutObject(
+        "billing",
+        pdfFileName,
+        pdfFileName,
+        function (err, etag) {
+          if (err) {
+            console.log(err);
+            res.status(400).json({ success: false });
+          } else {
+            // Delete local file after uploading
+            fs.unlinkSync(pdfFileName);
+            res.status(200).json({ success: true });
+          }
+        }
+      );
+    });
   } catch (e) {
     console.log(e);
     res.status(400).json({ success: false });
@@ -718,12 +802,34 @@ exports.createrzporder = async (req, res) => {
     const { id } = req.params;
     const { quantity, deliverycharges, productId, total, rzptotal } = req.body;
 
+    const ordern = await Order.countDocuments();
     const user = await User.findById(id);
     const product = await Product.findById(productId).populate(
       "creator",
       "storeAddress"
     );
     let oi = Math.floor(Math.random() * 9000000) + 1000000;
+
+    let maindata = [];
+    let qty = [];
+    for (let i = 0; i < user?.cart?.length; i++) {
+      qty.push(user.cart[i].quantity);
+      maindata.push({
+        product: productId[i],
+        seller: sellers[i],
+        qty: user.cart[i].quantity,
+      });
+    }
+
+    let sellers = [];
+    for (let i = 0; i < productId.length; i++) {
+      const product = await Product.findById(productId[i]).populate(
+        "creator",
+        "storeAddress"
+      );
+
+      sellers.push(product?.creator?._id);
+    }
 
     if (!user && !product) {
       return res.status(404).json({ message: "User or Product not found" });
@@ -739,6 +845,9 @@ exports.createrzporder = async (req, res) => {
         currentStatus: "pending",
         deliverycharges: deliverycharges,
         timing: "Tommorow, by 7:00 pm",
+        orderno: ordern + 1,
+        data: maindata,
+        sellerId: sellers,
       });
       await ord.save();
 
@@ -798,7 +907,19 @@ exports.finaliseorder = async (req, res) => {
       status,
     } = req.body;
 
-    const user = await User.findById(id);
+    const user = await User.findById(id).populate({
+      path: "cart",
+      populate: {
+        path: "product",
+        model: "Product",
+      },
+    });
+
+    let qty = [];
+    for (let i = 0; i < user?.cart?.length; i++) {
+      qty.push(user.cart[i].quantity);
+    }
+
     if (!user) {
       return res.status(404).json({ message: "User or Product not found" });
     } else {
@@ -889,6 +1010,39 @@ exports.finaliseorder = async (req, res) => {
             console.log("Error sending message:", error);
           });
 
+        //creating and assigning deliveries
+        credeli({ id, pickupid, oid, total });
+
+        //create order pdfs
+        let sellers = [];
+        let orderdata = [];
+        const order = await Order.findOne({ orderId: ordId });
+
+        for (let i = 0; i < order.productId.length; i++) {
+          const product = await Product.findById(order.productId[i]);
+          orderdata.push({
+            hsn: "",
+            desc: product.name,
+            qty: qty[i],
+            disc: product.discountedprice,
+            amt: product.price,
+          });
+        }
+
+        const buyer = await User.findById(order.buyerId);
+        const seller = await User.findById(order.sellerId);
+
+        let buyerdata = `${buyer.fullname}, ${buyer.address.streetaddress}, ${buyer.address.city}, ${buyer.address.landmark}, ${buyer.address.state}, ${buyer.address.country}`;
+        let sellerdata = `${seller.fullname}, ${seller.storeAddress.streetaddress}, ${seller.storeAddress.city}, ${seller.storeAddress.landmark}, ${seller.storeAddress.state}, ${seller.storeAddress.country}`;
+        createpdfs({
+          data: orderdata,
+          buyer: buyerdata,
+          seller: sellerdata,
+          mode: order.paymentMode,
+          refno: order.orderId,
+          total: order.total,
+          billno: order.orderno,
+        });
         res.status(200).json({ success: true });
       } else {
         await Order.updateOne(
@@ -898,8 +1052,6 @@ exports.finaliseorder = async (req, res) => {
 
         res.status(200).json({ success: true });
       }
-      //creating and assigning deliveries
-      credeli({ id, pickupid, oid, total });
     }
   } catch (e) {
     console.log(e);
@@ -913,14 +1065,38 @@ exports.createnewproductorder = async (req, res) => {
   const { quantity, deliverycharges, productId, total, pickupid } = req.body;
 
   try {
-    const user = await User.findById(userId);
-    const product = await Product.findById(productId).populate(
-      "creator",
-      "storeAddress"
-    );
+    let sellers = [];
+    const user = await User.findById(userId).populate({
+      path: "cart",
+      populate: {
+        path: "product",
+        model: "Product",
+      },
+    });
+
+    for (let i = 0; i < productId.length; i++) {
+      const product = await Product.findById(productId[i]).populate(
+        "creator",
+        "storeAddress"
+      );
+
+      sellers.push(product?.creator?._id);
+    }
+
     let oi = Math.floor(Math.random() * 9000000) + 1000000;
 
-    if (!user && !product) {
+    let maindata = [];
+    let qty = [];
+    for (let i = 0; i < user?.cart?.length; i++) {
+      qty.push(user.cart[i].quantity);
+      maindata.push({
+        product: productId[i],
+        seller: sellers[i],
+        qty: user.cart[i].quantity,
+      });
+    }
+
+    if (!user) {
       return res.status(404).json({ message: "User or Product not found" });
     } else {
       //a new order is created
@@ -934,6 +1110,8 @@ exports.createnewproductorder = async (req, res) => {
         currentStatus: "success",
         deliverycharges: deliverycharges,
         timing: "Tommorow, by 7:00 pm",
+        sellerId: sellers,
+        data: maindata,
       });
       await order.save();
       //upating order in customers purchase history
@@ -1017,10 +1195,40 @@ exports.createnewproductorder = async (req, res) => {
           console.log("Error sending message:", error);
         });
 
-      res.status(200).json({ success: true });
-
       //creating and assigning deliveries
-      credeli({ id, pickupid, oid, total });
+      // credeli({ id, pickupid, oid, total });
+
+      //create order pdfs
+      let orderdata = [];
+      //const order = await Order.findOne({ orderId: ordId });
+
+      for (let i = 0; i < order.productId.length; i++) {
+        const product = await Product.findById(order.productId[i]);
+        orderdata.push({
+          hsn: "",
+          desc: product.name,
+          qty: qty[i],
+          disc: product.discountedprice,
+          amt: product.price,
+        });
+      }
+
+      const buyer = await User.findById(order.buyerId);
+      const seller = await User.findById(order.sellerId);
+
+      let buyerdata = `${buyer.fullname}, ${buyer.address.streetaddress}, ${buyer.address.city}, ${buyer.address.landmark}, ${buyer.address.state}, ${buyer.address.country}`;
+      let sellerdata = `${seller?.fullname}, ${seller?.storeAddress.streetaddress}, ${seller?.storeAddress.city}, ${seller?.storeAddress.landmark}, ${seller?.storeAddress.state}, ${seller?.storeAddress.country}`;
+      createpdfs({
+        data: orderdata,
+        buyer: buyerdata,
+        seller: sellerdata,
+        mode: order.paymentMode,
+        refno: order.orderId,
+        total: order.total,
+        billno: order.orderno,
+      });
+
+      res.status(200).json({ success: true });
     }
   } catch (e) {
     console.log(e);
@@ -2022,5 +2230,150 @@ const credeli = async ({ id, pickupid, oid, total }) => {
   } catch (e) {
     console.log(e);
     res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//create pdf for orders
+const createpdfs = async ({
+  refno,
+  mode,
+  billno,
+  buyer,
+  seller,
+  data,
+  total,
+}) => {
+  try {
+    const currentDate = new Date();
+    const formattedDate = formatDate(currentDate);
+
+    const finaltotal = parseInt(total);
+
+    const pdfFileName = `${refno}.pdf`;
+    const writeStream = fs.createWriteStream(pdfFileName);
+    doc.pipe(writeStream);
+
+    doc.fontSize(17);
+    doc
+      .text(`Tax Invoice`, {
+        align: "center",
+      })
+      .moveUp(-1);
+
+    doc.fontSize(12);
+    doc.text("Grovyo Platforms Pvt Ltd", { align: "left" }).moveDown(0.5);
+    doc.text("+91 7318501865", { align: "left" }).moveDown(0.5);
+    doc
+      .text("37 A, Rampuram, Shyam Nagar, Kanpur, 208013", { align: "left" })
+      .moveDown(0.5);
+    doc.text("GSTIN - 09AAJCG9210A1ZV", { align: "left" }).moveDown(0.5);
+    doc
+      .text("State Name - Uttar Pradesh, Code: 09", { align: "left" })
+      .moveDown(1.5);
+
+    doc.text(`Reference No. ${refno}`, { align: "left" }).moveDown(0.5);
+    doc.text(`Dated on- ${formattedDate}`, { align: "left" }).moveDown(0.5);
+    doc.text(`Payment Mode- ${mode}`, { align: "left" }).moveDown(0.5);
+    doc.text(`Bill no.- ${billno}`, { align: "left" }).moveDown(2).fontSize(15);
+
+    //buyer details
+    doc.text(`Buyer (Bill To)`, { align: "left" }).moveDown(0.5).fontSize(12);
+    doc.text(`${buyer}`, { align: "left" }).moveDown(1).fontSize(15);
+
+    //seller details
+    doc.text(`Sold By (From)`, { align: "left" }).moveDown(0.5).fontSize(12);
+    doc.text(`${seller}`, { align: "left" }).moveDown(1.5).fontSize(15);
+
+    //details of products
+    doc
+      .text(`S No.  HSN/ASN   Description   Quantity   Discount   Amount`, {})
+      .moveDown(0.5);
+
+    for (i = 0; i < data.length; i++) {
+      doc
+        .text(
+          `${i + 1}       ${data[i].hsn}       ${data[i].desc}       ${
+            data[i].qty
+          }      Rs ${data[i].disc}       Rs ${data[i].amt}`,
+          {}
+        )
+        .moveDown(0.5);
+    }
+
+    doc.fontSize(13).moveDown(1.5);
+    doc.text(`Total - Rs ${total}`, {}).moveDown(1.5).fontSize(15);
+    doc
+      .text(
+        `Total Taxable Value    Central Tax     State Tax    Total Tax Amount`,
+        {}
+      )
+      .moveDown(1)
+      .fontSize(13);
+    doc
+      .text(
+        `Rs 30             9%  Rs 2.7             9%  Rs 2.7            Rs 5.4`,
+        {}
+      )
+      .moveDown(1);
+    doc
+      .text(`Total(After Round Off) - Rs ${finaltotal}`, {})
+      .moveDown(1.5)
+      .fontSize(15);
+    doc.text(`Declaration`, {}).moveDown(0.5).fontSize(11);
+    doc
+      .text(
+        `We declare that this invoice shows the actual price of the goods described and that all particullars are true and correct.`,
+        {}
+      )
+      .moveDown(1.5)
+      .fontSize(15);
+    doc
+      .text(`Authorised Signatory`, { align: "right" })
+      .moveDown(0.4)
+      .fontSize(11);
+    doc.text(`Grovyo Platforms Pvt Ltd`, { align: "right" }).moveDown(1);
+    doc
+      .text(`This is a computer generated invoice`, { align: "center" })
+      .moveDown(0.5);
+
+    doc.end();
+
+    // Upload PDF to Minio
+    writeStream.on("finish", async () => {
+      await minioClient.fPutObject(
+        "billing",
+        pdfFileName,
+        pdfFileName,
+        function (err, etag) {
+          if (err) {
+            console.log(err);
+            //res.status(400).json({ success: false });
+          } else {
+            // Delete local file after uploading
+            fs.unlinkSync(pdfFileName);
+            //res.status(200).json({ success: true });
+          }
+        }
+      );
+    });
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+//fetch an order
+exports.fetchanorder = async (req, res) => {
+  try {
+    const { id, ordid } = req.params;
+    const user = await User.findById(id);
+    const order = await Order.findById(ordid);
+    if (!user && !order) {
+      res.status(404).json({ success: false });
+    } else {
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
   }
 };

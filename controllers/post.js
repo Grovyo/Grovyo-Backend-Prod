@@ -1683,7 +1683,7 @@ exports.delenu = async (req, res) => {
 //create a poll for community post section
 exports.createpollcom = async (req, res) => {
   try {
-    const { id, comId } = req.params;
+    const { id, comId, topicId } = req.params;
     const { options, title, tag, desc } = req.body;
     const user = await User.findById(id);
     if (!user) {
@@ -1733,6 +1733,7 @@ exports.createpollcom = async (req, res) => {
         tags: tag,
         kind: "poll",
         type: "Poll",
+        topicId,
       });
 
       const savedpost = await poll.save();
@@ -1790,17 +1791,15 @@ exports.datadownload2 = async (req, res) => {
 
 //post anything
 exports.postanythings3 = async (req, res) => {
-  const { userId, comId } = req.params;
+  const { userId, comId, topicId } = req.params;
   try {
     const { title, desc, tags, category } = req.body;
     const tag = tags.split(",");
 
     const user = await User.findById(userId);
     const community = await Community.findById(comId);
-    const topic = await Topic.find({ community: community._id }).find({
-      title: "Posts",
-    });
-
+    const topic = await Topic.findById(topicId);
+    console.log(topic);
     if (user && community && topic && req.files.length > 0) {
       let pos = [];
 
@@ -1837,6 +1836,7 @@ exports.postanythings3 = async (req, res) => {
         sender: userId,
         post: pos,
         tags: tag,
+        topicId: topicId,
       });
       const savedpost = await post.save();
 
@@ -1881,13 +1881,14 @@ exports.postanythings3 = async (req, res) => {
         { $push: { posts: savedpost._id }, $inc: { totalposts: 1 } }
       );
       await Topic.updateOne(
-        { _id: topic[0]._id },
+        { _id: topic._id },
         { $push: { posts: savedpost._id }, $inc: { postcount: 1 } }
       );
       res.status(200).json({ savedpost, success: true });
     } else {
       res.status(404).json({
-        message: "User or Community not found or no files where there!",
+        message:
+          "User or Community or Topic not found or no files where there!",
         success: false,
       });
     }
@@ -2006,6 +2007,7 @@ exports.newfetchfeeds3 = async (req, res) => {
             memberscount: 1,
             isverified: 1,
           },
+          topicId: 1,
         },
       },
     ]);
