@@ -93,7 +93,7 @@ const userSchema = new mongoose.Schema(
     age: {
       type: Number,
     },
-    gr: { type: Number, default: 1 },
+    gr: { type: Number, default: 0 },
     // gender: {
     //   type: String,
     //   enum: ["MALE", "FEMALE"]
@@ -235,6 +235,7 @@ const userSchema = new mongoose.Schema(
         id: { type: ObjectId, ref: "User" },
       },
     ],
+    ismembershipactive: { type: Boolean, default: false },
     memberships: {
       membership: { type: ObjectId, ref: "membership" },
       status: { type: Boolean, default: false },
@@ -247,6 +248,15 @@ const userSchema = new mongoose.Schema(
     },
     creation: { type: Number },
     passcode: { type: String },
+    topicearning: { type: Number, default: 0 },
+    storeearning: { type: Number, default: 0 },
+    adsearning: { type: Number, default: 0 },
+    storeStats: [
+      {
+        Dates: { type: String },
+        Sales: { type: Number },
+      },
+    ],
   },
   { timestamps: false }
 );

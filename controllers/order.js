@@ -1014,9 +1014,49 @@ exports.finaliseorder = async (req, res) => {
         credeli({ id, pickupid, oid, total });
 
         //create order pdfs
-        let sellers = [];
         let orderdata = [];
         const order = await Order.findOne({ orderId: ordId });
+
+        //data for sales graph
+        let today = new Date();
+
+        let year = today.getFullYear();
+        let month = String(today.getMonth() + 1).padStart(2, "0");
+        let day = String(today.getDate()).padStart(2, "0");
+
+        let formattedDate = `${day}/${month}/${year}`;
+        const incrementValue = 1;
+        for (let i = 0; i < order.sellerId.length; i++) {
+          let selleruser = await User.findById(order?.sellerId[i]?._id);
+          if (
+            selleruser.storeStats?.length > 0 &&
+            selleruser.storeStats[selleruser.storeStats.length - 1]?.Dates ===
+              formattedDate
+          ) {
+            await User.updateOne(
+              { _id: selleruser._id, "storeStats.Dates": formattedDate },
+              {
+                $inc: {
+                  "storeStats.$.Sales": 1,
+                },
+              }
+            );
+          } else {
+            let d = {
+              Dates: formattedDate,
+              Sales: incrementValue,
+            };
+
+            await User.updateOne(
+              { _id: selleruser._id },
+              {
+                $push: {
+                  storeStats: d,
+                },
+              }
+            );
+          }
+        }
 
         for (let i = 0; i < order.productId.length; i++) {
           const product = await Product.findById(order.productId[i]);
@@ -1027,6 +1067,18 @@ exports.finaliseorder = async (req, res) => {
             disc: product.discountedprice,
             amt: product.price,
           });
+          let earning = { how: "product", when: Date.now() };
+          await User.updateOne(
+            { _id: product._id },
+            {
+              $addToSet: { customers: user._id, earning: earning },
+              $inc: { storeearning: product.price },
+            }
+          );
+          await Product.updateOne(
+            { _id: product._id },
+            { $inc: { itemsold: 1 } }
+          );
         }
 
         const buyer = await User.findById(order.buyerId);
@@ -1073,14 +1125,65 @@ exports.createnewproductorder = async (req, res) => {
         model: "Product",
       },
     });
+    let prices = [];
+
+    let today = new Date();
+
+    let year = today.getFullYear();
+    let month = String(today.getMonth() + 1).padStart(2, "0");
+    let day = String(today.getDate()).padStart(2, "0");
+
+    let formattedDate = `${day}/${month}/${year}`;
+    const incrementValue = 1;
 
     for (let i = 0; i < productId.length; i++) {
       const product = await Product.findById(productId[i]).populate(
         "creator",
         "storeAddress"
       );
-
+      prices.push(product.price);
       sellers.push(product?.creator?._id);
+
+      //data for sales graph
+      let selleruser = await User.findById(product?.creator?._id);
+      if (
+        selleruser.storeStats?.length > 0 &&
+        selleruser.storeStats[selleruser.storeStats.length - 1]?.Dates ===
+          formattedDate
+      ) {
+        await User.updateOne(
+          { _id: selleruser._id, "storeStats.Dates": formattedDate },
+          {
+            $inc: {
+              "storeStats.$.Sales": 1,
+            },
+          }
+        );
+      } else {
+        let d = {
+          Dates: formattedDate,
+          Sales: incrementValue,
+        };
+
+        await User.updateOne(
+          { _id: selleruser._id },
+          {
+            $push: {
+              storeStats: d,
+            },
+          }
+        );
+      }
+
+      let earning = { how: "product", when: Date.now() };
+      await User.updateOne(
+        { _id: product?.creator?._id },
+        {
+          $addToSet: { customers: user._id, earning: earning },
+          $inc: { storeearning: product.price },
+        }
+      );
+      await Product.updateOne({ _id: product._id }, { $inc: { itemsold: 1 } });
     }
 
     let oi = Math.floor(Math.random() * 9000000) + 1000000;
@@ -1093,6 +1196,7 @@ exports.createnewproductorder = async (req, res) => {
         product: productId[i],
         seller: sellers[i],
         qty: user.cart[i].quantity,
+        price: prices[i],
       });
     }
 

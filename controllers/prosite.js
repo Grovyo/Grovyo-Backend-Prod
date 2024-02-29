@@ -119,7 +119,7 @@ exports.fetchproducts = async (req, res) => {
 
       for (let i = 0; i < product.length; i++) {
         for (let j = 0; j < product[i].images.length; j++) {
-          const a = process.env.URL + product[i].images[j].content;
+          const a = process.env.PRODUCT_URL + product[i].images[j].content;
 
           ur.push({ content: a, type: product[i].images[j].type });
         }

@@ -300,7 +300,7 @@ exports.getaproduct = async (req, res) => {
       }
       for (let i = 0; i < product.images.length; i++) {
         if (product.images[i] !== null) {
-          const a = process.env.URL + product.images[i].content;
+          const a = process.env.PRODUCT_URL + product.images[i].content;
 
           urls.push(a);
         }

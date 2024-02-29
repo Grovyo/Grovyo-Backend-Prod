@@ -15,6 +15,7 @@ const OrderSchema = new mongoose.Schema(
         product: { type: ObjectId, ref: "Product" },
         qty: { type: Number },
         seller: { type: ObjectId, ref: "User" },
+        price: { type: Number, default: 0 },
       },
     ],
     currentStatus: {
@@ -60,7 +61,7 @@ const OrderSchema = new mongoose.Schema(
     paymentId: { type: String },
     topicId: { type: String },
     timing: { type: String },
-    finisheddeliveries: [{ type: ObjectId, ref: "DeliveriesSchema" }], //compeleted deliveries
+    finisheddeliveries: [{ type: ObjectId, ref: "DeliveriesSchema" }], //completed deliveries
     orderno: { type: Number, default: 0 },
   },
   { timestamps: true }

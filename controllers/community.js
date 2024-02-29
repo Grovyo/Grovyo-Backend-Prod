@@ -277,34 +277,6 @@ exports.joinmember = async (req, res) => {
 
         let formattedDate = `${day}/${month}/${year}`;
 
-        //visitor count
-        if (
-          community?.stats?.length > 0 &&
-          community.stats[0]?.X === formattedDate
-        ) {
-          await Community.updateOne(
-            { _id: community._id, "stats.X": formattedDate },
-            {
-              $inc: {
-                "stats.$.Y1": 1,
-              },
-            }
-          );
-        } else {
-          let d = {
-            X: formattedDate,
-            Y1: 1,
-          };
-          await Community.updateOne(
-            { _id: community._id },
-            {
-              $push: {
-                stats: d,
-              },
-            }
-          );
-        }
-
         const birthdateString = user.DOB;
         const birthdate = new Date(
           birthdateString.split("/").reverse().join("/")
@@ -465,7 +437,7 @@ exports.joinmember = async (req, res) => {
 
         if (
           community?.stats?.length > 0 &&
-          community.stats[0]?.X === formattedDate
+          community.stats[community.stats.length - 1]?.X === formattedDate
         ) {
           await Community.updateOne(
             { _id: community._id, "stats.X": formattedDate },
@@ -490,6 +462,15 @@ exports.joinmember = async (req, res) => {
             }
           );
         }
+        let address = user.address.state.toLocaleLowerCase().toString().trim();
+
+        if (community.location[address]) {
+          community.location[address]++;
+        } else {
+          community.location[address] = 1;
+        }
+
+        await community.save();
 
         //other updations
         let notif = { id: user._id, muted: false };
@@ -775,7 +756,7 @@ exports.compostfeed = async (req, res) => {
       //visitor count
       if (
         community?.stats?.length > 0 &&
-        community.stats[0]?.X === formattedDate
+        community.stats[community.stats.length - 1]?.X === formattedDate
       ) {
         await Community.updateOne(
           { _id: community._id, "stats.X": formattedDate },
@@ -823,7 +804,7 @@ exports.compostfeed = async (req, res) => {
       const canedit =
         (community.admins.includes(user._id) ||
           community.moderators.includes(user._id)) &&
-        community?.memberscount > 1;
+        community?.memberscount > 150;
 
       //can post
       const canpost =
