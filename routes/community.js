@@ -21,6 +21,7 @@ const {
   fetchmembers,
   forcejoincom,
   setcomtype,
+  reporting,
 } = require("../controllers/community");
 
 const storage = multer.memoryStorage();
@@ -71,5 +72,8 @@ router.post("/v1/forcejoincom/:id/:comId", forcejoincom);
 
 //setting community to public or private
 router.post("/v1/setcomtype/:id/:comId", setcomtype);
+
+//reporting
+router.post("/v1/reporting/:userid", reporting);
 
 module.exports = router;

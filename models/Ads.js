@@ -23,7 +23,16 @@ const AdsSchema = new mongoose.Schema(
         thumbnail: { type: String },
       },
     ],
-    preferedsection: { type: String },
+    adsDetails: [
+      {
+        time: { type: Date, default: Date.now },
+        click: { type: Number, default: 0 },
+        impressions: { type: Number, default: 0 },
+        cpc: { type: Number, default: 0 },
+        cost: { type: Number, default: 0 },
+      },
+    ],
+    type: { type: String },
     tags: [{ type: String }],
     location: [{ type: String }],
     gender: { type: String },

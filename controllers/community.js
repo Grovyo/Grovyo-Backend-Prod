@@ -9,6 +9,7 @@ const Comment = require("../models/comment");
 const Message = require("../models/message");
 const Ads = require("../models/Ads");
 const Conversation = require("../models/conversation");
+const Report = require("../models/reports");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 const fs = require("fs");
@@ -1718,9 +1719,15 @@ exports.fetchallposts = async (req, res) => {
       let ur = [];
       for (let i = 0; i < post?.length; i++) {
         for (let j = 0; j < post[i]?.post?.length; j++) {
-          const a = process.env.POST_URL + post[i].post[j].content;
+          if (post[i].post[j].thumbnail) {
+            const a = process.env.POST_URL + post[i].post[j].content;
+            const t = process.env.POST_URL + post[i].post[j].thumbnail;
 
-          ur.push({ content: a, type: post[i].post[j]?.type });
+            ur.push({ content: a, thumbnail: t, type: post[i].post[j]?.type });
+          } else {
+            const a = process.env.POST_URL + post[i].post[j].content;
+            ur.push({ content: a, type: post[i].post[j]?.type });
+          }
         }
         urls.push(ur);
         ur = [];
@@ -2019,5 +2026,28 @@ exports.setcomtype = async (req, res) => {
     res
       .status(400)
       .json({ success: false, message: "Something went wrong..." });
+  }
+};
+
+//submiting reports
+exports.reporting = async (req, res) => {
+  try {
+    const { userid } = req.params;
+    const { data, id, type } = req.body;
+    const user = await User.findById(userid);
+    if (!user) {
+      res.status(404).json({ message: "User not found", success: false });
+    } else {
+      const report = new Report({
+        senderId: user._id,
+        desc: data,
+        reportedid: { id: id, what: type },
+      });
+      await report.save();
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false, message: "Something went wrong" });
   }
 };

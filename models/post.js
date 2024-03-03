@@ -46,8 +46,10 @@ const PostSchema = new mongoose.Schema(
     },
     sharescount: { type: Number, default: 0 },
     type: { type: String, default: "Post" },
+    promoid: { type: ObjectId, ref: "Post" },
+    isPromoted: { type: Boolean, default: false },
   },
-  { timestamps: false, strict: false }
+  { timestamps: true, strict: false }
 );
 
 PostSchema.index({ title: "text" });

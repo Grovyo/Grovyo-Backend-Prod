@@ -16,6 +16,7 @@ const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 const fs = require("fs");
 require("dotenv").config();
 const axios = require("axios");
+const admin = require("../fireb");
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
 const POST_BUCKET = process.env.POST_BUCKET;
@@ -1069,19 +1070,23 @@ exports.dislikepost = async (req, res) => {
 //delete a post
 exports.deletepost = async (req, res) => {
   const { userId, postId } = req.params;
-  const post = await Post.findById(postId);
-  if (!post) {
-    res.status(404).json({ message: "Post not found" });
-  } else if (post.sender.toString() !== userId) {
-    res.status(400).json({ message: "You can't delete others post" });
-  } else {
-    await Community.updateOne(
-      { _id: post.community },
-      { $inc: { totalposts: -1 }, $pull: { posts: post?._id } }
-    );
-    await Post.findByIdAndDelete(postId);
-
-    res.status(200).json({ success: true });
+  try {
+    const post = await Post.findById(postId);
+    if (!post) {
+      res.status(404).json({ message: "Post not found" });
+    } else if (post.sender.toString() !== userId) {
+      res.status(400).json({ message: "You can't delete others post" });
+    } else {
+      await Community.updateOne(
+        { _id: post.community },
+        { $inc: { totalposts: -1 }, $pull: { posts: post?._id } }
+      );
+      await Post.findByIdAndDelete(postId);
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(404).json({ message: "Something went wrong", success: false });
   }
 };
 
@@ -1789,11 +1794,11 @@ exports.datadownload2 = async (req, res) => {
 
 //s3 bucket
 
-//post anything
+//post anything with thumbnail and video
 exports.postanythings3 = async (req, res) => {
   const { userId, comId, topicId } = req.params;
   try {
-    const { title, desc, tags, category } = req.body;
+    const { title, desc, tags, category, type } = req.body;
     const tag = tags.split(",");
 
     const user = await User.findById(userId);
@@ -1802,32 +1807,63 @@ exports.postanythings3 = async (req, res) => {
 
     if (user && community && topic && req.files.length > 0) {
       let pos = [];
+      if (type === "video") {
+        let thumbail = "";
+        let video = "";
+        for (let i = 0; i < req?.files?.length; i++) {
+          const uuidString = uuid();
+          const bucketName = "posts";
+          const objectName = `${Date.now()}_${uuidString}_${
+            req.files[i].originalname
+          }`;
 
-      for (let i = 0; i < req?.files?.length; i++) {
-        const uuidString = uuid();
-        const bucketName = "posts";
-        const objectName = `${Date.now()}_${uuidString}_${
-          req.files[i].originalname
-        }`;
+          const result = await s3.send(
+            new PutObjectCommand({
+              Bucket: POST_BUCKET,
+              Key: objectName,
+              Body: req.files[i].buffer,
+              ContentType: req.files[i].mimetype,
+            })
+          );
 
-        // await minioClient.putObject(
-        //   bucketName,
-        //   objectName,
-        //   req.files[i].buffer
-        //   // req.files[i].size,
-        //   // req.files[i].mimetype
-        // );
-        const result = await s3.send(
-          new PutObjectCommand({
-            Bucket: POST_BUCKET,
-            Key: objectName,
-            Body: req.files[i].buffer,
-            ContentType: req.files[i].mimetype,
-          })
-        );
-        //  const result = await uploader(req.files[i].buffer);
+          if (req.files[i].fieldname === "thumbnail") {
+            thumbail = objectName;
+          } else {
+            video = objectName;
+          }
+        }
+        pos.push({
+          content: video,
+          thumbnail: thumbail,
+          type: "video/mp4",
+        });
+      } else {
+        for (let i = 0; i < req?.files?.length; i++) {
+          const uuidString = uuid();
+          const bucketName = "posts";
+          const objectName = `${Date.now()}_${uuidString}_${
+            req.files[i].originalname
+          }`;
 
-        pos.push({ content: objectName, type: req.files[i].mimetype });
+          // await minioClient.putObject(
+          //   bucketName,
+          //   objectName,
+          //   req.files[i].buffer
+          //   // req.files[i].size,
+          //   // req.files[i].mimetype
+          // );
+          const result = await s3.send(
+            new PutObjectCommand({
+              Bucket: POST_BUCKET,
+              Key: objectName,
+              Body: req.files[i].buffer,
+              ContentType: req.files[i].mimetype,
+            })
+          );
+          //  const result = await uploader(req.files[i].buffer);
+
+          pos.push({ content: objectName, type: req.files[i].mimetype });
+        }
       }
       const post = new Post({
         title,
@@ -1884,6 +1920,43 @@ exports.postanythings3 = async (req, res) => {
         { _id: topic._id },
         { $push: { posts: savedpost._id }, $inc: { postcount: 1 } }
       );
+
+      let tokens = [];
+
+      for (let u of community.members) {
+        const user = await User.findById(u);
+
+        if (user.notificationtoken && user._id.toString() !== userId) {
+          tokens.push(user.notificationtoken);
+        }
+      }
+
+      const timestamp = `${new Date()}`;
+      const msg = {
+        notification: {
+          title: `${community.title} - Posted!`,
+          body: `${post.title}`,
+        },
+        data: {
+          screen: "CommunityChat",
+          sender_fullname: `${user?.fullname}`,
+          sender_id: `${user?._id}`,
+          text: `${post.title}`,
+          comId: `${community?._id}`,
+          createdAt: `${timestamp}`,
+        },
+        tokens: tokens,
+      };
+
+      await admin
+        .messaging()
+        .sendMulticast(msg)
+        .then((response) => {
+          console.log("Successfully sent message");
+        })
+        .catch((error) => {
+          console.log("Error sending message:", error);
+        });
       res.status(200).json({ savedpost, success: true });
     } else {
       res.status(404).json({
@@ -2060,12 +2133,13 @@ exports.newfetchfeeds3 = async (req, res) => {
     }
 
     //merging ads
-    post.unshift(firstad.postid);
-    for (let i = 0; i < feedad.length; i++) {
-      const randomIndex = getRandomIndex();
-      post.splice(randomIndex, 0, feedad[i]);
+    if (firstad) {
+      post.unshift(firstad.postid);
+      for (let i = 0; i < feedad.length; i++) {
+        const randomIndex = getRandomIndex();
+        post.splice(randomIndex, 0, feedad[i]);
+      }
     }
-
     for (let i = 0; i < post.length; i++) {
       if (
         post[i].likedby?.some((id) => id.toString() === user._id.toString())
@@ -2098,8 +2172,15 @@ exports.newfetchfeeds3 = async (req, res) => {
       let ur = [];
       for (let i = 0; i < post?.length; i++) {
         for (let j = 0; j < post[i]?.post?.length; j++) {
-          const a = process.env.POST_URL + post[i].post[j]?.content;
-          ur.push({ content: a, type: post[i].post[j]?.type });
+          if (post[i].post[j].thumbnail) {
+            const a = process.env.POST_URL + post[i].post[j].content;
+            const t = process.env.POST_URL + post[i].post[j].thumbnail;
+
+            ur.push({ content: a, thumbnail: t, type: post[i].post[j]?.type });
+          } else {
+            const a = process.env.POST_URL + post[i].post[j].content;
+            ur.push({ content: a, type: post[i].post[j]?.type });
+          }
         }
         urls.push(ur);
         ur = [];
@@ -2209,9 +2290,16 @@ exports.joinedcomnews3 = async (req, res) => {
 
       let ur = [];
       for (let j = 0; j < post[0]?.post?.length; j++) {
-        const a = process.env.POST_URL + post[0].post[j].content;
+        if (post[0].post[j].thumbnail) {
+          const a = process.env.POST_URL + post[0].post[j].content;
+          const t = process.env.POST_URL + post[0].post[j].thumbnail;
 
-        ur.push({ content: a, type: post[0].post[j]?.type });
+          ur.push({ content: a, thumbnail: t, type: post[0].post[j]?.type });
+        } else {
+          const a = process.env.POST_URL + post[0].post[j].content;
+
+          ur.push({ content: a, type: post[0].post[j]?.type });
+        }
       }
 
       urls.push(ur);
