@@ -23,7 +23,10 @@ let k = "[16, 12, 3, 7, 9, 5, 11, 6, 3, 2, 10, 1, 13, 3, 13, 4]";
 const encryptaes = (data) => {
   try {
     const textBytes = aesjs.utils.utf8.toBytes(data);
-    const aesCtr = new aesjs.ModeOfOperation.ctr(k, new aesjs.Counter(5));
+    const aesCtr = new aesjs.ModeOfOperation.ctr(
+      JSON.parse(k),
+      new aesjs.Counter(5)
+    );
     const encryptedBytes = aesCtr.encrypt(textBytes);
     const encryptedHex = aesjs.utils.hex.fromBytes(encryptedBytes);
     return encryptedHex;
@@ -36,7 +39,7 @@ const decryptaes = (data) => {
   try {
     const encryptedBytes = aesjs.utils.hex.toBytes(data);
     const aesCtr = new aesjs.ModeOfOperation.ctr(
-      JSON.parse(process.env.key),
+      JSON.parse(k),
       new aesjs.Counter(5)
     );
     const decryptedBytes = aesCtr.decrypt(encryptedBytes);
