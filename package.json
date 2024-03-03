@@ -51,7 +51,6 @@
     "node-base64-image": "^2.0.5",
     "nodemailer": "^6.9.7",
     "nodemon": "^2.0.20",
-    "pdf-creator-node": "^2.3.5",
     "pdfkit": "^0.14.0",
     "razorpay": "^2.9.2",
     "redis": "^4.6.11",

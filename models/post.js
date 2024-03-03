@@ -47,7 +47,7 @@ const PostSchema = new mongoose.Schema(
     sharescount: { type: Number, default: 0 },
     type: { type: String, default: "Post" },
   },
-  { timestamps: true }
+  { timestamps: false, strict: false }
 );
 
 PostSchema.index({ title: "text" });

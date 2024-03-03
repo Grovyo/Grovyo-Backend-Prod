@@ -7,6 +7,8 @@ const sharp = require("sharp");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
 const Message = require("../models/message");
+const Ads = require("../models/Ads");
+const Conversation = require("../models/conversation");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 const fs = require("fs");
@@ -48,7 +50,7 @@ async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
 
 //creating a community
 exports.createa = async (req, res) => {
-  const { title, desc, topic, type, price, category } = req.body;
+  const { title, desc, topic, type, price, category, nature } = req.body;
   const { userId } = req.params;
   const image = req.file;
   const uuidString = uuid();
@@ -819,6 +821,7 @@ exports.compostfeed = async (req, res) => {
       );
       let index = -1;
       posts.reverse();
+
       //index of post that appears first
       for (let i = 0; i < posts.length; i++) {
         if (posts[i]._id.toString() === postId) {
@@ -886,6 +889,16 @@ exports.compostfeed = async (req, res) => {
         dps.push(a);
       }
 
+      let ismember;
+      //cheking if community is private if person is member
+      if (community?.type !== "public") {
+        if (community?.members?.includes(user._id)) {
+          ismember = true;
+        } else {
+          ismember = false;
+        }
+      }
+
       //mergeing all the data
       const urlData = urls;
       const postData = posts;
@@ -913,6 +926,7 @@ exports.compostfeed = async (req, res) => {
         subs,
         canedit,
         canpost,
+        ismember,
         category: community?.category,
         success: true,
       });
@@ -1096,11 +1110,12 @@ exports.loadmoremessages = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
-  const { title, desc, topic, type, price, category, iddata } = req.body;
+  const { title, desc, topic, type, price, category, iddata, nature } =
+    req.body;
   const { userId } = req.params;
   const image = req.file;
   const uuidString = uuid();
-
+  console.log(nature);
   if (!image) {
     res.status(400).json({ message: "Please upload an image", success: false });
   } else if (iddata != undefined) {
@@ -1129,6 +1144,7 @@ exports.create = async (req, res) => {
         dp: objectName,
         desc: desc,
         category: category,
+        type: nature,
       });
       const savedcom = await community.save();
       const topic1 = new Topic({
@@ -1224,6 +1240,7 @@ exports.create = async (req, res) => {
         dp: objectName,
         desc: desc,
         category: category,
+        type: nature,
       });
       const savedcom = await community.save();
       const topic1 = new Topic({
@@ -1515,10 +1532,70 @@ exports.fetchallposts = async (req, res) => {
     }
 
     if (user && community) {
-      const post = await Post.find({ topicId: topic?._id }).populate(
+      const postold = await Post.find({ topicId: topic?._id }).populate(
         "sender",
         "fullname profilepic"
       );
+
+      //fetching ads
+      const infeedad = await Ads.find({
+        status: "active",
+        type: "infeed",
+      }).populate({
+        path: "postid",
+        select:
+          "desc post title kind likes comments community cta ctalink sender totalcomments adtype date createdAt",
+        populate: [
+          { path: "community", select: "dp title isverified memberscount" },
+          { path: "sender", select: "profilepic fullname" },
+        ],
+      });
+
+      let feedad = [];
+      for (let i = 0; i < infeedad.length; i++) {
+        feedad.push(infeedad[i].postid);
+      }
+
+      const vidad = await Ads.find({
+        status: "active",
+        $or: [{ type: "skipable" }, { type: "non-skipable" }],
+      }).populate({
+        path: "postid",
+        select:
+          "desc post title kind likes comments community cta ctalink sender totalcomments adtype date createdAt",
+        populate: [
+          { path: "community", select: "dp title isverified memberscount" },
+          { path: "sender", select: "profilepic fullname" },
+        ],
+      });
+
+      let vidadarray = [];
+      for (let i = 0; i < vidad.length; i++) {
+        let a = process.env.AD_URL + vidad[i].postid?.post[0].content;
+        let comdp = process.env.URL + vidad[i].postid?.community?.dp;
+        let final = {
+          _id: vidad[i].postid?._id,
+          likes: vidad[i].postid?.likes,
+          comments: vidad[i].postid?.likes,
+          totalcomments: vidad[i].postid?.totalcomments,
+          title: vidad[i].postid?.title,
+          desc: vidad[i].postid?.desc,
+          community: vidad[i].postid?.community,
+          sender: vidad[i].postid?.sender,
+          post: vidad[i].postid?.post,
+          kind: vidad[i].postid?.kind,
+          date: vidad[i].postid?.date,
+          adtype: vidad[i].postid?.adtype,
+          cta: vidad[i].postid?.cta,
+          ctalink: vidad[i].postid?.ctalink,
+          createdAt: vidad[i].postid?.createdAt,
+          desc: vidad[i].desc,
+          headline: vidad[i].headline,
+          url: a,
+          comdp,
+        };
+        vidadarray.push(final);
+      }
 
       //muted and unmuted topics
       let muted = null;
@@ -1528,8 +1605,67 @@ exports.fetchallposts = async (req, res) => {
         });
       }
 
+      let post = [];
+
+      for (let i = 0; i < postold.length; i++) {
+        //object of post
+        let po = {
+          _id: postold[i]._id,
+          likedby: postold[i].likedby,
+          likes: postold[i].likes,
+          dislike: postold[i].dislike,
+          dislikedby: postold[i].dislikedby,
+          comments: postold[i].comments,
+          totalcomments: postold[i].totalcomments,
+          tags: postold[i].tags,
+          views: postold[i].views,
+          title: postold[i].title,
+          desc: postold[i].desc,
+          community: postold[i].community,
+          sender: postold[i].sender,
+          isverified: postold[i].isverified,
+          kind: postold[i].kind,
+          post: postold[i].post,
+          votedby: postold[i].votedby,
+          totalvotes: postold[i].totalvotes,
+          contenttype: postold[i].contenttype,
+          date: postold[i].date,
+          status: postold[i].status,
+          sharescount: postold[i].sharescount,
+          type: postold[i].type,
+          options: postold[i].options,
+          createdAt: postold[i].createdAt,
+          topicId: postold[i].topicId,
+        };
+
+        post.push(po);
+      }
+
+      //mixing skipable and non-skipable ads with posts
+      for (let j = 0; j < vidadarray.length; j++) {
+        if (post.length > 0) {
+          const randomIndex = getRandomIndexforad();
+          if (post[randomIndex].post[0].type === "video/mp4") {
+            post[randomIndex].ad = vidadarray[j];
+          }
+        }
+      }
+
       let index = -1;
       post.reverse();
+
+      //mixing the infeed ad with posts
+      function getRandomIndex() {
+        return Math.floor(Math.random() * (Math.floor(post.length / 2) + 1));
+      }
+      function getRandomIndexforad() {
+        return Math.floor(Math.random() * Math.floor(post.length / 2));
+      }
+
+      for (let i = 0; i < feedad.length; i++) {
+        const randomIndex = getRandomIndex();
+        post.splice(randomIndex, 0, feedad[i]);
+      }
       //index of post that appears first
       for (let i = 0; i < post.length; i++) {
         if (post[i]._id.toString() === postId) {
@@ -1592,8 +1728,12 @@ exports.fetchallposts = async (req, res) => {
 
       //dp of the sender
       for (let i = 0; i < post.length; i++) {
-        const a = process.env.URL + post[i].sender.profilepic;
-
+        let a;
+        if (post[i].kind === "ad") {
+          a = process.env.URL + post[i].community.dp;
+        } else {
+          a = process.env.URL + post[i].sender.profilepic;
+        }
         dps.push(a);
       }
 
@@ -1748,5 +1888,136 @@ exports.fetchallsubscriptions = async (req, res) => {
   } catch (e) {
     console.log(e);
     res.status(404).json({ success: false, message: "Something went wrong" });
+  }
+};
+
+//fetching members to invite in community private
+exports.fetchmembers = async (req, res) => {
+  try {
+    const { id, comId } = req.params;
+    const user = await User.findById(id);
+    const com = await Community.findById(comId);
+    if (user && com) {
+      let users = [];
+      //finding all the users
+      for (let member of user.conversations) {
+        const convs = await Conversation.findById(member);
+        if (convs && convs.members?.includes(user._id)) {
+          for (const id of convs.members) {
+            if (id?.toString() !== user._id?.toString()) {
+              users.push(id.toString());
+              break;
+            }
+          }
+        }
+      }
+
+      let final = [];
+      //getting details of all those users
+      for (let newids of users) {
+        if (!com.members.includes(newids)) {
+          let u = await User.findById(newids);
+          let dp = process.env.URL + u.profilepic;
+          let d = { id: u._id, fullname: u.fullname, username: u.username, dp };
+          final.push(d);
+        }
+      }
+
+      res.status(200).json({ final, success: true });
+    } else {
+      res.status(404).json({ message: "User not found!", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ success: false, message: "Something went wrong..." });
+  }
+};
+
+//join the members inside the community
+exports.forcejoincom = async (req, res) => {
+  try {
+    const { id, comId } = req.params;
+    const user = await User.findById(id);
+    const com = await Community.findById(comId);
+    if (user && com) {
+      let publictopic = [];
+      for (let i = 0; i < com.topics.length; i++) {
+        const topic = await Topic.findById({ _id: com.topics[i] });
+
+        if (topic.type === "free") {
+          publictopic.push(topic);
+        }
+      }
+
+      //other updations
+      let notif = { id: user._id, muted: false };
+
+      await Community.updateOne(
+        { _id: comId },
+        {
+          $push: { members: user._id, notifications: notif },
+          $inc: { memberscount: 1 },
+        }
+      );
+      await User.updateOne(
+        { _id: user._id },
+        { $push: { communityjoined: com._id }, $inc: { totalcom: 1 } }
+      );
+
+      const topicIds = publictopic.map((topic) => topic._id);
+
+      await Topic.updateMany(
+        { _id: { $in: topicIds } },
+        {
+          $push: { members: user._id, notifications: notif },
+          $inc: { memberscount: 1 },
+        }
+      );
+
+      await User.updateMany(
+        { _id: user._id },
+        {
+          $push: { topicsjoined: topicIds },
+          $inc: { totaltopics: 2 },
+        }
+      );
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ message: "User not found!", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ success: false, message: "Something went wrong..." });
+  }
+};
+
+//join the members inside the community
+exports.setcomtype = async (req, res) => {
+  try {
+    const { id, comId } = req.params;
+    const user = await User.findById(id);
+    const com = await Community.findById(comId);
+    if (user && com) {
+      console.log(com.type);
+      await Community.updateOne(
+        { _id: comId },
+        {
+          $set: { type: com.type === "public" ? "private" : "public" },
+        }
+      );
+
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ message: "User not found!", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ success: false, message: "Something went wrong..." });
   }
 };

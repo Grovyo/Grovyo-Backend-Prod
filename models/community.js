@@ -122,7 +122,7 @@ const communitySchema = new mongoose.Schema(
     newmembers: [{ type: ObjectId, ref: "User" }],
     paidmemberscount: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: false, strict: false }
 );
 
 communitySchema.index({ title: "text" });

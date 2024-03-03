@@ -61,11 +61,8 @@ exports.searchcoms = async (req, res) => {
         .populate("creator", "fullname username profilepic isverified")
         .exec();
       for (let i = 0; i < coms.length; i++) {
-        const a = await generatePresignedUrl(
-          "images",
-          coms[i].dp.toString(),
-          60 * 60
-        );
+        const a = process.env.URL + coms[i].dp;
+
         dps.push(a);
       }
       for (let i = 0; i < coms.length; i++) {

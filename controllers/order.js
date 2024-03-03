@@ -17,7 +17,7 @@ const Deluser = require("../models/deluser");
 const Delivery = require("../models/deliveries");
 const Conversation = require("../models/conversation");
 const Message = require("../models/message");
-const Pdf = require("pdf-creator-node");
+
 const fs = require("fs");
 const Razorpay = require("razorpay");
 const {
@@ -1216,6 +1216,7 @@ exports.createnewproductorder = async (req, res) => {
         timing: "Tommorow, by 7:00 pm",
         sellerId: sellers,
         data: maindata,
+        orderno: (await Order.countDocuments()) + 1,
       });
       await order.save();
       //upating order in customers purchase history

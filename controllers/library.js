@@ -109,6 +109,7 @@ exports.fetchorders = async (req, res) => {
         .json({ data: merge, address: user.location, success: true });
     }
   } catch (e) {
+    console.log(e);
     res.status(400).json({ message: e.message, success: false });
   }
 };

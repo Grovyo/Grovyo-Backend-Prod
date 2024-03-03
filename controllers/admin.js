@@ -17,7 +17,7 @@ const aesjs = require("aes-js");
 
 const { faker } = require("@faker-js/faker/locale/en_IN");
 
-let k = [16, 12, 3, 7, 9, 5, 11, 6, 3, 2, 10, 1, 13, 3, 13, 4];
+let k = "[16, 12, 3, 7, 9, 5, 11, 6, 3, 2, 10, 1, 13, 3, 13, 4]";
 
 //encryption
 const encryptaes = (data) => {
@@ -733,16 +733,20 @@ exports.creataccs = async (req, res) => {
 
 exports.changegender = async (req, res) => {
   try {
-    const user = await User.find();
-    for (let i = 0; i < user.length; i++) {
-      const pastYearMs = 365 * 24 * 60 * 60 * 1000;
-      const randomTimestamp =
-        Date.now() - Math.floor(Math.random() * pastYearMs);
+    const post = await Post.find();
+    for (let i = 0; i < post.length; i++) {
+      function getRandomNumber() {
+        // Generate a random number between 0 (inclusive) and 1 (exclusive)
+        const random = Math.random();
 
-      // Convert the random timestamp to a Date object
-      const date = new Date(randomTimestamp);
+        // Scale and shift the random number to fit the range [10, 1000]
+        return Math.floor(random * (100 - 10 + 1)) + 10;
+      }
 
-      await User.updateOne({ _id: user[1]._id }, { $set: { createdAt: "" } });
+      await Post.updateOne(
+        { _id: post[i]._id },
+        { $inc: { sharescount: getRandomNumber() } }
+      );
     }
 
     res.status(200).json({ success: true });
@@ -758,9 +762,7 @@ exports.recentSearch = async (req, res) => {
     if (req.body.length > 0) {
       for (let i = 0; i < req.body.length; i++) {
         const id = decryptaes(req.body[i]);
-        const userselect = await User.findById(id).select(
-          "profilepic fullname username"
-        );
+        const userselect = await User.findById(id);
         const dp = process.env.URL + userselect.profilepic;
 
         const user = {
@@ -779,5 +781,17 @@ exports.recentSearch = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message, success: false });
     console.log(error);
+  }
+};
+
+exports.countactive = async (req, res) => {
+  try {
+    const active = await Adm.findById("");
+    let ac = active.activity;
+    let au = active.activity[ac.length - 1].activeuser;
+    res.status(200).json({ success: true, active: au });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
   }
 };

@@ -37,14 +37,19 @@ const AdsSchema = new mongoose.Schema(
     transactions: [{ type: ObjectId, ref: "AdTransactions" }],
     adid: { type: String, required: true },
     userid: { type: ObjectId, ref: "User" },
+    postid: { type: ObjectId, ref: "Post" },
     editcount: [
       {
         date: { type: String, default: Date.now().toString() },
         number: { type: String, default: 0 },
       },
     ],
+    creation: { type: Number },
+    type: { type: String },
+    headline: { type: String },
+    desc: { type: String },
   },
-  { timestamps: true }
+  { timestamps: false }
 );
 
 AdsSchema.index({ title: "text" });

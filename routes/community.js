@@ -18,6 +18,9 @@ const {
   removecomwithposts,
   fetchallposts,
   fetchallsubscriptions,
+  fetchmembers,
+  forcejoincom,
+  setcomtype,
 } = require("../controllers/community");
 
 const storage = multer.memoryStorage();
@@ -59,5 +62,14 @@ router.post("/v1/fetchallposts/:id/:comId", fetchallposts);
 
 //fetch all subscriptions
 router.post("/v1/fetchallsubscriptions/:id", fetchallsubscriptions);
+
+//fetching members
+router.get("/v1/fetchmembers/:id/:comId", fetchmembers);
+
+//forcejoincom
+router.post("/v1/forcejoincom/:id/:comId", forcejoincom);
+
+//setting community to public or private
+router.post("/v1/setcomtype/:id/:comId", setcomtype);
 
 module.exports = router;

@@ -1799,7 +1799,7 @@ exports.postanythings3 = async (req, res) => {
     const user = await User.findById(userId);
     const community = await Community.findById(comId);
     const topic = await Topic.findById(topicId);
-    console.log(topic);
+
     if (user && community && topic && req.files.length > 0) {
       let pos = [];
 
@@ -2011,6 +2011,60 @@ exports.newfetchfeeds3 = async (req, res) => {
         },
       },
     ]);
+
+    //fetching ads
+    const firstad = await Ads.findOne({
+      status: "active",
+      $or: [{ type: "banner" }],
+    })
+      .populate({
+        path: "postid",
+        select:
+          "desc post title kind likes comments members community cta ctalink sender totalcomments adtype date createdAt",
+        populate: [
+          {
+            path: "community",
+            select: "dp title isverified memberscount members",
+            populate: { path: "members", select: "profilepic" },
+          },
+          { path: "sender", select: "profilepic fullname" },
+        ],
+      })
+      .limit(1);
+
+    const infeedad = await Ads.find({
+      status: "active",
+      $or: [{ type: "infeed" }],
+    }).populate({
+      path: "postid",
+      select:
+        "desc post title kind likes comments community cta ctalink sender totalcomments adtype date createdAt",
+      populate: [
+        {
+          path: "community",
+          select: "dp title isverified memberscount members",
+          populate: { path: "members", select: "profilepic" },
+        },
+        { path: "sender", select: "profilepic fullname" },
+      ],
+    });
+
+    function getRandomIndex() {
+      const min = 6;
+      return min + Math.floor(Math.random() * (post.length - min));
+    }
+
+    let feedad = [];
+    for (let i = 0; i < infeedad.length; i++) {
+      feedad.push(infeedad[i].postid);
+    }
+
+    //merging ads
+    post.unshift(firstad.postid);
+    for (let i = 0; i < feedad.length; i++) {
+      const randomIndex = getRandomIndex();
+      post.splice(randomIndex, 0, feedad[i]);
+    }
 
     for (let i = 0; i < post.length; i++) {
       if (

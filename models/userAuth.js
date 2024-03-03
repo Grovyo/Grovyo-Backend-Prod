@@ -170,7 +170,8 @@ const userSchema = new mongoose.Schema(
     ],
     conversations: [
       {
-        type: String,
+        type: ObjectId,
+        ref: "Conversation",
         timestamp: new Date(),
       },
     ],
@@ -258,7 +259,7 @@ const userSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: false }
+  { timestamps: false, strict: false }
 );
 
 userSchema.index({ fullname: "text" });
