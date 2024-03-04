@@ -57,6 +57,12 @@ const AdsSchema = new mongoose.Schema(
     type: { type: String },
     headline: { type: String },
     desc: { type: String },
+    totalspent: { type: Number, default: 0 },
+    views: { type: Number, default: 0 },
+    impressions: { type: Number, default: 0 },
+    cpc: { type: Number, default: 0 },
+    clicks: { type: Number, default: 0 },
+    stopreason: { type: String },
   },
   { timestamps: false }
 );
