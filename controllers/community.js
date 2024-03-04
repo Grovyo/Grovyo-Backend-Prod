@@ -465,7 +465,10 @@ exports.joinmember = async (req, res) => {
             }
           );
         }
-        let address = user.address.state.toLocaleLowerCase().toString().trim();
+        let address = user?.address?.state
+          ?.toLocaleLowerCase()
+          ?.toString()
+          ?.trim();
 
         if (community.location[address]) {
           community.location[address]++;

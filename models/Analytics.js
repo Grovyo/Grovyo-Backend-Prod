@@ -1,15 +1,15 @@
-// const mongoose = require("mongoose")
-// const { ObjectId } = mongoose.Schema;
+const mongoose = require("mongoose");
+const { ObjectId } = mongoose.Schema;
 
-// const Analytics = new mongoose.Schema({
-// 	userid: { type: ObjectId, ref: "User" },
-// 	stats: [{
-// 		type: { type: String }, //Store or Community
-// 		X: [{ type: Number }], //days(x-axis)
-// 		Y1: [{ type: Number }],
-// 		Y2: [{ type: Number }],
-// 	}]
-// })
+const Analytics = new mongoose.Schema({
+  id: { type: String },
+  date: { type: String },
 
+  click: { type: Number, default: 0 },
+  impressions: { type: Number, default: 0 },
+  cpc: { type: Number, default: 0 },
+  cost: { type: Number, default: 0 },
+  views: { type: Number, default: 0 },
+});
 
-// module.exports = mongoose.model("Analytics", Analytics);
+module.exports = mongoose.model("Analytics", Analytics);

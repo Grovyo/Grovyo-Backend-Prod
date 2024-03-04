@@ -121,6 +121,7 @@ const communitySchema = new mongoose.Schema(
     newmemberscount: { type: Number, default: 0 },
     newmembers: [{ type: ObjectId, ref: "User" }],
     paidmemberscount: { type: Number, default: 0 },
+    ismonetized: { type: Boolean, default: false },
   },
   { timestamps: false, strict: false }
 );

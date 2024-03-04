@@ -1071,7 +1071,7 @@ exports.finaliseorder = async (req, res) => {
           await User.updateOne(
             { _id: product._id },
             {
-              $addToSet: { customers: user._id, earning: earning },
+              $addToSet: { customers: user._id, earningtype: earning },
               $inc: { storeearning: product.price },
             }
           );
@@ -1179,7 +1179,7 @@ exports.createnewproductorder = async (req, res) => {
       await User.updateOne(
         { _id: product?.creator?._id },
         {
-          $addToSet: { customers: user._id, earning: earning },
+          $addToSet: { customers: user._id, earningtype: earning },
           $inc: { storeearning: product.price },
         }
       );
