@@ -197,7 +197,7 @@ const userSchema = new mongoose.Schema(
       state: { type: String },
       city: { type: String },
       landmark: { type: String },
-      pincode: { type: Number },
+      pincode: { type: String },
       country: { type: String },
       coordinates: {
         latitude: { type: Number },

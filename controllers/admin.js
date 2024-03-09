@@ -85,7 +85,7 @@ async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
 
 async function generateFakeIndianUser() {
   const firstName = faker.name.firstName("female");
-  const lastName = faker.name.lastName();
+  const lastName = faker.name.lastName("female");
 
   const email = faker.internet
     .email({ firstName, provider: "gmail.com", allowSpecialCharacters: true })
@@ -93,19 +93,24 @@ async function generateFakeIndianUser() {
   const gender = "female";
   const bio = faker.person.bio();
   // const phoneNumber = faker.phone.number("+91##########");
-  // const address = {
-  //   street: faker.address.streetAddress({ useFullAddress: true }),
-  //   city: faker.address.city(),
-  //   state: faker.address.state(),
-  //   pincode: faker.address.zipCode(),
-  // };
+  const address = {
+    street: faker.address.streetAddress({ useFullAddress: false }),
+    city: faker.address.city(),
+    state: faker.address.state(),
+    pincode: faker.address.zipCode(),
+    country: "India",
+    coordinates: {
+      latitude: faker.address.latitude(),
+      longitude: faker.address.longitude(),
+    },
+  };
 
   return {
     firstName,
     lastName,
     email,
     bio,
-    //address,
+    address,
     gender,
     // personImageUrl,
   };
@@ -168,6 +173,7 @@ exports.findUser = async (req, res) => {
     res.status(400).json({ message: e.message });
   }
 };
+
 exports.findCreator = async (req, res) => {
   const { userId, id } = req.params;
   try {
@@ -187,6 +193,7 @@ exports.findCreator = async (req, res) => {
     res.status(400).json({ message: e.message });
   }
 };
+
 exports.findBusiness = async (req, res) => {
   const { userId, id } = req.params;
   try {
@@ -206,6 +213,7 @@ exports.findBusiness = async (req, res) => {
     res.status(400).json({ message: e.message });
   }
 };
+
 exports.findDeliveryPartners = async (req, res) => {
   const { userId, id } = req.params;
   try {
@@ -225,6 +233,7 @@ exports.findDeliveryPartners = async (req, res) => {
     res.status(400).json({ message: e.message });
   }
 };
+
 exports.findcoms = async (req, res) => {
   const { comId, id } = req.params;
   try {
@@ -244,6 +253,7 @@ exports.findcoms = async (req, res) => {
     res.status(400).json({ message: e.message });
   }
 };
+
 exports.findposts = async (req, res) => {
   const { postId, id } = req.params;
   try {
@@ -648,13 +658,13 @@ exports.trnsfrcommems = async (req, res) => {
 exports.creataccs = async (req, res) => {
   try {
     let users = [];
-    for (let i = 2000; i < 2346; i++) {
+    for (let i = 1; i < 1024; i++) {
       const user = await generateFakeIndianUser();
-      const personImageUrl = `GG (${i + 1}).jpg`;
+      const personImageUrl = `p (${i}).jpg`;
       let d = { user, personImageUrl };
       function generateRandomNumber() {
-        let min = 100000000;
-        let max = 999999999;
+        let min = 10000;
+        let max = 99999;
         return Math.floor(Math.random() * (max - min + 1)) + min;
       }
 
@@ -689,6 +699,7 @@ exports.creataccs = async (req, res) => {
         DOB: generateRandomDOB(),
         gr: 1,
         creation: Date.now(),
+        address: user.address,
       });
       await us.save();
 

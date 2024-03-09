@@ -503,7 +503,7 @@ exports.createnewaccount = async (req, res) => {
   const interestsString = interestsArray[0];
   const individualInterests = interestsString.split(",");
 
-  const contactsfinal = JSON.parse(contacts);
+  const contactsfinal = JSON.parse(contacts) || [];
 
   function generateRandomCode() {
     let code = "";
@@ -553,6 +553,7 @@ exports.createnewaccount = async (req, res) => {
         gender: gender,
         DOB: dob,
         memberships: mem,
+        gr: 0,
       });
       await user.save();
       await User.updateOne(
