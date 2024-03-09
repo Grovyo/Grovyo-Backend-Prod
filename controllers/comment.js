@@ -153,11 +153,7 @@ exports.fetchallcomments = async (req, res) => {
       }
       const dps = [];
       for (let i = 0; i < comment.length; i++) {
-        const a = await generatePresignedUrl(
-          "images",
-          comment[i].senderId.profilepic.toString(),
-          60 * 60
-        );
+        const a = process.env.URL + comment[i].senderId.profilepic;
         dps.push(a);
       }
 

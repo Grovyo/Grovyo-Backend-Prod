@@ -101,81 +101,14 @@ exports.searchpros = async (req, res) => {
   }
 };
 
-// exports.fetchingprosite = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const user = await User.findById(id);
-//     if (!user) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "User Not Found" });
-//     }
-//     const community = [];
-//     for (let i = 0; i < user.communitycreated.length; i++) {
-//       const id = user.communitycreated[i];
-//       comm = await Community.findById(id);
-//       community.push(comm);
-//     }
-
-//     const communityDps = await Promise.all(
-//       community.map(async (d) => {
-//         const imageforCommunity = process.env.URL + d.dp;
-
-//         return imageforCommunity;
-//       })
-//     );
-
-//     const communitywithDps = community.map((f, i) => {
-//       return { ...f.toObject(), dps: communityDps[i] };
-//     });
-
-//     const products = await Product.find({ creator: id });
-
-//     const productdps = await Promise.all(
-//       products.map(async (product) => {
-//         const a = process.env.PRODUCT_URL + product.images[0].content;
-//         return a;
-//       })
-//     );
-
-//     const productsWithDps = products.map((product, index) => {
-//       return {
-//         ...product.toObject(),
-//         dp: productdps[index],
-//       };
-//     });
-
-//     const userDetails = {
-//       bio: user.desc,
-//       phone: user.phone,
-//       dp: process.env.URL + user.profilepic,
-//       username: user.username,
-//       fullname: user.fullname,
-//       email: user.email,
-//       links: {
-//         insta: user.insta,
-//         snap: user.snap,
-//         x: user.x,
-//         yt: user.yt,
-//         linkdin: user.linkdin,
-//       },
-//     };
-//     const data = {
-//       communitywithDps,
-//       productsWithDps,
-//       userDetails,
-//     };
-
-//     res.status(200).json({ success: true, data, user });
-//   } catch (error) {
-//     res.status(500).json({ message: error.message, success: false });
-//     console.log(error);
-//   }
-// };
-
 exports.fetchingprosite = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User Not Found" });
+    }
     const user = await User.findById(id);
     if (!user) {
       return res
@@ -237,7 +170,11 @@ exports.fetchingprosite = async (req, res) => {
       username: user.username,
       fullname: user.fullname,
       dp: process.env.URL + user.profilepic,
-      temp: user.prosite_template,
+      isStore: user.showStoreSection,
+      isAbout: user.showAboutSection,
+      isCommunity: user.showCommunitySection,
+      temp: user.prositeweb_template,
+      temp1: user.prositemob_template,
       email: user.email,
       links: {
         insta: user.insta,
@@ -256,6 +193,5 @@ exports.fetchingprosite = async (req, res) => {
     res.status(200).json({ success: true, data, user });
   } catch (error) {
     res.status(500).json({ message: error.message, success: false });
-    console.log(error);
   }
 };

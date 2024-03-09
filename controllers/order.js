@@ -2,6 +2,7 @@ const Order = require("../models/orders");
 const Product = require("../models/product");
 const User = require("../models/userAuth");
 const Minio = require("minio");
+const Analytics = require("../models/Analytics");
 const Topic = require("../models/topic");
 const stripe = require("stripe")(
   "sk_test_51NAGrZSEXlKwVDBNhya5wiyCmbRILf14f1Bk2uro1IMurrItZFsnmn7WNA0I5Q3RMnCVui1ox5v9ynOg3CGrFkHu00hLvIqqS1"
@@ -1025,36 +1026,30 @@ exports.finaliseorder = async (req, res) => {
         let day = String(today.getDate()).padStart(2, "0");
 
         let formattedDate = `${day}/${month}/${year}`;
-        const incrementValue = 1;
+
         for (let i = 0; i < order.sellerId.length; i++) {
-          let selleruser = await User.findById(order?.sellerId[i]?._id);
-          if (
-            selleruser.storeStats?.length > 0 &&
-            selleruser.storeStats[selleruser.storeStats.length - 1]?.Dates ===
-              formattedDate
-          ) {
-            await User.updateOne(
-              { _id: selleruser._id, "storeStats.Dates": formattedDate },
+          let selleruser = await User.findById(order?.sellerId[i]);
+
+          let analytcis = await Analytics.findOne({
+            date: formattedDate,
+            id: selleruser._id,
+          });
+          if (analytcis) {
+            await Analytics.updateOne(
+              { _id: analytcis._id },
               {
                 $inc: {
-                  "storeStats.$.Sales": 1,
+                  Sales: 1,
                 },
               }
             );
           } else {
-            let d = {
-              Dates: formattedDate,
-              Sales: incrementValue,
-            };
-
-            await User.updateOne(
-              { _id: selleruser._id },
-              {
-                $push: {
-                  storeStats: d,
-                },
-              }
-            );
+            const an = new Analytics({
+              date: formattedDate,
+              id: selleruser._id,
+              Sales: 1,
+            });
+            await an.save();
           }
         }
 
@@ -1146,33 +1141,34 @@ exports.createnewproductorder = async (req, res) => {
 
       //data for sales graph
       let selleruser = await User.findById(product?.creator?._id);
-      if (
-        selleruser.storeStats?.length > 0 &&
-        selleruser.storeStats[selleruser.storeStats.length - 1]?.Dates ===
-          formattedDate
-      ) {
-        await User.updateOne(
-          { _id: selleruser._id, "storeStats.Dates": formattedDate },
+      let today = new Date();
+
+      let year = today.getFullYear();
+      let month = String(today.getMonth() + 1).padStart(2, "0");
+      let day = String(today.getDate()).padStart(2, "0");
+
+      let formattedDate = `${day}/${month}/${year}`;
+
+      let analytcis = await Analytics.findOne({
+        date: formattedDate,
+        id: selleruser._id,
+      });
+      if (analytcis) {
+        await Analytics.updateOne(
+          { _id: analytcis._id },
           {
             $inc: {
-              "storeStats.$.Sales": 1,
+              Sales: 1,
             },
           }
         );
       } else {
-        let d = {
-          Dates: formattedDate,
-          Sales: incrementValue,
-        };
-
-        await User.updateOne(
-          { _id: selleruser._id },
-          {
-            $push: {
-              storeStats: d,
-            },
-          }
-        );
+        const an = new Analytics({
+          date: formattedDate,
+          id: selleruser._id,
+          Sales: 1,
+        });
+        await an.save();
       }
 
       let earning = { how: "product", when: Date.now() };
@@ -2480,5 +2476,26 @@ exports.fetchanorder = async (req, res) => {
   } catch (e) {
     console.log(e);
     res.status(400).json({ success: false });
+  }
+};
+
+//recieving pdf and orders after generation through admin panel
+exports.getorderpdf = async (req, res) => {
+  const { oid } = req.body;
+  try {
+    const order = await Order.findById(oid);
+    if (order) {
+      const pdflink = await generatePresignedUrl(
+        "billing",
+        order.orderId.toString(),
+        60 * 60
+      );
+      res.status(200).json({ pdflink, success: true });
+    } else {
+      res.status(404).json({ success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
   }
 };

@@ -537,6 +537,12 @@ exports.createnewaccount = async (req, res) => {
           ContentType: req.file.mimetype,
         })
       );
+
+      let mem = {
+        membership: "65671e5204b7d0d07ef0e796",
+        status: true,
+      };
+
       const user = new User({
         fullname: fullname,
         username: username,
@@ -546,6 +552,7 @@ exports.createnewaccount = async (req, res) => {
         interest: individualInterests,
         gender: gender,
         DOB: dob,
+        memberships: mem,
       });
       await user.save();
       await User.updateOne(

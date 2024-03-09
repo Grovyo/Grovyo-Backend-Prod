@@ -84,13 +84,13 @@ async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
 }
 
 async function generateFakeIndianUser() {
-  const firstName = faker.name.firstName("male");
+  const firstName = faker.name.firstName("female");
   const lastName = faker.name.lastName();
 
   const email = faker.internet
     .email({ firstName, provider: "gmail.com", allowSpecialCharacters: true })
     .toLowerCase();
-  const gender = "male";
+  const gender = "female";
   const bio = faker.person.bio();
   // const phoneNumber = faker.phone.number("+91##########");
   // const address = {
@@ -648,9 +648,9 @@ exports.trnsfrcommems = async (req, res) => {
 exports.creataccs = async (req, res) => {
   try {
     let users = [];
-    for (let i = 61; i < 340; i++) {
+    for (let i = 2000; i < 2346; i++) {
       const user = await generateFakeIndianUser();
-      const personImageUrl = `dpsc (${i + 1}).jpg`;
+      const personImageUrl = `GG (${i + 1}).jpg`;
       let d = { user, personImageUrl };
       function generateRandomNumber() {
         let min = 100000000;
@@ -676,7 +676,10 @@ exports.creataccs = async (req, res) => {
 
       const us = new User({
         fullname: user.firstName + " " + user.lastName,
-        username: user.firstName + generateRandomNumber() + `-${i}`,
+        username:
+          i % 2 === 0
+            ? user.firstName + `${i}` + generateRandomNumber()
+            : user.firstName + generateRandomNumber() + `${i}`,
         email: user.email,
         passw: encrptedpass,
         profilepic: personImageUrl,
@@ -684,6 +687,8 @@ exports.creataccs = async (req, res) => {
         // interest: individualInterests,
         gender: user.gender,
         DOB: generateRandomDOB(),
+        gr: 1,
+        creation: Date.now(),
       });
       await us.save();
 
@@ -793,6 +798,176 @@ exports.countactive = async (req, res) => {
     let ac = active.activity;
     let au = active.activity[ac.length - 1].activeuser;
     res.status(200).json({ success: true, active: au });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+exports.increasefollowers = async (req, res) => {
+  try {
+    const { count, comId, stats } = req.body;
+
+    const community = await Community.findById(comId);
+    const users = await User.findById();
+    for (let i = 0; i < parseInt(count); i++) {
+      const user = await User.findById(users[i]);
+
+      let publictopic = [];
+      for (let i = 0; i < community.topics.length; i++) {
+        const topic = await Topic.findById({ _id: community.topics[i] });
+
+        if (topic.type === "free") {
+          publictopic.push(topic);
+        }
+      }
+
+      //other updations
+      let notif = { id: user._id, muted: false };
+
+      await Community.updateOne(
+        { _id: comId },
+        {
+          $addToSet: { members: user._id, notifications: notif },
+          $inc: { memberscount: 1 },
+        }
+      );
+
+      await User.updateOne(
+        { _id: user._id },
+        { $addToSet: { communityjoined: community._id }, $inc: { totalcom: 1 } }
+      );
+
+      const topicIds = publictopic.map((topic) => topic._id);
+
+      await Topic.updateMany(
+        { _id: { $in: topicIds } },
+        {
+          $addToSet: { members: user._id, notifications: notif },
+          $inc: { memberscount: 1 },
+        }
+      );
+
+      await User.updateMany(
+        { _id: user._id },
+        {
+          $addToSet: { topicsjoined: topicIds },
+          $inc: { totaltopics: 2 },
+        }
+      );
+    }
+    res.status(200).json({ success: true });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+exports.inclike = async (req, res) => {
+  try {
+    const { count, postId, stats } = req.body;
+
+    const post = await Post.findById(postId);
+    const users = await User.find();
+
+    for (let i = 0; i < parseInt(count); i++) {
+      if (!post) {
+        res.status(400).json({ message: "No post found" });
+      } else if (post.likedby.includes(users[i]._id)) {
+        try {
+          await Post.updateOne(
+            { _id: postId },
+            { $pull: { likedby: users[i]._id }, $inc: { likes: -1 } }
+          );
+          await User.updateOne(
+            { _id: users[i]._id },
+            { $pull: { likedposts: post._id } }
+          );
+          res.status(200).json({ success: true });
+        } catch (e) {
+          res.status(400).json({ message: e.message });
+        }
+      } else {
+        try {
+          await Post.updateOne(
+            { _id: postId },
+            { $push: { likedby: users[i]._id }, $inc: { likes: 1 } }
+          );
+          await User.updateOne(
+            { _id: users[i]._id },
+            { $push: { likedposts: post._id } }
+          );
+
+          if (users[i]._id.toString() !== post.sender._id.toString()) {
+            // const not = new Notification({
+            //   senderId: users[i]._id,
+            //   recId: post.sender,
+            //   text: users[i].fullname + " liked your post",
+            // });
+            // await not.save();
+            // await User.updateOne(
+            //   { _id: not.recId },
+            //   { $push: { notifications: not._id }, $inc: { notificationscount: 1 } }
+            // );
+            console.log("noti");
+          } else if (users[i]._id.toString() === post.sender._id.toString()) {
+            null;
+            console.log("no noti");
+          }
+          res.status(200).json({ success: true });
+        } catch (e) {
+          res.status(400).json({ message: e.message });
+        }
+      }
+    }
+
+    res.status(200).json({ success: true });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+exports.randomcomments = async (req, res) => {
+  try {
+    const { list, postId } = req.body;
+
+    for (let i = 0; i < list.length; i++) {
+      const user = await User.findOne({});
+      const newComment = new Comment({
+        senderId: user._id,
+        postId: postId,
+        text: list[i],
+      });
+      await newComment.save();
+      await Post.updateOne(
+        { _id: postId },
+        { $addToSet: { comments: newComment._id }, $inc: { totalcomments: 1 } }
+      );
+    }
+    res.status(200).json({ success: true });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+exports.incview = async (req, res) => {
+  try {
+    const { count, postId } = req.body;
+    await Post.updateOne({ _id: postId }, { $inc: { views: count } });
+    res.status(200).json({ success: true });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+exports.incshr = async (req, res) => {
+  try {
+    const { count, postId } = req.body;
+    await Post.updateOne({ _id: postId }, { $inc: { sharescount: count } });
+    res.status(200).json({ success: true });
   } catch (e) {
     console.log(e);
     res.status(400).json({ success: false });

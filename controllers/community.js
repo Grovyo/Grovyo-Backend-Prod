@@ -11,6 +11,7 @@ const Ads = require("../models/Ads");
 const Conversation = require("../models/conversation");
 const Report = require("../models/reports");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const Analytics = require("../models/Analytics");
 const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 const fs = require("fs");
 require("dotenv").config();
@@ -437,34 +438,28 @@ exports.joinmember = async (req, res) => {
         }
 
         //member count inc per day
-
-        if (
-          community?.stats?.length > 0 &&
-          community.stats[community.stats.length - 1]?.X === formattedDate
-        ) {
-          await Community.updateOne(
-            { _id: community._id, "stats.X": formattedDate },
+        let analytcis = await Analytics.findOne({
+          date: formattedDate,
+          id: community._id,
+        });
+        if (analytcis) {
+          await Analytics.updateOne(
+            { _id: analytcis._id },
             {
               $inc: {
-                "stats.$.Y1": 1,
+                Y1: 1,
               },
             }
           );
         } else {
-          let d = {
-            X: formattedDate,
+          const an = new Analytics({
+            date: formattedDate,
+            id: community._id,
             Y1: 1,
-            Y2: 0,
-          };
-          await Community.updateOne(
-            { _id: community._id },
-            {
-              $push: {
-                stats: d,
-              },
-            }
-          );
+          });
+          await an.save();
         }
+
         let address = user?.address?.state
           ?.toLocaleLowerCase()
           ?.toString()
@@ -558,6 +553,37 @@ exports.unjoinmember = async (req, res) => {
         { _id: comId },
         { $pull: { notifications: { id: user._id } } }
       );
+
+      //counting unjoin members in graph
+      let today = new Date();
+
+      let year = today.getFullYear();
+      let month = String(today.getMonth() + 1).padStart(2, "0");
+      let day = String(today.getDate()).padStart(2, "0");
+
+      let formattedDate = `${day}/${month}/${year}`;
+
+      let analytcis = await Analytics.findOne({
+        date: formattedDate,
+        id: community._id,
+      });
+      if (analytcis) {
+        await Analytics.updateOne(
+          { _id: analytcis._id },
+          {
+            $inc: {
+              Y3: 1,
+            },
+          }
+        );
+      } else {
+        const an = new Analytics({
+          date: formattedDate,
+          id: community._id,
+          Y3: 1,
+        });
+        await an.save();
+      }
 
       for (let i = 0; i < community.topics?.length; i++) {
         const topic = await Topic.findById(community.topics[i]);
@@ -760,32 +786,26 @@ exports.compostfeed = async (req, res) => {
 
     if (user && community) {
       //visitor count
-      if (
-        community?.stats?.length > 0 &&
-        community.stats[community.stats.length - 1]?.X === formattedDate
-      ) {
-        await Community.updateOne(
-          { _id: community._id, "stats.X": formattedDate },
+      let analytcis = await Analytics.findOne({
+        date: formattedDate,
+        id: community._id,
+      });
+      if (analytcis) {
+        await Analytics.updateOne(
+          { _id: analytcis._id },
           {
             $inc: {
-              "stats.$.Y2": 1,
+              Y2: 1,
             },
           }
         );
       } else {
-        let d = {
-          X: formattedDate,
-          Y1: 0,
-          Y2: incrementValue,
-        };
-        await Community.updateOne(
-          { _id: community._id },
-          {
-            $push: {
-              stats: d,
-            },
-          }
-        );
+        const an = new Analytics({
+          date: formattedDate,
+          id: community._id,
+          Y2: 1,
+        });
+        await an.save();
       }
 
       await Community.updateOne(
