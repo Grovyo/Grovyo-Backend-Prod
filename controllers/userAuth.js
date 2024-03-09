@@ -503,7 +503,8 @@ exports.createnewaccount = async (req, res) => {
   const interestsString = interestsArray[0];
   const individualInterests = interestsString.split(",");
 
-  const contactsfinal = JSON.parse(contacts) || [];
+  //const contactsfinal = JSON.parse(contacts) || [];
+  const contactsfinal = [];
 
   function generateRandomCode() {
     let code = "";
