@@ -3,6 +3,7 @@ const Community = require("../models/community");
 const User = require("../models/userAuth");
 const Minio = require("minio");
 const Product = require("../models/product");
+const { default: mongoose } = require("mongoose");
 
 require("dotenv").config();
 
