@@ -116,6 +116,24 @@ async function generateFakeIndianUser() {
   };
 }
 
+async function generateIndianloc() {
+  const address = {
+    street: faker.address.streetAddress({ useFullAddress: false }),
+    city: faker.address.city(),
+    state: faker.address.state(),
+    pincode: faker.address.zipCode(),
+    country: "India",
+    coordinates: {
+      latitude: faker.address.latitude(),
+      longitude: faker.address.longitude(),
+    },
+  };
+
+  return {
+    address,
+  };
+}
+
 exports.getuserstotal = async (req, res) => {
   const { userId } = req.params;
 
@@ -752,20 +770,17 @@ exports.creataccs = async (req, res) => {
 
 exports.changegender = async (req, res) => {
   try {
-    const post = await Post.find();
-    for (let i = 0; i < post.length; i++) {
-      function getRandomNumber() {
-        // Generate a random number between 0 (inclusive) and 1 (exclusive)
-        const random = Math.random();
+    const user = await User.find({ gr: 1 });
+    for (let i = 0; i < user.length; i++) {
+      console.log(user.length - i);
+      const add = await generateIndianloc();
 
-        // Scale and shift the random number to fit the range [10, 1000]
-        return Math.floor(random * (100 - 10 + 1)) + 10;
+      if (!user[i].address) {
+        await User.updateOne(
+          { _id: user[i]._id },
+          { $set: { address: add.address } }
+        );
       }
-
-      await Post.updateOne(
-        { _id: post[i]._id },
-        { $inc: { sharescount: getRandomNumber() } }
-      );
     }
 
     res.status(200).json({ success: true });

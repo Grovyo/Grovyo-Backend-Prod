@@ -1545,7 +1545,9 @@ exports.fetchallposts = async (req, res) => {
     const community = await Community.findById(comId);
 
     let topic;
-
+    let feedad = [];
+    let vidadarray = [];
+    let post = [];
     if (!topicId) {
       topic = await Topic.findOne({
         title: "Posts",
@@ -1561,75 +1563,79 @@ exports.fetchallposts = async (req, res) => {
         "fullname profilepic"
       );
 
-      //fetching ads
-      const infeedad = await Ads.find({
-        status: "active",
-        type: "infeed",
-      }).populate({
-        path: "postid",
-        select:
-          "desc post title kind likes comments community cta ctalink sender totalcomments adtype date createdAt",
-        populate: [
-          { path: "community", select: "dp title isverified memberscount" },
-          { path: "sender", select: "profilepic fullname" },
-        ],
-      });
-
-      let feedad = [];
-      for (let i = 0; i < infeedad.length; i++) {
-        feedad.push(infeedad[i].postid);
-      }
-
-      const vidad = await Ads.find({
-        status: "active",
-        $or: [{ type: "skipable" }, { type: "non-skipable" }],
-      }).populate({
-        path: "postid",
-        select:
-          "desc post title kind likes comments community cta ctalink sender totalcomments adtype date createdAt",
-        populate: [
-          { path: "community", select: "dp title isverified memberscount" },
-          { path: "sender", select: "profilepic fullname" },
-        ],
-      });
-
-      let vidadarray = [];
-      for (let i = 0; i < vidad.length; i++) {
-        let a = process.env.AD_URL + vidad[i].postid?.post[0].content;
-        let comdp = process.env.URL + vidad[i].postid?.community?.dp;
-        let final = {
-          _id: vidad[i].postid?._id,
-          likes: vidad[i].postid?.likes,
-          comments: vidad[i].postid?.likes,
-          totalcomments: vidad[i].postid?.totalcomments,
-          title: vidad[i].postid?.title,
-          desc: vidad[i].postid?.desc,
-          community: vidad[i].postid?.community,
-          sender: vidad[i].postid?.sender,
-          post: vidad[i].postid?.post,
-          kind: vidad[i].postid?.kind,
-          date: vidad[i].postid?.date,
-          adtype: vidad[i].postid?.adtype,
-          cta: vidad[i].postid?.cta,
-          ctalink: vidad[i].postid?.ctalink,
-          createdAt: vidad[i].postid?.createdAt,
-          desc: vidad[i].desc,
-          headline: vidad[i].headline,
-          url: a,
-          comdp,
-        };
-        vidadarray.push(final);
-      }
-
-      //muted and unmuted topics
-      let muted = null;
-      if (topic?.notifications?.length > 0) {
-        muted = topic?.notifications?.filter((f, i) => {
-          return f.id?.toString() === user._id.toString();
+      if (
+        community.type === "public" &&
+        topic.postcount > 0 &&
+        community.ismonetized
+      ) {
+        //removing un existing posts
+        for (let i = 0; i < topic.posts.length; i++) {
+          const post = await Post.findById(topic.posts[i]);
+          if (!post) {
+            await Topic.updateOne(
+              { _id: topic._id },
+              { $pull: { posts: topic.posts[i] }, $inc: { postcount: -1 } }
+            );
+          }
+        }
+        //fetching ads
+        const infeedad = await Ads.find({
+          status: "active",
+          type: "infeed",
+        }).populate({
+          path: "postid",
+          select:
+            "desc post title kind likes comments community cta ctalink sender totalcomments adtype date createdAt",
+          populate: [
+            { path: "community", select: "dp title isverified memberscount" },
+            { path: "sender", select: "profilepic fullname" },
+          ],
         });
-      }
 
-      let post = [];
+        for (let i = 0; i < infeedad.length; i++) {
+          feedad.push(infeedad[i].postid);
+        }
+
+        const vidad = await Ads.find({
+          status: "active",
+          $or: [{ type: "skipable" }, { type: "non-skipable" }],
+        }).populate({
+          path: "postid",
+          select:
+            "desc post title kind likes comments community cta ctalink sender totalcomments adtype date createdAt",
+          populate: [
+            { path: "community", select: "dp title isverified memberscount" },
+            { path: "sender", select: "profilepic fullname" },
+          ],
+        });
+
+        for (let i = 0; i < vidad.length; i++) {
+          let a = process.env.AD_URL + vidad[i].postid?.post[0].content;
+          let comdp = process.env.URL + vidad[i].postid?.community?.dp;
+          let final = {
+            _id: vidad[i].postid?._id,
+            likes: vidad[i].postid?.likes,
+            comments: vidad[i].postid?.likes,
+            totalcomments: vidad[i].postid?.totalcomments,
+            title: vidad[i].postid?.title,
+            desc: vidad[i].postid?.desc,
+            community: vidad[i].postid?.community,
+            sender: vidad[i].postid?.sender,
+            post: vidad[i].postid?.post,
+            kind: vidad[i].postid?.kind,
+            date: vidad[i].postid?.date,
+            adtype: vidad[i].postid?.adtype,
+            cta: vidad[i].postid?.cta,
+            ctalink: vidad[i].postid?.ctalink,
+            createdAt: vidad[i].postid?.createdAt,
+            desc: vidad[i].desc,
+            headline: vidad[i].headline,
+            url: a,
+            comdp,
+          };
+          vidadarray.push(final);
+        }
+      }
 
       for (let i = 0; i < postold.length; i++) {
         //object of post
@@ -1661,10 +1667,8 @@ exports.fetchallposts = async (req, res) => {
           createdAt: postold[i].createdAt,
           topicId: postold[i].topicId,
         };
-
         post.push(po);
       }
-
       //mixing skipable and non-skipable ads with posts
       for (let j = 0; j < vidadarray.length; j++) {
         if (post.length > 0) {
@@ -1675,6 +1679,13 @@ exports.fetchallposts = async (req, res) => {
         }
       }
 
+      //muted and unmuted topics
+      let muted = null;
+      if (topic?.notifications?.length > 0) {
+        muted = topic?.notifications?.filter((f, i) => {
+          return f.id?.toString() === user._id.toString();
+        });
+      }
       let index = -1;
       post.reverse();
 

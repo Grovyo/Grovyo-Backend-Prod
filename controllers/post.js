@@ -2001,7 +2001,6 @@ exports.newfetchfeeds3 = async (req, res) => {
     //   .populate("community", "title members")
     //   .populate("members", "profilepic fullname");
     const post = await Post.aggregate([
-      //{ $match: { tags: { $in: user.interest } } },
       { $sample: { size: 100 } },
       {
         $lookup: {
@@ -2028,6 +2027,14 @@ exports.newfetchfeeds3 = async (req, res) => {
         },
       },
       {
+        $lookup: {
+          from: "users",
+          localField: "community.type",
+          foreignField: "_id",
+          as: "type",
+        },
+      },
+      {
         $addFields: {
           sender: { $arrayElemAt: ["$sender", 0] },
           community: { $arrayElemAt: ["$community", 0] },
@@ -2046,6 +2053,11 @@ exports.newfetchfeeds3 = async (req, res) => {
               },
             },
           },
+        },
+      },
+      {
+        $match: {
+          "community.type": { $eq: "public" }, // Exclude posts with community type other than "public"
         },
       },
       {
@@ -2079,6 +2091,7 @@ exports.newfetchfeeds3 = async (req, res) => {
             members: 1,
             memberscount: 1,
             isverified: 1,
+            type: 1,
           },
           topicId: 1,
         },
@@ -2390,5 +2403,276 @@ exports.reseteverycart = async (req, res) => {
     res
       .status(400)
       .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//fetch more data
+exports.fetchmoredata = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    const dps = [];
+    let current = [];
+    const memdps = [];
+    const subs = [];
+    const liked = [];
+    const ads = [];
+    const urls = [];
+    const content = [];
+    const addp = [];
+
+    //checking and removing posts with no communities
+    const p = await Post.find();
+
+    for (let i = 0; i < p.length; i++) {
+      const com = await Community.findById(p[i].community);
+      if (!com) {
+        p[i].remove();
+      }
+    }
+    //fetching post
+
+    // const post = await Post.find()
+    //   .populate("community", "title members")
+    //   .populate("members", "profilepic fullname");
+    const post = await Post.aggregate([
+      { $sample: { size: 20 } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "sender",
+          foreignField: "_id",
+          as: "sender",
+        },
+      },
+      {
+        $lookup: {
+          from: "communities",
+          localField: "community",
+          foreignField: "_id",
+          as: "community",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "community.members",
+          foreignField: "_id",
+          as: "members",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "community.type",
+          foreignField: "_id",
+          as: "type",
+        },
+      },
+      {
+        $addFields: {
+          sender: { $arrayElemAt: ["$sender", 0] },
+          community: { $arrayElemAt: ["$community", 0] },
+        },
+      },
+      {
+        $addFields: {
+          "community.members": {
+            $map: {
+              input: { $slice: ["$members", 0, 4] },
+              as: "member",
+              in: {
+                _id: "$$member._id",
+                fullname: "$$member.fullname",
+                profilepic: "$$member.profilepic",
+              },
+            },
+          },
+        },
+      },
+      {
+        $match: {
+          "community.type": { $eq: "public" }, // Exclude posts with community type other than "public"
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          createdAt: 1,
+          status: 1,
+          likedby: 1,
+          likes: 1,
+          dislike: 1,
+          comments: 1,
+          totalcomments: 1,
+          tags: 1,
+          view: 1,
+          desc: 1,
+          isverified: 1,
+          post: 1,
+          contenttype: 1,
+          date: 1,
+          sharescount: 1,
+          sender: {
+            _id: 1,
+            fullname: 1,
+            profilepic: 1,
+          },
+          community: {
+            _id: 1,
+            title: 1,
+            dp: 1,
+            members: 1,
+            memberscount: 1,
+            isverified: 1,
+            type: 1,
+          },
+          topicId: 1,
+        },
+      },
+    ]);
+
+    //fetching ads
+    const firstad = await Ads.findOne({
+      status: "active",
+      $or: [{ type: "banner" }],
+    })
+      .populate({
+        path: "postid",
+        select:
+          "desc post title kind likes comments members community cta ctalink sender totalcomments adtype date createdAt",
+        populate: [
+          {
+            path: "community",
+            select: "dp title isverified memberscount members",
+            populate: { path: "members", select: "profilepic" },
+          },
+          { path: "sender", select: "profilepic fullname" },
+        ],
+      })
+      .limit(1);
+
+    const infeedad = await Ads.find({
+      status: "active",
+      $or: [{ type: "infeed" }],
+    }).populate({
+      path: "postid",
+      select:
+        "desc post title kind likes comments community cta ctalink sender totalcomments adtype date createdAt",
+      populate: [
+        {
+          path: "community",
+          select: "dp title isverified memberscount members",
+          populate: { path: "members", select: "profilepic" },
+        },
+        { path: "sender", select: "profilepic fullname" },
+      ],
+    });
+
+    function getRandomIndex() {
+      const min = 6;
+      return min + Math.floor(Math.random() * (post.length - min));
+    }
+
+    let feedad = [];
+    for (let i = 0; i < infeedad.length; i++) {
+      feedad.push(infeedad[i].postid);
+    }
+
+    //merging ads
+    if (firstad) {
+      post.unshift(firstad.postid);
+      for (let i = 0; i < feedad.length; i++) {
+        const randomIndex = getRandomIndex();
+        post.splice(randomIndex, 0, feedad[i]);
+      }
+    }
+    for (let i = 0; i < post.length; i++) {
+      if (
+        post[i].likedby?.some((id) => id.toString() === user._id.toString())
+      ) {
+        liked.push(true);
+      } else {
+        liked.push(false);
+      }
+    }
+
+    for (let k = 0; k < post.length; k++) {
+      const coms = await Community.findById(post[k].community);
+
+      if (coms?.members?.includes(user._id)) {
+        subs.push("subscribed");
+      } else {
+        subs.push("unsubscribed");
+      }
+    }
+
+    if (!post) {
+      res.status(201).json({ message: "No post found", success: false });
+    } else {
+      //post
+      for (let i = 0; i < post.length; i++) {
+        const a = process.env.URL + post[i].community.dp;
+        dps.push(a);
+      }
+
+      let ur = [];
+      for (let i = 0; i < post?.length; i++) {
+        for (let j = 0; j < post[i]?.post?.length; j++) {
+          if (post[i].post[j].thumbnail) {
+            const a = process.env.POST_URL + post[i].post[j].content;
+            const t = process.env.POST_URL + post[i].post[j].thumbnail;
+
+            ur.push({ content: a, thumbnail: t, type: post[i].post[j]?.type });
+          } else {
+            const a = process.env.POST_URL + post[i].post[j].content;
+            ur.push({ content: a, type: post[i].post[j]?.type });
+          }
+        }
+        urls.push(ur);
+        ur = [];
+      }
+
+      for (let i = 0; i < post.length; i++) {
+        for (
+          let j = 0;
+          j < Math.min(4, post[i].community.members.length);
+          j++
+        ) {
+          const a =
+            process.env.URL + post[i]?.community?.members[j]?.profilepic;
+          current.push(a);
+        }
+
+        memdps.push(current);
+        current = [];
+      }
+
+      //post data
+      const dpData = dps;
+      const memdpData = memdps;
+      const urlData = urls;
+      const postData = post;
+      const subData = subs;
+      const likeData = liked;
+
+      const mergedData = urlData.map((u, i) => ({
+        dps: dpData[i],
+        memdps: memdpData[i],
+        urls: u,
+        liked: likeData[i],
+        subs: subData[i],
+        posts: postData[i],
+      }));
+
+      res.status(200).json({
+        mergedData,
+        success: true,
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: err, success: false });
   }
 };
