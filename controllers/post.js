@@ -2000,7 +2000,21 @@ exports.newfetchfeeds3 = async (req, res) => {
     // const post = await Post.find()
     //   .populate("community", "title members")
     //   .populate("members", "profilepic fullname");
+
     const post = await Post.aggregate([
+      {
+        $lookup: {
+          from: "communities",
+          localField: "community",
+          foreignField: "_id",
+          as: "communityInfo",
+        },
+      },
+      {
+        $match: {
+          "communityInfo.category": { $in: user.interest },
+        },
+      },
       { $sample: { size: 100 } },
       {
         $lookup: {
@@ -2358,7 +2372,9 @@ exports.joinedcomnews3 = async (req, res) => {
 //fetching the interests
 exports.fetchinterest = async (req, res) => {
   try {
-    const interest = await Interest.find();
+    // const interest = await Interest.find({ count: 0 });
+    const interest = await Interest.find({ count: { $gt: 0 } });
+
     let finals = [];
     let dps = [];
     for (let i = 0; i < interest.length; i++) {

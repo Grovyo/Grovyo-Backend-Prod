@@ -835,7 +835,7 @@ exports.increasefollowers = async (req, res) => {
     const { count, comId, stats } = req.body;
 
     const community = await Community.findById(comId);
-    const users = await User.findById();
+    const users = await User.find();
     for (let i = 0; i < parseInt(count); i++) {
       const user = await User.findById(users[i]);
 
