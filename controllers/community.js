@@ -1139,7 +1139,7 @@ exports.create = async (req, res) => {
   const { userId } = req.params;
   const image = req.file;
   const uuidString = uuid();
-  console.log(nature);
+
   if (!image) {
     res.status(400).json({ message: "Please upload an image", success: false });
   } else if (iddata != undefined) {
