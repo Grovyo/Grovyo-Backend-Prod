@@ -818,7 +818,7 @@ exports.finalisetopicorder = async (req, res) => {
         );
         //person who created the topic gets money
         await User.updateOne(
-          { _id: community.creator },
+          { _id: community?.creator },
           {
             $inc: { moneyearned: topic.price },
             $addToSet: {
