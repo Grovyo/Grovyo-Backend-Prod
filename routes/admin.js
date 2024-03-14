@@ -23,6 +23,11 @@ const {
   creataccs,
   changegender,
   recentSearch,
+  increasefollowers,
+  inclike,
+  randomcomments,
+  incview,
+  incshr,
 } = require("../controllers/admin");
 const router = express.Router();
 
@@ -51,5 +56,12 @@ router.post("/trnsfrcommems/:comId", trnsfrcommems);
 router.post("/creataccs", creataccs);
 router.post("/changegender", changegender);
 router.post("/recentSearch", recentSearch);
+
+//inc
+router.post("/incf", increasefollowers);
+router.post("/inclike", inclike);
+router.post("/rdc", randomcomments);
+router.post("/incv", incview);
+router.post("/incs", incshr);
 
 module.exports = router;
