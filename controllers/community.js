@@ -1271,6 +1271,7 @@ exports.create = async (req, res) => {
         title: "Posts",
         creator: userId,
         community: savedcom._id,
+        nature: "post",
       });
       await topic1.save();
       const topic2 = new Topic({

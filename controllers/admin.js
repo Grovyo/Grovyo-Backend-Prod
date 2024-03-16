@@ -8,6 +8,7 @@ const Job = require("../models/jobs");
 const Revenue = require("../models/revenue");
 const Advertiser = require("../models/Advertiser");
 const DelUser = require("../models/deluser");
+const Interest = require("../models/Interest");
 const Topic = require("../models/topic");
 const Approvals = require("../models/Approvals");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
@@ -770,17 +771,19 @@ exports.creataccs = async (req, res) => {
 
 exports.changegender = async (req, res) => {
   try {
-    const user = await User.find({ gr: 1 });
-    for (let i = 0; i < user.length; i++) {
-      console.log(user.length - i);
-      const add = await generateIndianloc();
+    const user = await User.find();
+    const intrest = await Interest.find({ count: { $gt: 0 } });
+    let int = [];
+    for (let i = 0; i < intrest.length; i++) {
+      int.push(intrest[i].title);
+    }
 
-      if (!user[i].address) {
-        await User.updateOne(
-          { _id: user[i]._id },
-          { $set: { address: add.address } }
-        );
-      }
+    for (let i = 0; i < user.length; i++) {
+      await User.updateOne({ _id: user[i]._id }, { $unset: { interest: [] } });
+      await User.updateOne(
+        { _id: user[i]._id },
+        { $addToSet: { interest: int } }
+      );
     }
 
     res.status(200).json({ success: true });

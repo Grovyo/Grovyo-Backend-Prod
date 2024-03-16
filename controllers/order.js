@@ -1122,21 +1122,12 @@ exports.createnewproductorder = async (req, res) => {
     });
     let prices = [];
 
-    let today = new Date();
-
-    let year = today.getFullYear();
-    let month = String(today.getMonth() + 1).padStart(2, "0");
-    let day = String(today.getDate()).padStart(2, "0");
-
-    let formattedDate = `${day}/${month}/${year}`;
-    const incrementValue = 1;
-
     for (let i = 0; i < productId.length; i++) {
       const product = await Product.findById(productId[i]).populate(
         "creator",
         "storeAddress"
       );
-      prices.push(product.price);
+      prices.push(product?.discountedprice);
       sellers.push(product?.creator?._id);
 
       //data for sales graph
@@ -1171,15 +1162,18 @@ exports.createnewproductorder = async (req, res) => {
         await an.save();
       }
 
+      //earnig distribution
       let earning = { how: "product", when: Date.now() };
       await User.updateOne(
         { _id: product?.creator?._id },
         {
           $addToSet: { customers: user._id, earningtype: earning },
-          $inc: { storeearning: product.price },
+          $inc: { storeearning: product?.discountedprice },
         }
       );
       await Product.updateOne({ _id: product._id }, { $inc: { itemsold: 1 } });
+
+      //commission by company not taken yet
     }
 
     let oi = Math.floor(Math.random() * 9000000) + 1000000;
@@ -1212,7 +1206,7 @@ exports.createnewproductorder = async (req, res) => {
         timing: "Tommorow, by 7:00 pm",
         sellerId: sellers,
         data: maindata,
-        orderno: (await Order.countDocuments()) + 1,
+        orderno: parseInt((await Order.countDocuments()) + 1),
       });
       await order.save();
       //upating order in customers purchase history
