@@ -4,6 +4,8 @@ const User = require("../models/userAuth");
 const Minio = require("minio");
 const Analytics = require("../models/Analytics");
 const Topic = require("../models/topic");
+const SellerOrder = require("../models/SellerOrder");
+const Admin = require("../models/admin");
 const stripe = require("stripe")(
   "sk_test_51NAGrZSEXlKwVDBNhya5wiyCmbRILf14f1Bk2uro1IMurrItZFsnmn7WNA0I5Q3RMnCVui1ox5v9ynOg3CGrFkHu00hLvIqqS1"
 );
@@ -1107,7 +1109,7 @@ exports.finaliseorder = async (req, res) => {
 };
 
 //create a new product order(cod)
-exports.createnewproductorder = async (req, res) => {
+exports.createnewproductorderr = async (req, res) => {
   const { userId } = req.params;
   const { quantity, deliverycharges, productId, total, pickupid } = req.body;
 
@@ -1125,7 +1127,7 @@ exports.createnewproductorder = async (req, res) => {
     for (let i = 0; i < productId.length; i++) {
       const product = await Product.findById(productId[i]).populate(
         "creator",
-        "storeAddress"
+        "storeAddress ismembershipactive membership"
       );
       prices.push(product?.discountedprice);
       sellers.push(product?.creator?._id);
@@ -1162,83 +1164,227 @@ exports.createnewproductorder = async (req, res) => {
         await an.save();
       }
 
-      //earnig distribution
-      let earning = { how: "product", when: Date.now() };
-      await User.updateOne(
-        { _id: product?.creator?._id },
-        {
-          $addToSet: { customers: user._id, earningtype: earning },
-          $inc: { storeearning: product?.discountedprice },
+      let oi = Math.floor(Math.random() * 9000000) + 1000000;
+
+      let maindata = [];
+      let qty = [];
+      for (let i = 0; i < user?.cart?.length; i++) {
+        qty.push(user.cart[i].quantity);
+        if (user.cart[i].quantity) {
+          maindata.push({
+            product: productId[i],
+            seller: sellers[i],
+            qty: user.cart[i].quantity,
+            price: prices[i],
+          });
         }
-      );
-      await Product.updateOne({ _id: product._id }, { $inc: { itemsold: 1 } });
+      }
 
-      //commission by company not taken yet
-    }
+      if (!user) {
+        return res.status(404).json({ message: "User or Product not found" });
+      } else {
+        //a new order is created
+        const order = new Order({
+          buyerId: userId,
+          productId: productId,
+          quantity: quantity,
+          total: total,
+          orderId: oi,
+          paymentMode: "Cash",
+          currentStatus: "success",
+          deliverycharges: deliverycharges,
+          timing: "Tommorow, by 7:00 pm",
+          sellerId: sellers,
+          data: maindata,
+          orderno: parseInt((await Order.countDocuments()) + 1),
+        });
+        await order.save();
+        //upating order in customers purchase history
+        await User.updateOne(
+          { _id: userId },
+          { $push: { puchase_history: order._id } }
+        );
+        await User.updateOne(
+          { _id: user._id },
+          { $unset: { cart: [], cartproducts: [] } }
+        );
 
-    let oi = Math.floor(Math.random() * 9000000) + 1000000;
+        //commission taken by company until membership is purchased by the creator (10%)
 
-    let maindata = [];
-    let qty = [];
-    for (let i = 0; i < user?.cart?.length; i++) {
-      qty.push(user.cart[i].quantity);
-      maindata.push({
-        product: productId[i],
-        seller: sellers[i],
-        qty: user.cart[i].quantity,
-        price: prices[i],
-      });
-    }
+        let deduction; //10% amount earned by company and substracted from creator as fees
 
-    if (!user) {
-      return res.status(404).json({ message: "User or Product not found" });
-    } else {
-      //a new order is created
-      const order = new Order({
-        buyerId: userId,
-        productId: productId,
-        quantity: quantity,
-        total: total,
-        orderId: oi,
-        paymentMode: "Cash",
-        currentStatus: "success",
-        deliverycharges: deliverycharges,
-        timing: "Tommorow, by 7:00 pm",
-        sellerId: sellers,
-        data: maindata,
-        orderno: parseInt((await Order.countDocuments()) + 1),
-      });
-      await order.save();
-      //upating order in customers purchase history
-      await User.updateOne(
-        { _id: userId },
-        { $push: { puchase_history: order._id } }
-      );
-      await User.updateOne(
-        { _id: user._id },
-        { $unset: { cart: [], cartproducts: [] } }
-      );
+        if (!product.creator?.ismembershipactive) {
+          deduction = ((parseInt(total) - 28 - 5 - 6) / 10) * 100;
+        } else {
+          deduction = parseInt(total) - 28 - 5 - 6;
+        }
+
+        //earning distribution
+
+        //admin earning
+        let earned = {
+          how: "Sales Commission",
+          amount: deduction,
+          when: Date.now(),
+          id: order._id,
+        };
+
+        await Admin.updateOne(
+          { date: formattedDate },
+          {
+            $inc: { todayearning: deduction },
+            $push: { earningtype: earned },
+          }
+        );
+
+        //creator earning
+        let storeearning = total - deduction;
+        let earning = { how: "product", when: Date.now() };
+        await User.updateOne(
+          { _id: product?.creator?._id },
+          {
+            $addToSet: { customers: user._id, earningtype: earning },
+            $inc: { storeearning: storeearning },
+          }
+        );
+        await Product.updateOne(
+          { _id: product._id },
+          { $inc: { itemsold: 1 } }
+        );
+      }
+
+      //generating mesId
+      function msgid() {
+        return Math.floor(100000 + Math.random() * 900000);
+      }
+
+      //sending notification to each store creator that a new order has arrived
+      const workspace = await User.findById("65f5539d09dbe77dea51400d");
+      for (const sell of sellers) {
+        const seller = await User.findById(sell);
+        const convs = await Conversation.findOne({
+          members: { $all: [seller?._id, workspace._id] },
+        });
+        const senderpic = process.env.URL + workspace.profilepic;
+        const recpic = process.env.URL + seller.profilepic;
+
+        const mesId = msgid();
+        let data = {
+          conversationId: convs._id,
+          sender: workspace._id,
+          text: `A new order with orderId ${oi} has arrived.`,
+          mesId: mesId,
+        };
+        if (convs) {
+          const m = new Message(data);
+          await m.save();
+
+          const msg = {
+            notification: {
+              title: `Workspace`,
+              body: `A new order with orderId ${oi} has arrived.`,
+            },
+            data: {
+              screen: "Conversation",
+              sender_fullname: `${seller?.fullname}`,
+              sender_id: `${seller?._id}`,
+              text: `A new order with orderId ${oi} has arrived.`,
+              convId: `${convs?._id}`,
+              createdAt: `${timestamp}`,
+              mesId: `${mesId}`,
+              typ: `message`,
+              senderuname: `${seller?.username}`,
+              senderverification: `${seller.isverified}`,
+              senderpic: `${recpic}`,
+              reciever_fullname: `${workspace.fullname}`,
+              reciever_username: `${workspace.username}`,
+              reciever_isverified: `${workspace.isverified}`,
+              reciever_pic: `${senderpic}`,
+              reciever_id: `${workspace._id}`,
+            },
+            token: seller?.notificationtoken,
+          };
+
+          await admin
+            .messaging()
+            .send(msg)
+            .then((response) => {
+              console.log("Successfully sent message");
+            })
+            .catch((error) => {
+              console.log("Error sending message:", error);
+            });
+        } else {
+          const conv = new Conversation({
+            members: [workspace._id, seller._id],
+          });
+          const savedconv = await conv.save();
+          await User.updateOne(
+            { _id: workspace._id },
+            {
+              $addToSet: {
+                conversations: savedconv?._id,
+              },
+            }
+          );
+          await User.updateOne(
+            { _id: seller._id },
+            {
+              $addToSet: {
+                conversations: savedconv?._id,
+              },
+            }
+          );
+
+          const m = new Message(data);
+          await m.save();
+
+          const msg = {
+            notification: {
+              title: `Workspace`,
+              body: `A new order with orderId ${oi} has arrived.`,
+            },
+            data: {
+              screen: "Conversation",
+              sender_fullname: `${seller?.fullname}`,
+              sender_id: `${seller?._id}`,
+              text: `A new order with orderId ${oi} has arrived.`,
+              convId: `${convs?._id}`,
+              createdAt: `${timestamp}`,
+              mesId: `${mesId}`,
+              typ: `message`,
+              senderuname: `${seller?.username}`,
+              senderverification: `${seller.isverified}`,
+              senderpic: `${recpic}`,
+              reciever_fullname: `${workspace.fullname}`,
+              reciever_username: `${workspace.username}`,
+              reciever_isverified: `${workspace.isverified}`,
+              reciever_pic: `${senderpic}`,
+              reciever_id: `${workspace._id}`,
+            },
+            token: seller?.notificationtoken,
+          };
+
+          await admin
+            .messaging()
+            .send(msg)
+            .then((response) => {
+              console.log("Successfully sent message");
+            })
+            .catch((error) => {
+              console.log("Error sending message:", error);
+            });
+        }
+      }
 
       //sending notification to admin
       let flashid = "655e189fb919c70bf6895485";
       const flash = await User.findById(flashid);
       const mainuser = await User.findById("65314cd99db37d9109914f3f");
       const timestamp = `${new Date()}`;
-      //generating mesId
-      function msgid() {
-        return Math.floor(100000 + Math.random() * 900000);
-      }
 
-      const senderpic = await generatePresignedUrl(
-        "images",
-        flash.profilepic.toString(),
-        60 * 60
-      );
-      const recpic = await generatePresignedUrl(
-        "images",
-        mainuser.profilepic.toString(),
-        60 * 60
-      );
+      const senderpic = process.env.URL + flash.profilepic;
+      const recpic = process.env.URL + mainuser.profilepic;
 
       const mesId = msgid();
       const convs = await Conversation.findOne({
@@ -1295,7 +1441,7 @@ exports.createnewproductorder = async (req, res) => {
 
       //create order pdfs
       let orderdata = [];
-      //const order = await Order.findOne({ orderId: ordId });
+      const order = await Order.findOne({ orderId: ordId });
 
       for (let i = 0; i < order.productId.length; i++) {
         const product = await Product.findById(order.productId[i]);
@@ -1324,6 +1470,398 @@ exports.createnewproductorder = async (req, res) => {
       });
 
       res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+exports.createnewproductorder = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { quantity, deliverycharges, productId, total, pickupid } = req.body;
+
+    const user = await User.findById(userId).populate({
+      path: "cart",
+      populate: {
+        path: "product",
+        model: "Product",
+      },
+    });
+
+    let sellers = [];
+    let prices = [];
+    let maindata = [];
+    let qty = [];
+
+    for (let i = 0; i < productId.length; i++) {
+      const product = await Product.findById(productId[i]).populate(
+        "creator",
+        "storeAddress ismembershipactive membership"
+      );
+      prices.push(product?.discountedprice);
+      sellers.push(product?.creator?._id);
+
+      //data for sales graph
+      let selleruser = await User.findById(product?.creator?._id);
+      let today = new Date();
+
+      let year = today.getFullYear();
+      let month = String(today.getMonth() + 1).padStart(2, "0");
+      let day = String(today.getDate()).padStart(2, "0");
+
+      let formattedDate = `${day}/${month}/${year}`;
+
+      let analytcis = await Analytics.findOne({
+        date: formattedDate,
+        id: selleruser._id,
+      });
+      if (analytcis) {
+        await Analytics.updateOne(
+          { _id: analytcis._id },
+          {
+            $inc: {
+              Sales: 1,
+            },
+          }
+        );
+      } else {
+        const an = new Analytics({
+          date: formattedDate,
+          id: selleruser._id,
+          Sales: 1,
+        });
+        await an.save();
+      }
+    }
+
+    for (let i = 0; i < user?.cart?.length; i++) {
+      qty.push(user.cart[i].quantity);
+      if (user.cart[i].quantity) {
+        maindata.push({
+          product: productId[i],
+          seller: sellers[i],
+          qty: user.cart[i].quantity,
+          price: prices[i],
+        });
+      }
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User or Product not found" });
+    } else {
+      const order = new Order({
+        buyerId: userId,
+        productId: productId,
+        quantity: quantity,
+        total: total,
+        orderId: oi,
+        paymentMode: "Cash",
+        currentStatus: "success",
+        deliverycharges: deliverycharges,
+        timing: "Tommorow, by 7:00 pm",
+        sellerId: sellers,
+        data: maindata,
+        orderno: parseInt((await Order.countDocuments()) + 1),
+      });
+      await order.save();
+
+      //upating order in customer's purchase history
+      await User.updateOne(
+        { _id: userId },
+        { $push: { puchase_history: order._id } }
+      );
+      await User.updateOne(
+        { _id: user._id },
+        { $unset: { cart: [], cartproducts: [] } }
+      );
+
+      for (let i = 0; i < maindata.length; i++) {
+        const sellerorder = new SellerOrder({
+          buyerId: userId,
+          productId: maindata[i].product,
+          quantity: maindata[i].qty,
+          total: maindata[i].price,
+          orderId: oi,
+          paymentMode: "Cash",
+          currentStatus: "success",
+          deliverycharges: deliverycharges,
+          timing: "Tommorow, by 7:00 pm",
+          sellerId: maindata[i].seller,
+          orderno: parseInt((await Order.countDocuments()) + 1),
+        });
+        await sellerorder.save();
+
+        //commission taken by company until membership is purchased by the creator (10%)
+        const product = await Product.findById(maindata[i].product).populate(
+          "creator",
+          "storeAddress ismembershipactive membership"
+        );
+
+        let deduction; //10% amount earned by company and substracted from creator as fees
+
+        if (!product.creator?.ismembershipactive) {
+          deduction = ((parseInt(total) - 28 - 5 - 6) / 10) * 100;
+        } else {
+          deduction = parseInt(total) - 28 - 5 - 6;
+        }
+
+        //earning distribution
+        let today = new Date();
+
+        let year = today.getFullYear();
+        let month = String(today.getMonth() + 1).padStart(2, "0");
+        let day = String(today.getDate()).padStart(2, "0");
+
+        let formattedDate = `${day}/${month}/${year}`;
+
+        //admin earning
+        let earned = {
+          how: "Sales Commission",
+          amount: deduction,
+          when: Date.now(),
+          id: order._id,
+        };
+
+        await Admin.updateOne(
+          { date: formattedDate },
+          {
+            $inc: { todayearning: deduction },
+            $push: { earningtype: earned },
+          }
+        );
+
+        //creator earning
+        let storeearning = total - deduction;
+        let earning = { how: "product", when: Date.now() };
+        await User.updateOne(
+          { _id: product?.creator?._id },
+          {
+            $addToSet: { customers: user._id, earningtype: earning },
+            $inc: { storeearning: storeearning },
+          }
+        );
+        await Product.updateOne(
+          { _id: product._id },
+          { $inc: { itemsold: 1 } }
+        );
+      }
+
+      //generating mesId
+      function msgid() {
+        return Math.floor(100000 + Math.random() * 900000);
+      }
+
+      //sending notification to each store creator that a new order has arrived
+      const workspace = await User.findById("65f5539d09dbe77dea51400d");
+      for (const sell of sellers) {
+        const seller = await User.findById(sell);
+        const convs = await Conversation.findOne({
+          members: { $all: [seller?._id, workspace._id] },
+        });
+        const senderpic = process.env.URL + workspace.profilepic;
+        const recpic = process.env.URL + seller.profilepic;
+
+        const mesId = msgid();
+        let data = {
+          conversationId: convs._id,
+          sender: workspace._id,
+          text: `A new order with orderId ${oi} has arrived.`,
+          mesId: mesId,
+        };
+        if (convs) {
+          const m = new Message(data);
+          await m.save();
+
+          const msg = {
+            notification: {
+              title: `Workspace`,
+              body: `A new order with orderId ${oi} has arrived.`,
+            },
+            data: {
+              screen: "Conversation",
+              sender_fullname: `${seller?.fullname}`,
+              sender_id: `${seller?._id}`,
+              text: `A new order with orderId ${oi} has arrived.`,
+              convId: `${convs?._id}`,
+              createdAt: `${timestamp}`,
+              mesId: `${mesId}`,
+              typ: `message`,
+              senderuname: `${seller?.username}`,
+              senderverification: `${seller.isverified}`,
+              senderpic: `${recpic}`,
+              reciever_fullname: `${workspace.fullname}`,
+              reciever_username: `${workspace.username}`,
+              reciever_isverified: `${workspace.isverified}`,
+              reciever_pic: `${senderpic}`,
+              reciever_id: `${workspace._id}`,
+            },
+            token: seller?.notificationtoken,
+          };
+
+          await admin
+            .messaging()
+            .send(msg)
+            .then((response) => {
+              console.log("Successfully sent message");
+            })
+            .catch((error) => {
+              console.log("Error sending message:", error);
+            });
+        } else {
+          const conv = new Conversation({
+            members: [workspace._id, seller._id],
+          });
+          const savedconv = await conv.save();
+          await User.updateOne(
+            { _id: workspace._id },
+            {
+              $addToSet: {
+                conversations: savedconv?._id,
+              },
+            }
+          );
+          await User.updateOne(
+            { _id: seller._id },
+            {
+              $addToSet: {
+                conversations: savedconv?._id,
+              },
+            }
+          );
+
+          const m = new Message(data);
+          await m.save();
+
+          const msg = {
+            notification: {
+              title: `Workspace`,
+              body: `A new order with orderId ${oi} has arrived.`,
+            },
+            data: {
+              screen: "Conversation",
+              sender_fullname: `${seller?.fullname}`,
+              sender_id: `${seller?._id}`,
+              text: `A new order with orderId ${oi} has arrived.`,
+              convId: `${convs?._id}`,
+              createdAt: `${timestamp}`,
+              mesId: `${mesId}`,
+              typ: `message`,
+              senderuname: `${seller?.username}`,
+              senderverification: `${seller.isverified}`,
+              senderpic: `${recpic}`,
+              reciever_fullname: `${workspace.fullname}`,
+              reciever_username: `${workspace.username}`,
+              reciever_isverified: `${workspace.isverified}`,
+              reciever_pic: `${senderpic}`,
+              reciever_id: `${workspace._id}`,
+            },
+            token: seller?.notificationtoken,
+          };
+
+          await admin
+            .messaging()
+            .send(msg)
+            .then((response) => {
+              console.log("Successfully sent message");
+            })
+            .catch((error) => {
+              console.log("Error sending message:", error);
+            });
+        }
+      }
+
+      //sending notification to admin
+      let flashid = "655e189fb919c70bf6895485";
+      const flash = await User.findById(flashid);
+      const mainuser = await User.findById("65314cd99db37d9109914f3f");
+      const timestamp = `${new Date()}`;
+
+      const senderpic = process.env.URL + flash.profilepic;
+      const recpic = process.env.URL + mainuser.profilepic;
+
+      const mesId = msgid();
+      const convs = await Conversation.findOne({
+        members: { $all: [mainuser?._id, flash._id] },
+      });
+
+      let data = {
+        conversationId: convs._id,
+        sender: flash._id,
+        text: `A new order with orderId ${oi} has arrived.`,
+        mesId: mesId,
+      };
+      const m = new Message(data);
+      await m.save();
+
+      const msg = {
+        notification: {
+          title: `Grovyo Flash`,
+          body: `A new order with orderId ${oi} has arrived.`,
+        },
+        data: {
+          screen: "Conversation",
+          sender_fullname: `${mainuser?.fullname}`,
+          sender_id: `${mainuser?._id}`,
+          text: `A new order with orderId ${oi} has arrived.`,
+          convId: `${convs?._id}`,
+          createdAt: `${timestamp}`,
+          mesId: `${mesId}`,
+          typ: `message`,
+          senderuname: `${mainuser?.username}`,
+          senderverification: `${mainuser.isverified}`,
+          senderpic: `${recpic}`,
+          reciever_fullname: `${flash.fullname}`,
+          reciever_username: `${flash.username}`,
+          reciever_isverified: `${flash.isverified}`,
+          reciever_pic: `${senderpic}`,
+          reciever_id: `${flash._id}`,
+        },
+        token: mainuser?.notificationtoken,
+      };
+
+      await admin
+        .messaging()
+        .send(msg)
+        .then((response) => {
+          console.log("Successfully sent message");
+        })
+        .catch((error) => {
+          console.log("Error sending message:", error);
+        });
+
+      //creating and assigning deliveries
+      // credeli({ id, pickupid, oid, total });
+
+      //create order pdfs
+      let orderdata = [];
+
+      for (let i = 0; i < order.productId.length; i++) {
+        const product = await Product.findById(order.productId[i]);
+        orderdata.push({
+          hsn: "",
+          desc: product.name,
+          qty: qty[i],
+          disc: product.discountedprice,
+          amt: product.price,
+        });
+      }
+
+      const buyer = await User.findById(order.buyerId);
+      const seller = await User.findById(order.sellerId);
+
+      let buyerdata = `${buyer.fullname}, ${buyer.address.streetaddress}, ${buyer.address.city}, ${buyer.address.landmark}, ${buyer.address.state}, ${buyer.address.country}`;
+      let sellerdata = `${seller?.fullname}, ${seller?.storeAddress.streetaddress}, ${seller?.storeAddress.city}, ${seller?.storeAddress.landmark}, ${seller?.storeAddress.state}, ${seller?.storeAddress.country}`;
+      createpdfs({
+        data: orderdata,
+        buyer: buyerdata,
+        seller: sellerdata,
+        mode: order.paymentMode,
+        refno: order.orderId,
+        total: order.total,
+        billno: order.orderno,
+      });
     }
   } catch (e) {
     console.log(e);
