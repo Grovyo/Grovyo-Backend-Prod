@@ -1498,7 +1498,7 @@ exports.createnewproductorder = async (req, res) => {
     for (let i = 0; i < productId.length; i++) {
       const product = await Product.findById(productId[i]).populate(
         "creator",
-        "storeAddress ismembershipactive membership"
+        "storeAddress ismembershipactive memberships"
       );
       prices.push(product?.discountedprice);
       sellers.push(product?.creator?._id);
@@ -1606,8 +1606,11 @@ exports.createnewproductorder = async (req, res) => {
         // } else {
         //   deduction = parseInt(total) - 28 - 5 - 6;
         // }
-        console.log(product.creator);
-        if (product.creator?.ismembershipactive === false) {
+        console.log(product.creator?.membership);
+        if (
+          product.creator?.ismembershipactive === false &&
+          product.creator?.memberships?.membership
+        ) {
           deduction = (parseInt(product.discountedprice) / 10) * 100;
         }
 
