@@ -1481,7 +1481,7 @@ exports.createnewproductorder = async (req, res) => {
   try {
     const { userId } = req.params;
     const { quantity, deliverycharges, productId, total, pickupid } = req.body;
-
+    console.log(req.body);
     const user = await User.findById(userId).populate({
       path: "cart",
       populate: {
