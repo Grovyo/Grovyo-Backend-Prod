@@ -1869,6 +1869,7 @@ exports.createnewproductorder = async (req, res) => {
         total: order.total,
         billno: order.orderno,
       });
+      res.status(200).json({ success: true });
     }
   } catch (e) {
     console.log(e);
