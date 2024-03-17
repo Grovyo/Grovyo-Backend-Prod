@@ -1494,7 +1494,7 @@ exports.createnewproductorder = async (req, res) => {
     let prices = [];
     let maindata = [];
     let qty = [];
-
+    let oi = Math.floor(Math.random() * 9000000) + 1000000;
     for (let i = 0; i < productId.length; i++) {
       const product = await Product.findById(productId[i]).populate(
         "creator",
