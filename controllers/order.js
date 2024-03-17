@@ -1606,7 +1606,7 @@ exports.createnewproductorder = async (req, res) => {
         // } else {
         //   deduction = parseInt(total) - 28 - 5 - 6;
         // }
-        console.log(product.creator?.memberships?.membership);
+        console.log(product.creator);
         if (
           product.creator?.ismembershipactive === false &&
           product.creator?.memberships?.membership
