@@ -1677,7 +1677,7 @@ exports.createnewproductorder = async (req, res) => {
             conversationId: convs._id,
             sender: workspace._id,
             text: `A new order with orderId ${oi} has arrived./n
-            quantity:${qty[i]}
+            quantity:${qty}
             `,
             mesId: mesId,
           };
