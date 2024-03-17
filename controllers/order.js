@@ -1664,13 +1664,14 @@ exports.createnewproductorder = async (req, res) => {
         const recpic = process.env.URL + seller.profilepic;
 
         const mesId = msgid();
-        let data = {
-          conversationId: convs._id,
-          sender: workspace._id,
-          text: `A new order with orderId ${oi} has arrived.`,
-          mesId: mesId,
-        };
+
         if (convs) {
+          let data = {
+            conversationId: convs._id,
+            sender: workspace._id,
+            text: `A new order with orderId ${oi} has arrived.`,
+            mesId: mesId,
+          };
           const m = new Message(data);
           await m.save();
 
@@ -1714,6 +1715,12 @@ exports.createnewproductorder = async (req, res) => {
             members: [workspace._id, seller._id],
           });
           const savedconv = await conv.save();
+          let data = {
+            conversationId: conv._id,
+            sender: workspace._id,
+            text: `A new order with orderId ${oi} has arrived.`,
+            mesId: mesId,
+          };
           await User.updateOne(
             { _id: workspace._id },
             {
