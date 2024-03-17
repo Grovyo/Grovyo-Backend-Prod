@@ -1481,7 +1481,7 @@ exports.createnewproductorder = async (req, res) => {
   try {
     const { userId } = req.params;
     const { quantity, deliverycharges, productId, total, pickupid } = req.body;
-    console.log(req.body);
+
     const user = await User.findById(userId).populate({
       path: "cart",
       populate: {
@@ -1599,12 +1599,15 @@ exports.createnewproductorder = async (req, res) => {
           "storeAddress ismembershipactive membership"
         );
 
-        let deduction; //10% amount earned by company and substracted from creator as fees
+        let deduction = 0; //10% amount earned by company and substracted from creator as fees
 
+        // if (!product.creator?.ismembershipactive) {
+        //   deduction = ((parseInt(total) - 28 - 5 - 6) / 10) * 100;
+        // } else {
+        //   deduction = parseInt(total) - 28 - 5 - 6;
+        // }
         if (!product.creator?.ismembershipactive) {
-          deduction = ((parseInt(total) - 28 - 5 - 6) / 10) * 100;
-        } else {
-          deduction = parseInt(total) - 28 - 5 - 6;
+          deduction = (parseInt(product.discountedprice) / 10) * 100;
         }
 
         //earning distribution
@@ -1616,24 +1619,26 @@ exports.createnewproductorder = async (req, res) => {
 
         let formattedDate = `${day}/${month}/${year}`;
 
-        //admin earning
-        let earned = {
-          how: "Sales Commission",
-          amount: deduction,
-          when: Date.now(),
-          id: order._id,
-        };
+        if (deduction > 0) {
+          //admin earning
+          let earned = {
+            how: "Sales Commission",
+            amount: deduction,
+            when: Date.now(),
+            id: order._id,
+          };
 
-        await Admin.updateOne(
-          { date: formattedDate },
-          {
-            $inc: { todayearning: deduction },
-            $push: { earningtype: earned },
-          }
-        );
+          await Admin.updateOne(
+            { date: formattedDate },
+            {
+              $inc: { todayearning: deduction },
+              $push: { earningtype: earned },
+            }
+          );
+        }
 
         //creator earning
-        let storeearning = total - deduction;
+        let storeearning = product.discountedprice - deduction;
         let earning = { how: "product", when: Date.now() };
         await User.updateOne(
           { _id: product?.creator?._id },
@@ -1682,21 +1687,21 @@ exports.createnewproductorder = async (req, res) => {
             },
             data: {
               screen: "Conversation",
-              sender_fullname: `${seller?.fullname}`,
-              sender_id: `${seller?._id}`,
+              sender_fullname: `${workspace?.fullname}`,
+              sender_id: `${workspace?._id}`,
               text: `A new order with orderId ${oi} has arrived.`,
               convId: `${convs?._id}`,
               createdAt: `${timestamp}`,
               mesId: `${mesId}`,
               typ: `message`,
-              senderuname: `${seller?.username}`,
-              senderverification: `${seller.isverified}`,
-              senderpic: `${recpic}`,
-              reciever_fullname: `${workspace.fullname}`,
-              reciever_username: `${workspace.username}`,
-              reciever_isverified: `${workspace.isverified}`,
-              reciever_pic: `${senderpic}`,
-              reciever_id: `${workspace._id}`,
+              senderuname: `${workspace?.username}`,
+              senderverification: `${workspace.isverified}`,
+              senderpic: `${senderpic}`,
+              reciever_fullname: `${seller.fullname}`,
+              reciever_username: `${seller.username}`,
+              reciever_isverified: `${seller.isverified}`,
+              reciever_pic: `${recpic}`,
+              reciever_id: `${seller._id}`,
             },
             token: seller?.notificationtoken,
           };
