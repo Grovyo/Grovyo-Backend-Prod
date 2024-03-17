@@ -1481,7 +1481,7 @@ exports.createnewproductorder = async (req, res) => {
   try {
     const { userId } = req.params;
     const { quantity, deliverycharges, productId, total, pickupid } = req.body;
-
+    console.log(req.body);
     const user = await User.findById(userId).populate({
       path: "cart",
       populate: {
@@ -1606,7 +1606,7 @@ exports.createnewproductorder = async (req, res) => {
         // } else {
         //   deduction = parseInt(total) - 28 - 5 - 6;
         // }
-        if (!product.creator?.ismembershipactive) {
+        if (product.creator?.ismembershipactive === false) {
           deduction = (parseInt(product.discountedprice) / 10) * 100;
         }
 
@@ -1618,7 +1618,7 @@ exports.createnewproductorder = async (req, res) => {
         let day = String(today.getDate()).padStart(2, "0");
 
         let formattedDate = `${day}/${month}/${year}`;
-
+        console.log(deduction);
         if (deduction > 0) {
           //admin earning
           let earned = {
@@ -1639,6 +1639,7 @@ exports.createnewproductorder = async (req, res) => {
 
         //creator earning
         let storeearning = product.discountedprice - deduction;
+        console.log(storeearning);
         let earning = { how: "product", when: Date.now() };
         await User.updateOne(
           { _id: product?.creator?._id },
@@ -1674,7 +1675,9 @@ exports.createnewproductorder = async (req, res) => {
           let data = {
             conversationId: convs._id,
             sender: workspace._id,
-            text: `A new order with orderId ${oi} has arrived.`,
+            text: `A new order with orderId ${oi} has arrived./n
+            quantity:${qty[i]}
+            `,
             mesId: mesId,
           };
           const m = new Message(data);

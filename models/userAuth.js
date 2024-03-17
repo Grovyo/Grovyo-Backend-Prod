@@ -188,6 +188,11 @@ const userSchema = new mongoose.Schema(
         id: { type: String },
       },
     ],
+    uniquecustomers: [
+      {
+        id: { type: String },
+      },
+    ],
     collectionss: [
       { type: mongoose.Schema.Types.ObjectId, ref: "Collectionss" },
     ],
