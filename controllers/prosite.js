@@ -510,7 +510,7 @@ exports.saveprosite = async (req, res) => {
   }
 };
 
-exports.userprositedetails = async () => {
+exports.userprositedetails = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id);
