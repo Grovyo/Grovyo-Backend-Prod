@@ -800,6 +800,104 @@ exports.createpdf = async (req, res) => {
 };
 
 //create a new product order(UPI)
+exports.createrzporderr = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity, deliverycharges, productId, total, rzptotal } = req.body;
+
+    const ordern = await Order.countDocuments();
+    const user = await User.findById(id);
+    const product = await Product.findById(productId).populate(
+      "creator",
+      "storeAddress"
+    );
+    let oi = Math.floor(Math.random() * 9000000) + 1000000;
+
+    let maindata = [];
+    let qty = [];
+    for (let i = 0; i < user?.cart?.length; i++) {
+      qty.push(user.cart[i].quantity);
+      maindata.push({
+        product: productId[i],
+        seller: sellers[i],
+        qty: user.cart[i].quantity,
+      });
+    }
+
+    let sellers = [];
+    for (let i = 0; i < productId.length; i++) {
+      const product = await Product.findById(productId[i]).populate(
+        "creator",
+        "storeAddress"
+      );
+
+      sellers.push(product?.creator?._id);
+    }
+
+    if (!user && !product) {
+      return res.status(404).json({ message: "User or Product not found" });
+    } else {
+      //a new order is created
+      const ord = new Order({
+        buyerId: user._id,
+        productId: productId,
+        quantity: quantity,
+        total: total,
+        orderId: oi,
+        paymentMode: "UPI",
+        currentStatus: "pending",
+        deliverycharges: deliverycharges,
+        timing: "Tommorow, by 7:00 pm",
+        orderno: ordern + 1,
+        data: maindata,
+        sellerId: sellers,
+      });
+      await ord.save();
+
+      //upating order in customers purchase history
+      await User.updateOne(
+        { _id: id },
+        { $push: { puchase_history: ord._id } }
+      );
+
+      let pids = JSON.stringify(productId);
+
+      //creatign a rzp order
+      instance.orders.create(
+        {
+          amount: parseInt(rzptotal),
+          currency: "INR",
+          receipt: `receipt#${oi}`,
+          notes: {
+            total,
+            quantity,
+            deliverycharges,
+            pids,
+            total,
+          },
+        },
+        function (err, order) {
+          console.log(err, order);
+          if (err) {
+            res.status(400).json({ err, success: false });
+          } else {
+            res.status(200).json({
+              oid: order.id,
+              order: ord._id,
+              phone: user?.phone,
+              email: user?.email,
+              success: true,
+            });
+          }
+        }
+      );
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
 exports.createrzporder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1481,7 +1579,7 @@ exports.createnewproductorder = async (req, res) => {
   try {
     const { userId } = req.params;
     const { quantity, deliverycharges, productId, total, pickupid } = req.body;
-    console.log(req.body);
+
     const user = await User.findById(userId).populate({
       path: "cart",
       populate: {
@@ -1596,22 +1694,17 @@ exports.createnewproductorder = async (req, res) => {
         //commission taken by company until membership is purchased by the creator (10%)
         const product = await Product.findById(maindata[i].product).populate(
           "creator",
-          "storeAddress ismembershipactive membership"
+          "storeAddress ismembershipactive memberships"
         );
 
         let deduction = 0; //10% amount earned by company and substracted from creator as fees
 
-        // if (!product.creator?.ismembershipactive) {
-        //   deduction = ((parseInt(total) - 28 - 5 - 6) / 10) * 100;
-        // } else {
-        //   deduction = parseInt(total) - 28 - 5 - 6;
-        // }
-        console.log(product.creator);
         if (
-          product.creator?.ismembershipactive === false &&
-          product.creator?.memberships?.membership
+          product.creator?.ismembershipactive === false ||
+          product.creator?.memberships?.membership?.toString() ===
+            "65671e5204b7d0d07ef0e796"
         ) {
-          deduction = (parseInt(product.discountedprice) / 10) * 100;
+          deduction = product.discountedprice * 0.1;
         }
 
         //earning distribution
@@ -1622,7 +1715,7 @@ exports.createnewproductorder = async (req, res) => {
         let day = String(today.getDate()).padStart(2, "0");
 
         let formattedDate = `${day}/${month}/${year}`;
-        console.log(deduction);
+
         if (deduction > 0) {
           //admin earning
           let earned = {
@@ -1643,7 +1736,7 @@ exports.createnewproductorder = async (req, res) => {
 
         //creator earning
         let storeearning = product.discountedprice - deduction;
-        console.log(storeearning);
+
         let earning = { how: "product", when: Date.now() };
         await User.updateOne(
           { _id: product?.creator?._id },
