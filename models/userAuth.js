@@ -257,6 +257,13 @@ const userSchema = new mongoose.Schema(
     topicearning: { type: Number, default: 0 },
     storeearning: { type: Number, default: 0 },
     adsearning: { type: Number, default: 0 },
+    prositeweb_template: {
+      type: String,
+    },
+    prositemob_template: {
+      type: String,
+    },
+    isbankverified: { type: Boolean, default: false },
     storeStats: [
       {
         Dates: { type: String },
