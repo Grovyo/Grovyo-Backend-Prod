@@ -726,7 +726,7 @@ exports.createtopicporder = async (req, res) => {
         { $push: { subscriptions: subscription._id } }
       );
 
-      //creatign a rzp subscription
+      //creating a rzp subscription
       instance.orders.create(
         {
           amount: parseInt(topic.price) * 100,
@@ -803,7 +803,7 @@ exports.finalisetopicorder = async (req, res) => {
               members: user._id,
               notifications: user?._id,
             },
-            $inc: { memberscount: 1 },
+            $inc: { memberscount: 1, earnings: topic.price },
           }
         );
         //updating paid members count

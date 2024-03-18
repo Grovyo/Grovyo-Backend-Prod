@@ -27,6 +27,7 @@ const topicSchema = new mongoose.Schema(
       },
     ],
     nature: { type: String, default: "chat" },
+    earnings: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
