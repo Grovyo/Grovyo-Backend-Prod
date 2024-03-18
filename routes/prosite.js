@@ -16,6 +16,7 @@ const {
   createprosite,
   getlist,
   getdetailprosite,
+  userprositedetails,
 } = require("../controllers/prosite");
 
 router.post("/edituser/:userId", editbio);
@@ -29,5 +30,6 @@ router.get("/fetchallglimpse/:userId", fetchallglimpse);
 router.post("/createprosite/:userId", upload.any(), createprosite);
 router.get("/getlist/:userId", getlist);
 router.get("/getdetailprosite/:userId/:siteId", getdetailprosite);
+router.get("/userprositedetails/:id", userprositedetails);
 
 module.exports = router;

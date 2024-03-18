@@ -509,3 +509,22 @@ exports.saveprosite = async (req, res) => {
     res.status(400).json({ message: e.message, success: false });
   }
 };
+
+exports.userprositedetails = async () => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
+    }
+    const userDetails = {
+      prositemobile: user.prositemob_template,
+      prositeweb: user.prositeweb_template,
+    };
+    res.status(200).json({ success: true, userDetails });
+  } catch (error) {
+    res.status(400).json({ success: false, message: "Something went  wrong" });
+  }
+};

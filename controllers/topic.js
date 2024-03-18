@@ -820,7 +820,7 @@ exports.finalisetopicorder = async (req, res) => {
         await User.updateOne(
           { _id: community?.creator },
           {
-            $inc: { moneyearned: topic.price },
+            $inc: { moneyearned: topic.price, topicearning: topic.price },
             $addToSet: {
               earningtype: {
                 how: "Topic Purchase",
