@@ -1900,24 +1900,30 @@ exports.fetchallsubscriptions = async (req, res) => {
           "community",
           "title dp"
         );
-        let purchaseindex = topic.purchased.findIndex(
-          (f, i) => f.id?.toString() === user._id?.toString()
-        );
 
-        const timestamp = topic.purchased[purchaseindex]?.broughton || 0;
-        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+        if (!topic) {
+          subs[i].remove();
+          topic?.remove();
+        } else {
+          let purchaseindex = topic?.purchased.findIndex(
+            (f, i) => f.id?.toString() === user._id?.toString()
+          );
 
-        const currentTimestamp = Date.now();
+          const timestamp = topic?.purchased[purchaseindex]?.broughton || 0;
+          const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
 
-        const difference = currentTimestamp - timestamp;
+          const currentTimestamp = Date.now();
 
-        const isWithin30Days = difference <= thirtyDaysInMs;
-        status.push({
-          topic: topic?.title,
-          community: topic?.community?.title,
-          validity: isWithin30Days ? "Active" : "Expired",
-          dp: process.env.URL + topic?.community?.dp,
-        });
+          const difference = currentTimestamp - timestamp;
+
+          const isWithin30Days = difference <= thirtyDaysInMs;
+          status.push({
+            topic: topic?.title,
+            community: topic?.community?.title,
+            validity: isWithin30Days ? "Active" : "Expired",
+            dp: process.env.URL + topic?.community?.dp,
+          });
+        }
       }
       let merged = subs.map((s, i) => ({
         s,
@@ -1929,7 +1935,7 @@ exports.fetchallsubscriptions = async (req, res) => {
     }
   } catch (e) {
     console.log(e);
-    res.status(404).json({ success: false, message: "Something went wrong" });
+    res.status(400).json({ success: false, message: "Something went wrong" });
   }
 };
 

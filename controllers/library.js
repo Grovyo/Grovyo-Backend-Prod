@@ -87,16 +87,28 @@ exports.fetchorders = async (req, res) => {
             "name brandname creator images inclusiveprice price percentoff sellername totalstars"
           )
           .populate("sellerId", "isverified fullname");
-        orders.push(order);
+
+        if (order?.productId && order?.sellerId) {
+          orders.push(order);
+        } else {
+          order?.remove();
+          await User.updateOne(
+            { _id: user._id },
+            { $pull: { puchase_history: order?._id } }
+          );
+        }
       }
 
       const image = [];
       if (orders) {
         for (let j = 0; j < orders.length; j++) {
-          const a =
-            process.env.PRODUCT_URL + orders[j].productId[0].images[0].content;
+          if (orders[j]) {
+            const a =
+              process.env.PRODUCT_URL +
+              orders[j].productId[0].images[0].content;
 
-          image.push(a);
+            image.push(a);
+          }
         }
       }
 

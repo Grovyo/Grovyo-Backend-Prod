@@ -21,6 +21,15 @@ const Delivery = require("../models/deliveries");
 const Conversation = require("../models/conversation");
 const Message = require("../models/message");
 
+// const { Queue, Worker } = require("bullmq");
+
+// const myQueue = new Queue("delivery-pending", {
+//   connection: {
+//     host: "192.168.29.221",
+//     port: 6379,
+//   },
+// });
+
 const fs = require("fs");
 const Razorpay = require("razorpay");
 const {
@@ -1593,6 +1602,7 @@ exports.createnewproductorder = async (req, res) => {
     let maindata = [];
     let qty = [];
     let oi = Math.floor(Math.random() * 9000000) + 1000000;
+
     for (let i = 0; i < productId.length; i++) {
       const product = await Product.findById(productId[i]).populate(
         "creator",
@@ -1615,6 +1625,7 @@ exports.createnewproductorder = async (req, res) => {
         date: formattedDate,
         id: selleruser._id,
       });
+
       if (analytcis) {
         await Analytics.updateOne(
           { _id: analytcis._id },
@@ -1656,9 +1667,9 @@ exports.createnewproductorder = async (req, res) => {
         total: total,
         orderId: oi,
         paymentMode: "Cash",
-        currentStatus: "success",
+        currentStatus: "processing",
         deliverycharges: deliverycharges,
-        timing: "Tommorow, by 7:00 pm",
+        // timing: "Tommorow, by 7:00 pm",
         sellerId: sellers,
         data: maindata,
         orderno: parseInt((await Order.countDocuments()) + 1),
@@ -1683,9 +1694,9 @@ exports.createnewproductorder = async (req, res) => {
           total: maindata[i].price,
           orderId: oi,
           paymentMode: "Cash",
-          currentStatus: "success",
+          currentStatus: "processing",
           deliverycharges: deliverycharges,
-          timing: "Tommorow, by 7:00 pm",
+          // timing: "Tommorow, by 7:00 pm",
           sellerId: maindata[i].seller,
           orderno: parseInt((await Order.countDocuments()) + 1),
         });
@@ -1942,6 +1953,13 @@ exports.createnewproductorder = async (req, res) => {
         .catch((error) => {
           console.log("Error sending message:", error);
         });
+
+      // const r = await myQueue.add(
+      //   "delivery-pending",
+      //   { order },
+      //   { removeOnComplete: true, removeOnFail: true }
+      // );
+      // console.log(r.id, "Added to delivery queue");
 
       //creating and assigning deliveries
       // credeli({ id, pickupid, oid, total });
