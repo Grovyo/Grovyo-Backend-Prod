@@ -772,17 +772,42 @@ exports.creataccs = async (req, res) => {
 exports.changegender = async (req, res) => {
   try {
     const user = await User.find();
-    const intrest = await Interest.find({ count: { $gt: 0 } });
-    let int = [];
-    for (let i = 0; i < intrest.length; i++) {
-      int.push(intrest[i].title);
+    const pro = await Product.find();
+    for (let i = 0; i < pro.length; i++) {
+      const address = {
+        street: faker.address.streetAddress({ useFullAddress: false }),
+        city: faker.address.city(),
+        state: faker.address.state(),
+        pincode: faker.address.zipCode(),
+        country: "India",
+        coordinates: {
+          latitude: faker.address.latitude(),
+          longitude: faker.address.longitude(),
+        },
+      };
+
+      await User.updateOne(
+        { _id: pro[i].creator },
+        { $set: { storeAddress: address } }
+      );
     }
 
     for (let i = 0; i < user.length; i++) {
-      await User.updateOne({ _id: user[i]._id }, { $unset: { interest: [] } });
+      const address = {
+        street: faker.address.streetAddress({ useFullAddress: false }),
+        city: faker.address.city(),
+        state: faker.address.state(),
+        pincode: faker.address.zipCode(),
+        country: "India",
+        coordinates: {
+          latitude: faker.address.latitude(),
+          longitude: faker.address.longitude(),
+        },
+      };
+
       await User.updateOne(
         { _id: user[i]._id },
-        { $addToSet: { interest: int } }
+        { $set: { address: address } }
       );
     }
 

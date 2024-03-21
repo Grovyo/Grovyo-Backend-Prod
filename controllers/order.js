@@ -21,14 +21,14 @@ const Delivery = require("../models/deliveries");
 const Conversation = require("../models/conversation");
 const Message = require("../models/message");
 
-// const { Queue, Worker } = require("bullmq");
+const { Queue, Worker } = require("bullmq");
 
-// const myQueue = new Queue("delivery-pending", {
-//   connection: {
-//     host: "192.168.29.221",
-//     port: 6379,
-//   },
-// });
+const myQueue = new Queue("delivery-pending", {
+  connection: {
+    host: "192.168.29.221",
+    port: 6379,
+  },
+});
 
 const fs = require("fs");
 const Razorpay = require("razorpay");
@@ -938,6 +938,7 @@ exports.createrzporder = async (req, res) => {
         "storeAddress"
       );
 
+      prices.push(product?.discountedprice);
       sellers.push(product?.creator?._id);
     }
 
@@ -954,7 +955,7 @@ exports.createrzporder = async (req, res) => {
         paymentMode: "UPI",
         currentStatus: "pending",
         deliverycharges: deliverycharges,
-        timing: "Tommorow, by 7:00 pm",
+        // timing: "Tommorow, by 7:00 pm",
         orderno: ordern + 1,
         data: maindata,
         sellerId: sellers,
@@ -1025,7 +1026,11 @@ exports.finaliseorder = async (req, res) => {
       },
     });
 
+    const order = await Order.findOne({ orderId: ordId });
+
     let qty = [];
+    let sellers = [];
+
     for (let i = 0; i < user?.cart?.length; i++) {
       qty.push(user.cart[i].quantity);
     }
@@ -1048,6 +1053,222 @@ exports.finaliseorder = async (req, res) => {
           { _id: user._id },
           { $unset: { cart: [], cartproducts: [] } }
         );
+
+        for (let i = 0; i < order.data.length; i++) {
+          const sellerorder = new SellerOrder({
+            buyerId: order.buyerId,
+            productId: order.data[i].product,
+            quantity: order.data[i].qty,
+            total: order.data[i].price,
+            orderId: oi,
+            paymentMode: "Cash",
+            currentStatus: "processing",
+            deliverycharges: deliverycharges,
+            // timing: "Tommorow, by 7:00 pm",
+            sellerId: order.data[i].seller,
+            orderno: parseInt((await Order.countDocuments()) + 1),
+          });
+          await sellerorder.save();
+
+          //commission taken by company until membership is purchased by the creator (10%)
+          const product = await Product.findById(
+            order.data[i].product
+          ).populate("creator", "storeAddress ismembershipactive memberships");
+
+          sellers.push(product?.creator?._id);
+
+          let deduction = 0; //10% amount earned by company and substracted from creator as fees
+
+          if (
+            product.creator?.ismembershipactive === false ||
+            product.creator?.memberships?.membership?.toString() ===
+              "65671e5204b7d0d07ef0e796"
+          ) {
+            deduction = product.discountedprice * 0.1;
+          }
+
+          //earning distribution
+          let today = new Date();
+
+          let year = today.getFullYear();
+          let month = String(today.getMonth() + 1).padStart(2, "0");
+          let day = String(today.getDate()).padStart(2, "0");
+
+          let formattedDate = `${day}/${month}/${year}`;
+
+          if (deduction > 0) {
+            //admin earning
+            let earned = {
+              how: "Sales Commission",
+              amount: deduction,
+              when: Date.now(),
+              id: order._id,
+            };
+
+            await Admin.updateOne(
+              { date: formattedDate },
+              {
+                $inc: { todayearning: deduction },
+                $push: { earningtype: earned },
+              }
+            );
+          }
+
+          //creator earning
+          let storeearning = product.discountedprice - deduction;
+
+          let earning = { how: "product", when: Date.now() };
+          await User.updateOne(
+            { _id: product?.creator?._id },
+            {
+              $addToSet: { customers: user._id, earningtype: earning },
+              $inc: { storeearning: storeearning },
+            }
+          );
+          await Product.updateOne(
+            { _id: product._id },
+            { $inc: { itemsold: 1 } }
+          );
+        }
+
+        //generating mesId
+        function msgid() {
+          return Math.floor(100000 + Math.random() * 900000);
+        }
+
+        //sending notification to each store creator that a new order has arrived
+        const workspace = await User.findById("65f5539d09dbe77dea51400d");
+        for (const sell of sellers) {
+          const seller = await User.findById(sell);
+          const convs = await Conversation.findOne({
+            members: { $all: [seller?._id, workspace._id] },
+          });
+          const senderpic = process.env.URL + workspace.profilepic;
+          const recpic = process.env.URL + seller.profilepic;
+          const timestamp = `${new Date()}`;
+          const mesId = msgid();
+
+          if (convs) {
+            let data = {
+              conversationId: convs._id,
+              sender: workspace._id,
+              text: `A new order with orderId #${order.orderId} has arrived.`,
+              mesId: mesId,
+            };
+            const m = new Message(data);
+            await m.save();
+
+            if (seller?.notificationtoken) {
+              const msg = {
+                notification: {
+                  title: `Workspace`,
+                  body: `A new order with orderId #${order.orderId} has arrived.`,
+                },
+                data: {
+                  screen: "Conversation",
+                  sender_fullname: `${workspace?.fullname}`,
+                  sender_id: `${workspace?._id}`,
+                  text: `A new order with orderId ${oi} has arrived.`,
+                  convId: `${convs?._id}`,
+                  createdAt: `${timestamp}`,
+                  mesId: `${mesId}`,
+                  typ: `message`,
+                  senderuname: `${workspace?.username}`,
+                  senderverification: `${workspace.isverified}`,
+                  senderpic: `${senderpic}`,
+                  reciever_fullname: `${seller.fullname}`,
+                  reciever_username: `${seller.username}`,
+                  reciever_isverified: `${seller.isverified}`,
+                  reciever_pic: `${recpic}`,
+                  reciever_id: `${seller._id}`,
+                },
+                token: seller?.notificationtoken,
+              };
+
+              await admin
+                .messaging()
+                .send(msg)
+                .then((response) => {
+                  console.log("Successfully sent message");
+                })
+                .catch((error) => {
+                  console.log("Error sending message:", error);
+                });
+            }
+          } else {
+            const conv = new Conversation({
+              members: [workspace._id, seller._id],
+            });
+            const savedconv = await conv.save();
+            let data = {
+              conversationId: conv._id,
+              sender: workspace._id,
+              text: `A new order with orderId #${order.orderId} has arrived.`,
+              mesId: mesId,
+            };
+            await User.updateOne(
+              { _id: workspace._id },
+              {
+                $addToSet: {
+                  conversations: savedconv?._id,
+                },
+              }
+            );
+            await User.updateOne(
+              { _id: seller._id },
+              {
+                $addToSet: {
+                  conversations: savedconv?._id,
+                },
+              }
+            );
+
+            const m = new Message(data);
+            await m.save();
+
+            const msg = {
+              notification: {
+                title: `Workspace`,
+                body: `A new order with orderId #${order.orderId} has arrived.`,
+              },
+              data: {
+                screen: "Conversation",
+                sender_fullname: `${seller?.fullname}`,
+                sender_id: `${seller?._id}`,
+                text: `A new order with orderId #${order.orderId} has arrived.`,
+                convId: `${convs?._id}`,
+                createdAt: `${timestamp}`,
+                mesId: `${mesId}`,
+                typ: `message`,
+                senderuname: `${seller?.username}`,
+                senderverification: `${seller.isverified}`,
+                senderpic: `${recpic}`,
+                reciever_fullname: `${workspace.fullname}`,
+                reciever_username: `${workspace.username}`,
+                reciever_isverified: `${workspace.isverified}`,
+                reciever_pic: `${senderpic}`,
+                reciever_id: `${workspace._id}`,
+              },
+              token: seller?.notificationtoken,
+            };
+
+            await admin
+              .messaging()
+              .send(msg)
+              .then((response) => {
+                console.log("Successfully sent message");
+              })
+              .catch((error) => {
+                console.log("Error sending message:", error);
+              });
+          }
+        }
+        const r = await myQueue.add(
+          "delivery-pending",
+          { order },
+          { removeOnComplete: true, removeOnFail: true }
+        );
+        console.log(r.id, "Added to delivery queue");
 
         //sending notification to admin
         let flashid = "655e189fb919c70bf6895485";
@@ -1783,49 +2004,49 @@ exports.createnewproductorder = async (req, res) => {
           let data = {
             conversationId: convs._id,
             sender: workspace._id,
-            text: `A new order with orderId ${oi} has arrived./n
-            quantity:${qty}
-            `,
+            text: `A new order with orderId ${oi} has arrived.`,
             mesId: mesId,
           };
           const m = new Message(data);
           await m.save();
 
-          const msg = {
-            notification: {
-              title: `Workspace`,
-              body: `A new order with orderId ${oi} has arrived.`,
-            },
-            data: {
-              screen: "Conversation",
-              sender_fullname: `${workspace?.fullname}`,
-              sender_id: `${workspace?._id}`,
-              text: `A new order with orderId ${oi} has arrived.`,
-              convId: `${convs?._id}`,
-              createdAt: `${timestamp}`,
-              mesId: `${mesId}`,
-              typ: `message`,
-              senderuname: `${workspace?.username}`,
-              senderverification: `${workspace.isverified}`,
-              senderpic: `${senderpic}`,
-              reciever_fullname: `${seller.fullname}`,
-              reciever_username: `${seller.username}`,
-              reciever_isverified: `${seller.isverified}`,
-              reciever_pic: `${recpic}`,
-              reciever_id: `${seller._id}`,
-            },
-            token: seller?.notificationtoken,
-          };
+          if (seller?.notificationtoken) {
+            const msg = {
+              notification: {
+                title: `Workspace`,
+                body: `A new order with orderId ${oi} has arrived.`,
+              },
+              data: {
+                screen: "Conversation",
+                sender_fullname: `${workspace?.fullname}`,
+                sender_id: `${workspace?._id}`,
+                text: `A new order with orderId ${oi} has arrived.`,
+                convId: `${convs?._id}`,
+                createdAt: `${timestamp}`,
+                mesId: `${mesId}`,
+                typ: `message`,
+                senderuname: `${workspace?.username}`,
+                senderverification: `${workspace.isverified}`,
+                senderpic: `${senderpic}`,
+                reciever_fullname: `${seller.fullname}`,
+                reciever_username: `${seller.username}`,
+                reciever_isverified: `${seller.isverified}`,
+                reciever_pic: `${recpic}`,
+                reciever_id: `${seller._id}`,
+              },
+              token: seller?.notificationtoken,
+            };
 
-          await admin
-            .messaging()
-            .send(msg)
-            .then((response) => {
-              console.log("Successfully sent message");
-            })
-            .catch((error) => {
-              console.log("Error sending message:", error);
-            });
+            await admin
+              .messaging()
+              .send(msg)
+              .then((response) => {
+                console.log("Successfully sent message");
+              })
+              .catch((error) => {
+                console.log("Error sending message:", error);
+              });
+          }
         } else {
           const conv = new Conversation({
             members: [workspace._id, seller._id],
@@ -1917,49 +2138,49 @@ exports.createnewproductorder = async (req, res) => {
       };
       const m = new Message(data);
       await m.save();
+      if (mainuser?.notificationtoken) {
+        const msg = {
+          notification: {
+            title: `Grovyo Flash`,
+            body: `A new order with orderId ${oi} has arrived.`,
+          },
+          data: {
+            screen: "Conversation",
+            sender_fullname: `${mainuser?.fullname}`,
+            sender_id: `${mainuser?._id}`,
+            text: `A new order with orderId ${oi} has arrived.`,
+            convId: `${convs?._id}`,
+            createdAt: `${timestamp}`,
+            mesId: `${mesId}`,
+            typ: `message`,
+            senderuname: `${mainuser?.username}`,
+            senderverification: `${mainuser.isverified}`,
+            senderpic: `${recpic}`,
+            reciever_fullname: `${flash.fullname}`,
+            reciever_username: `${flash.username}`,
+            reciever_isverified: `${flash.isverified}`,
+            reciever_pic: `${senderpic}`,
+            reciever_id: `${flash._id}`,
+          },
+          token: mainuser?.notificationtoken,
+        };
 
-      const msg = {
-        notification: {
-          title: `Grovyo Flash`,
-          body: `A new order with orderId ${oi} has arrived.`,
-        },
-        data: {
-          screen: "Conversation",
-          sender_fullname: `${mainuser?.fullname}`,
-          sender_id: `${mainuser?._id}`,
-          text: `A new order with orderId ${oi} has arrived.`,
-          convId: `${convs?._id}`,
-          createdAt: `${timestamp}`,
-          mesId: `${mesId}`,
-          typ: `message`,
-          senderuname: `${mainuser?.username}`,
-          senderverification: `${mainuser.isverified}`,
-          senderpic: `${recpic}`,
-          reciever_fullname: `${flash.fullname}`,
-          reciever_username: `${flash.username}`,
-          reciever_isverified: `${flash.isverified}`,
-          reciever_pic: `${senderpic}`,
-          reciever_id: `${flash._id}`,
-        },
-        token: mainuser?.notificationtoken,
-      };
-
-      await admin
-        .messaging()
-        .send(msg)
-        .then((response) => {
-          console.log("Successfully sent message");
-        })
-        .catch((error) => {
-          console.log("Error sending message:", error);
-        });
-
-      // const r = await myQueue.add(
-      //   "delivery-pending",
-      //   { order },
-      //   { removeOnComplete: true, removeOnFail: true }
-      // );
-      // console.log(r.id, "Added to delivery queue");
+        await admin
+          .messaging()
+          .send(msg)
+          .then((response) => {
+            console.log("Successfully sent message");
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+      }
+      const r = await myQueue.add(
+        "delivery-pending",
+        { order },
+        { removeOnComplete: true, removeOnFail: true }
+      );
+      console.log(r.id, "Added to delivery queue");
 
       //creating and assigning deliveries
       // credeli({ id, pickupid, oid, total });

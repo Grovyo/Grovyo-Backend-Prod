@@ -1343,12 +1343,15 @@ exports.getallmembers = async (req, res) => {
         })
         .populate({
           path: "admins",
+          model: "User",
           select: "fullname pic isverified username profilepic",
         })
         .populate({
           path: "blocked",
+          model: "User",
           select: "fullname pic isverified username profilepic",
         });
+
       if (!community) {
         res
           .status(404)
@@ -1357,8 +1360,8 @@ exports.getallmembers = async (req, res) => {
         let dps = [];
 
         let isadmin =
-          community.admins[0]._id?.toString === user._id?.toString();
-        const admindp = process.env.URL + community.admins[0].profilepic;
+          community?.admins[0]._id?.toString === user._id?.toString();
+        const admindp = process.env.URL + community?.admins[0].profilepic;
 
         for (let j = 0; j < community?.members?.length; j++) {
           const a = process.env.URL + community.members[j].profilepic;
