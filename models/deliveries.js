@@ -57,6 +57,7 @@ const Deliveries = new mongoose.Schema({
       price: { type: Number, default: 0 },
     },
   ],
+  verifypic: [{ type: String }],
 });
 
 Deliveries.index({ title: "text" });
