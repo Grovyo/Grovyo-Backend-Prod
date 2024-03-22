@@ -49,6 +49,7 @@ exports.searchnow = async (req, res) => {
 
 //search communities
 exports.searchcoms = async (req, res) => {
+  const { id } = req.params;
   const { query } = req.query;
   try {
     if (!query) {
@@ -58,6 +59,8 @@ exports.searchcoms = async (req, res) => {
       const creatordps = [];
       const coms = await Community.find({
         title: { $regex: `.*${query}.*`, $options: "i" },
+        type: "public",
+        blocked: { $nin: id },
       })
         .populate("creator", "fullname username profilepic isverified")
         .select("title createdAt dp memberscount")

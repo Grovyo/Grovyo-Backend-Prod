@@ -15,7 +15,7 @@ const upload = multer({ storage: storage });
 router.post("/searchnow", searchnow);
 
 //search communities
-router.post("/searchcoms", searchcoms);
+router.post("/searchcoms/:id", searchcoms);
 
 //search communities
 router.post("/searchpros", searchpros);
