@@ -405,18 +405,16 @@ exports.returnuser = async (req, res) => {
 exports.interests = async (req, res) => {
   try {
     const userId = req.params.userId;
-    const interest = req.body.data;
-    const interestsArray = [interest];
-    const interestsString = interestsArray[0];
-    const individualInterests = interestsString.split(",");
+    const interest = req.body;
 
     await User.findByIdAndUpdate({ _id: userId }, { $unset: { interest: [] } });
     await User.findByIdAndUpdate(
       { _id: userId },
-      { $addToSet: { interest: individualInterests } }
+      { $addToSet: { interest: interest } }
     );
     res.status(200).json({ success: true });
   } catch (err) {
+    console.log(err);
     return res.status(400).json({
       error: errorHandler(err),
     });
