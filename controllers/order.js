@@ -919,19 +919,10 @@ exports.createrzporder = async (req, res) => {
       "storeAddress"
     );
     let oi = Math.floor(Math.random() * 9000000) + 1000000;
-
+    let sellers = [];
     let maindata = [];
     let qty = [];
-    for (let i = 0; i < user?.cart?.length; i++) {
-      qty.push(user.cart[i].quantity);
-      maindata.push({
-        product: productId[i],
-        seller: sellers[i],
-        qty: user.cart[i].quantity,
-      });
-    }
 
-    let sellers = [];
     for (let i = 0; i < productId.length; i++) {
       const product = await Product.findById(productId[i]).populate(
         "creator",
@@ -940,6 +931,15 @@ exports.createrzporder = async (req, res) => {
 
       prices.push(product?.discountedprice);
       sellers.push(product?.creator?._id);
+    }
+
+    for (let i = 0; i < user?.cart?.length; i++) {
+      qty.push(user.cart[i].quantity);
+      maindata.push({
+        product: productId[i],
+        seller: sellers[i],
+        qty: user.cart[i].quantity,
+      });
     }
 
     if (!user && !product) {
