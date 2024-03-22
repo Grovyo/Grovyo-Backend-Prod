@@ -60,6 +60,8 @@ exports.searchcoms = async (req, res) => {
         title: { $regex: `.*${query}.*`, $options: "i" },
       })
         .populate("creator", "fullname username profilepic isverified")
+        .select("title createdAt")
+        .lean()
         .exec();
       for (let i = 0; i < coms.length; i++) {
         const a = process.env.URL + coms[i].dp;
@@ -89,7 +91,11 @@ exports.searchpros = async (req, res) => {
       const dps = [];
       const pros = await User.find({
         fullname: { $regex: `.*${query}.*`, $options: "i" },
-      }).exec();
+      })
+        .select("fullname profilepic username isverified createdAt")
+        .lean()
+        .exec();
+
       for (let i = 0; i < pros.length; i++) {
         const a = process.env.URL + pros[i].profilepic;
 

@@ -87,7 +87,7 @@ router.post(
   upload.single("image"),
   filldetailsphone
 );
-router.post("/interest/:userId", interests);
+router.post("/upinterest/:userId", interests);
 router.post("/adminlogin007", adminlogin);
 router.post("/test", upload.any(), test);
 router.get("/getdetails/:id", getdetails);

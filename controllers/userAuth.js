@@ -406,18 +406,16 @@ exports.interests = async (req, res) => {
   try {
     const userId = req.params.userId;
     const interest = req.body.data;
+    const interestsArray = [interest];
+    const interestsString = interestsArray[0];
+    const individualInterests = interestsString.split(",");
+
+    await User.findByIdAndUpdate({ _id: userId }, { $unset: { interest: [] } });
     await User.findByIdAndUpdate(
       { _id: userId },
-      { $addToSet: { interest: interest } },
-      { new: true }
-    )
-      .then((updatedUser) => {
-        res.json(updatedUser);
-      })
-      .catch((error) => {
-        console.error(error);
-        res.status(500).json({ error: "Failed to update user interests" });
-      });
+      { $addToSet: { interest: individualInterests } }
+    );
+    res.status(200).json({ success: true });
   } catch (err) {
     return res.status(400).json({
       error: errorHandler(err),
