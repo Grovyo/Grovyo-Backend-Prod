@@ -60,7 +60,8 @@ exports.searchcoms = async (req, res) => {
         title: { $regex: `.*${query}.*`, $options: "i" },
       })
         .populate("creator", "fullname username profilepic isverified")
-        .select("title createdAt")
+        .select("title createdAt dp memberscount")
+        .limit(100)
         .lean()
         .exec();
       for (let i = 0; i < coms.length; i++) {
@@ -94,6 +95,7 @@ exports.searchpros = async (req, res) => {
       })
         .select("fullname profilepic username isverified createdAt")
         .lean()
+        .limit(100)
         .exec();
 
       for (let i = 0; i < pros.length; i++) {
