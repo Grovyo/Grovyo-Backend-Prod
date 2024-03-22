@@ -922,6 +922,7 @@ exports.createrzporder = async (req, res) => {
     let sellers = [];
     let maindata = [];
     let qty = [];
+    let prices = [];
 
     for (let i = 0; i < productId.length; i++) {
       const product = await Product.findById(productId[i]).populate(
