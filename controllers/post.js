@@ -11,7 +11,11 @@ const ffmpeg = require("fluent-ffmpeg");
 const Ads = require("../models/Ads");
 const Tag = require("../models/Tags");
 const Interest = require("../models/Interest");
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 const fs = require("fs");
 require("dotenv").config();
@@ -1071,7 +1075,7 @@ exports.dislikepost = async (req, res) => {
 exports.deletepost = async (req, res) => {
   const { userId, postId } = req.params;
   try {
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId).populate("community", "category");
     if (!post) {
       res.status(404).json({ message: "Post not found" });
     } else if (post.sender.toString() !== userId) {
@@ -1081,7 +1085,44 @@ exports.deletepost = async (req, res) => {
         { _id: post.community },
         { $inc: { totalposts: -1 }, $pull: { posts: post?._id } }
       );
+      const int = await Interest.findOne({ title: post.community.category });
+
+      for (let i = 0; i < post.tags?.length; i++) {
+        const t = await Tag.findOne({ title: post.tags[i].toLowerCase() });
+
+        if (t) {
+          await Tag.updateOne(
+            { _id: t._id },
+            { $inc: { count: -1 }, $pull: { post: post._id } }
+          );
+          if (int) {
+            await Interest.updateOne(
+              { _id: int._id },
+              { $inc: { count: -1 }, $pull: { post: post._id, tags: t._id } }
+            );
+          }
+        }
+      }
+      const topic = await Topic.findOne({
+        community: post.community,
+        nature: "post",
+        title: "Posts",
+      });
+      await Topic.updateOne(
+        { _id: topic._id },
+        { $pull: { posts: post._id }, $inc: { postcount: -1 } }
+      );
+      for (let j = 0; j < post.post.length; j++) {
+        const result = await s3.send(
+          new DeleteObjectCommand({
+            Bucket: POST_BUCKET,
+            Key: post.post[j].content,
+          })
+        );
+      }
+
       await Post.findByIdAndDelete(postId);
+
       res.status(200).json({ success: true });
     }
   } catch (e) {

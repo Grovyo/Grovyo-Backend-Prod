@@ -10,7 +10,11 @@ const Message = require("../models/message");
 const Ads = require("../models/Ads");
 const Conversation = require("../models/conversation");
 const Report = require("../models/reports");
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} = require("@aws-sdk/client-s3");
 const Analytics = require("../models/Analytics");
 const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 const fs = require("fs");
@@ -18,6 +22,7 @@ require("dotenv").config();
 const Subscriptions = require("../models/Subscriptions");
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
+const POST_BUCKET = process.env.POST_BUCKET;
 
 const s3 = new S3Client({
   region: process.env.BUCKET_REGION,
@@ -1213,6 +1218,7 @@ exports.create = async (req, res) => {
           $push: {
             topicsjoined: [topic1._id, topic2._id],
             communityjoined: savedcom._id,
+            communitycreated: savedcom._id,
           },
           $inc: { totaltopics: 3, totalcom: 1 },
         }
@@ -1316,6 +1322,7 @@ exports.create = async (req, res) => {
           $push: {
             topicsjoined: [topic1._id, topic2._id],
             communityjoined: savedcom._id,
+            communitycreated: savedcom._id,
           },
           $inc: { totaltopics: 2, totalcom: 1 },
         }
@@ -1520,14 +1527,48 @@ exports.removecomwithposts = async (req, res) => {
     const user = await User.findById(id);
     if (user) {
       const community = await Community.findById(comId);
+      new DeleteObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: community.dp,
+      });
       if (community) {
         for (let i = 0; i < community.posts.length; i++) {
           const post = await Post.findById(community.posts[i]);
           if (post) {
+            for (let j = 0; j < post.post.length; j++) {
+              const result = await s3.send(
+                new DeleteObjectCommand({
+                  Bucket: POST_BUCKET,
+                  Key: post.post[j].content,
+                })
+              );
+            }
             post.remove();
           }
         }
-        //)
+        //remove all topics of community
+        const topics = await Topic.find({ community: community._id });
+        if (topics?.length > 0) {
+          for (let i = 0; i < topics.length; i++) {
+            await User.findByIdAndUpdate(
+              { _id: user._id },
+              { $pull: { topicsjoined: topics[i]._id } }
+            );
+            topics[i].remove();
+          }
+        }
+
+        await User.findByIdAndUpdate(
+          { _id: user._id },
+          {
+            $pull: {
+              communityjoined: community?._id,
+              communitycreated: community?._id,
+            },
+            $inc: { totaltopics: -topics?.length, totalcom: 1 },
+          }
+        );
+
         community.remove();
       }
       res.status(200).json({ success: true });
