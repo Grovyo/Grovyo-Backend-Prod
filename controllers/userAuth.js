@@ -535,11 +535,6 @@ exports.createnewaccount = async (req, res) => {
         })
       );
 
-      let mem = {
-        membership: "65671e5204b7d0d07ef0e796",
-        status: true,
-      };
-
       const user = new User({
         fullname: fullname,
         username: username,
@@ -549,7 +544,7 @@ exports.createnewaccount = async (req, res) => {
         interest: individualInterests,
         gender: gender,
         DOB: dob,
-        memberships: mem,
+
         gr: 0,
       });
       await user.save();
@@ -635,6 +630,13 @@ exports.createnewaccount = async (req, res) => {
           $set: { notificationtoken: token },
         }
       );
+      //updating membership
+      user.ismembershipactive = true;
+      user.memberships.membership = "65671e5204b7d0d07ef0e796";
+      user.memberships.ending = "infinite";
+      user.memberships.status = true;
+      await user.save();
+
       let pic = process.env.URL + user.profilepic;
 
       //joining community by default of Grovyo
@@ -648,6 +650,12 @@ exports.createnewaccount = async (req, res) => {
           publictopic.push(topic);
         }
       }
+      //updating membership
+      user.ismembershipactive = true;
+      user.memberships.membership = "65671e5204b7d0d07ef0e796";
+      user.memberships.ending = "infinite";
+      user.memberships.status = true;
+      await user.save();
 
       await Community.updateOne(
         { _id: comId },
@@ -810,6 +818,7 @@ exports.createnewaccountweb = async (req, res) => {
   }
 };
 
+//email signup
 exports.createnewaccountemail = async (req, res) => {
   const {
     fullname,
@@ -877,6 +886,12 @@ exports.createnewaccountemail = async (req, res) => {
           $set: { notificationtoken: token },
         }
       );
+      //updating membership
+      user.ismembershipactive = true;
+      user.memberships.membership = "65671e5204b7d0d07ef0e796";
+      user.memberships.ending = "infinite";
+      user.memberships.status = true;
+      await user.save();
       let pic = process.env.URL + user.profilepic;
 
       //joining community by default of Grovyo
@@ -951,6 +966,12 @@ exports.createnewaccountemail = async (req, res) => {
           $set: { notificationtoken: token },
         }
       );
+      //updating membership
+      user.ismembershipactive = true;
+      user.memberships.membership = "65671e5204b7d0d07ef0e796";
+      user.memberships.ending = "infinite";
+      user.memberships.status = true;
+      await user.save();
       let pic = process.env.URL + user.profilepic;
 
       //joining community by default of Grovyo
