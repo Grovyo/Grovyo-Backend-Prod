@@ -974,7 +974,7 @@ exports.inclike = async (req, res) => {
         }
       }
     }
-
+    await Post.updateOne({ _id: postId }, { $inc: { views: count * 4 } });
     res.status(200).json({ success: true });
   } catch (e) {
     console.log(e);
