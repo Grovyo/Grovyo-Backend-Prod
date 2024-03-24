@@ -1971,36 +1971,40 @@ exports.postanythings3 = async (req, res) => {
         const user = await User.findById(u);
 
         if (user.notificationtoken && user._id.toString() !== userId) {
-          tokens.push(user.notificationtoken);
+          if (user.notificationtoken) {
+            tokens.push(user.notificationtoken);
+          }
         }
       }
 
-      const timestamp = `${new Date()}`;
-      const msg = {
-        notification: {
-          title: `${community.title} - Posted!`,
-          body: `${post.title}`,
-        },
-        data: {
-          screen: "CommunityChat",
-          sender_fullname: `${user?.fullname}`,
-          sender_id: `${user?._id}`,
-          text: `${post.title}`,
-          comId: `${community?._id}`,
-          createdAt: `${timestamp}`,
-        },
-        tokens: tokens,
-      };
+      if (tokens?.length > 0) {
+        const timestamp = `${new Date()}`;
+        const msg = {
+          notification: {
+            title: `${community.title} - Posted!`,
+            body: `${post.title}`,
+          },
+          data: {
+            screen: "CommunityChat",
+            sender_fullname: `${user?.fullname}`,
+            sender_id: `${user?._id}`,
+            text: `${post.title}`,
+            comId: `${community?._id}`,
+            createdAt: `${timestamp}`,
+          },
+          tokens: tokens,
+        };
 
-      await admin
-        .messaging()
-        .sendMulticast(msg)
-        .then((response) => {
-          console.log("Successfully sent message");
-        })
-        .catch((error) => {
-          console.log("Error sending message:", error);
-        });
+        await admin
+          .messaging()
+          .sendMulticast(msg)
+          .then((response) => {
+            console.log("Successfully sent message");
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+      }
       res.status(200).json({ savedpost, success: true });
     } else {
       res.status(404).json({
