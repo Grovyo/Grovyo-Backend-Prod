@@ -28,6 +28,7 @@ const {
   randomcomments,
   incview,
   incshr,
+  incoms,
 } = require("../controllers/admin");
 const router = express.Router();
 
@@ -63,5 +64,6 @@ router.post("/inclike", inclike);
 router.post("/rdc", randomcomments);
 router.post("/incv", incview);
 router.post("/incs", incshr);
+router.post("/incoms", incoms);
 
 module.exports = router;

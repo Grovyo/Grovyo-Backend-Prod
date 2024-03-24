@@ -2210,10 +2210,10 @@ exports.newfetchfeeds3 = async (req, res) => {
     //merging ads
     if (firstad) {
       post.unshift(firstad.postid);
-      for (let i = 0; i < feedad.length; i++) {
-        const randomIndex = getRandomIndex();
-        post.splice(randomIndex, 0, feedad[i]);
-      }
+    }
+    for (let i = 0; i < feedad.length; i++) {
+      const randomIndex = getRandomIndex();
+      post.splice(randomIndex, 0, feedad[i]);
     }
     for (let i = 0; i < post.length; i++) {
       if (

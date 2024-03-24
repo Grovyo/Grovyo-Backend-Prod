@@ -2,12 +2,13 @@ const User = require("../models/userAuth");
 const Order = require("../models/orders");
 const Post = require("../models/post");
 const Product = require("../models/product");
-const Community = require("../models/community");
+const Comment = require("../models/comment");
 const Report = require("../models/reports");
 const Job = require("../models/jobs");
 const Revenue = require("../models/revenue");
 const Advertiser = require("../models/Advertiser");
 const DelUser = require("../models/deluser");
+const Community = require("../models/community");
 const Interest = require("../models/Interest");
 const Topic = require("../models/topic");
 const Approvals = require("../models/Approvals");
@@ -772,43 +773,16 @@ exports.creataccs = async (req, res) => {
 exports.changegender = async (req, res) => {
   try {
     const user = await User.find();
-    const pro = await Product.find();
-    for (let i = 0; i < pro.length; i++) {
-      const address = {
-        street: faker.address.streetAddress({ useFullAddress: false }),
-        city: faker.address.city(),
-        state: faker.address.state(),
-        pincode: faker.address.zipCode(),
-        country: "India",
-        coordinates: {
-          latitude: faker.address.latitude(),
-          longitude: faker.address.longitude(),
-        },
-      };
-
-      await User.updateOne(
-        { _id: pro[i].creator },
-        { $set: { storeAddress: address } }
-      );
-    }
 
     for (let i = 0; i < user.length; i++) {
-      const address = {
-        street: faker.address.streetAddress({ useFullAddress: false }),
-        city: faker.address.city(),
-        state: faker.address.state(),
-        pincode: faker.address.zipCode(),
-        country: "India",
-        coordinates: {
-          latitude: faker.address.latitude(),
-          longitude: faker.address.longitude(),
-        },
-      };
-
-      await User.updateOne(
-        { _id: user[i]._id },
-        { $set: { address: address } }
-      );
+      const regexPattern = /\b(?:C|fem|A|B|f|l)\b/;
+      if (regexPattern.test(user[i].profilepic)) {
+        await User.updateOne(
+          { _id: user[i]._id },
+          { $set: { profilepic: "defaultuser.png" } }
+        );
+        console.log("true", user[i].gr);
+      }
     }
 
     res.status(200).json({ success: true });
@@ -926,7 +900,7 @@ exports.inclike = async (req, res) => {
 
     for (let i = 0; i < parseInt(count); i++) {
       if (!post) {
-        res.status(400).json({ message: "No post found" });
+        console.log("no post");
       } else if (post.likedby.includes(users[i]._id)) {
         try {
           await Post.updateOne(
@@ -937,9 +911,8 @@ exports.inclike = async (req, res) => {
             { _id: users[i]._id },
             { $pull: { likedposts: post._id } }
           );
-          res.status(200).json({ success: true });
         } catch (e) {
-          res.status(400).json({ message: e.message });
+          console.log(e);
         }
       } else {
         try {
@@ -968,9 +941,8 @@ exports.inclike = async (req, res) => {
             null;
             console.log("no noti");
           }
-          res.status(200).json({ success: true });
         } catch (e) {
-          res.status(400).json({ message: e.message });
+          console.log(e);
         }
       }
     }
@@ -1021,6 +993,45 @@ exports.incshr = async (req, res) => {
   try {
     const { count, postId } = req.body;
     await Post.updateOne({ _id: postId }, { $inc: { sharescount: count } });
+    res.status(200).json({ success: true });
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+exports.incoms = async (req, res) => {
+  try {
+    const { count, postId } = req.body;
+    const post = await Post.findById(postId);
+    const com = await Community.findById(post.community).populate(
+      "members",
+      "gr"
+    );
+
+    for (let i = 150; i < Math.min(count, com.members.length); i++) {
+      const mem = com.members[i];
+      const user = await User.findById(mem);
+
+      if (user && user.gr === 1) {
+        const newComment = new Comment({
+          senderId: mem,
+          postId: postId,
+          text: "Interested",
+        });
+
+        try {
+          await newComment.save();
+
+          await Post.updateOne(
+            { _id: postId },
+            { $push: { comments: newComment._id }, $inc: { totalcomments: 1 } }
+          );
+        } catch (error) {
+          console.error("Error saving comment:", error);
+        }
+      }
+    }
     res.status(200).json({ success: true });
   } catch (e) {
     console.log(e);
