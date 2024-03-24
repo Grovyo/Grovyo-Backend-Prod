@@ -1108,10 +1108,13 @@ exports.deletepost = async (req, res) => {
         nature: "post",
         title: "Posts",
       });
-      await Topic.updateOne(
-        { _id: topic._id },
-        { $pull: { posts: post._id }, $inc: { postcount: -1 } }
-      );
+      console.log(topic, "topic");
+      if (topic) {
+        await Topic.updateOne(
+          { _id: topic._id },
+          { $pull: { posts: post._id }, $inc: { postcount: -1 } }
+        );
+      }
       for (let j = 0; j < post.post.length; j++) {
         const result = await s3.send(
           new DeleteObjectCommand({
