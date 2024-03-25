@@ -2007,11 +2007,19 @@ exports.fetchmembers = async (req, res) => {
       let final = [];
       //getting details of all those users
       for (let newids of users) {
-        if (!com.members.includes(newids)) {
-          let u = await User.findById(newids);
-          let dp = process.env.URL + u.profilepic;
-          let d = { id: u._id, fullname: u.fullname, username: u.username, dp };
-          final.push(d);
+        console.log(newids);
+        if (newids && newids !== null && newids !== undefined) {
+          if (!com.members.includes(newids)) {
+            let u = await User.findById(newids);
+            let dp = process.env.URL + u.profilepic;
+            let d = {
+              id: u._id,
+              fullname: u.fullname,
+              username: u.username,
+              dp,
+            };
+            final.push(d);
+          }
         }
       }
 
