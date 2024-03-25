@@ -2049,10 +2049,11 @@ exports.forcejoincom = async (req, res) => {
       await Community.updateOne(
         { _id: comId },
         {
-          $push: { members: user._id, notifications: notif },
+          $push: { members: user._id, notifications: notif, admins: user._id },
           $inc: { memberscount: 1 },
         }
       );
+
       await User.updateOne(
         { _id: user._id },
         { $push: { communityjoined: com._id }, $inc: { totalcom: 1 } }
