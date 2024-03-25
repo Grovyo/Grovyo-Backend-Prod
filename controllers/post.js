@@ -2168,7 +2168,7 @@ exports.newfetchfeeds3 = async (req, res) => {
       .populate({
         path: "postid",
         select:
-          "desc post title kind likes comments members community cta ctalink sender totalcomments adtype date createdAt",
+          "desc post title kind likes likedby comments members community cta ctalink sender totalcomments adtype date createdAt",
         populate: [
           {
             path: "community",
@@ -2186,7 +2186,7 @@ exports.newfetchfeeds3 = async (req, res) => {
     }).populate({
       path: "postid",
       select:
-        "desc post title kind likes comments community cta ctalink sender totalcomments adtype date createdAt",
+        "desc post title kind likes comments community cta ctalink likedby sender totalcomments adtype date createdAt",
       populate: [
         {
           path: "community",
@@ -2211,10 +2211,16 @@ exports.newfetchfeeds3 = async (req, res) => {
     if (firstad) {
       post.unshift(firstad.postid);
     }
-    for (let i = 0; i < feedad.length; i++) {
-      const randomIndex = getRandomIndex();
-      post.splice(randomIndex, 0, feedad[i]);
-    }
+
+    if (
+      feedad?.length > 0 &&
+      (!feedad.includes(null) || !feedad.includes("null"))
+    )
+      for (let i = 0; i < feedad.length; i++) {
+        const randomIndex = getRandomIndex();
+        post.splice(randomIndex, 0, feedad[i]);
+      }
+
     for (let i = 0; i < post.length; i++) {
       if (
         post[i].likedby?.some((id) => id.toString() === user._id.toString())
