@@ -2010,7 +2010,6 @@ exports.fetchmembers = async (req, res) => {
         let u = await User.findById(newids);
         if (u) {
           if (!com.members.includes(newids)) {
-            console.log(u);
             let dp = process.env.URL + u.profilepic;
             let d = {
               id: u._id,

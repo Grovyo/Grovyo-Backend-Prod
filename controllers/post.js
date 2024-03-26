@@ -2215,11 +2215,12 @@ exports.newfetchfeeds3 = async (req, res) => {
     if (
       feedad?.length > 0 &&
       (!feedad.includes(null) || !feedad.includes("null"))
-    )
+    ) {
       for (let i = 0; i < feedad.length; i++) {
         const randomIndex = getRandomIndex();
         post.splice(randomIndex, 0, feedad[i]);
       }
+    }
 
     for (let i = 0; i < post.length; i++) {
       if (

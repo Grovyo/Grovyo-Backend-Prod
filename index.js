@@ -79,7 +79,7 @@ app.use("/api", Deliveryroutes);
 const connectDB = async () => {
   try {
     mongoose.set("strictQuery", false);
-    mongoose.connect(process.env.PRODDB).then(() => {
+    mongoose.connect(process.env.DATABASE).then(() => {
       console.log("DB is connected");
     });
     // mongoose.connect('mongodb+srv://fsayush100:shreyansh7@cluster0.mrnejwh.mongodb.net/your-database-name?retryWrites=true&w=majority').then(() => {
