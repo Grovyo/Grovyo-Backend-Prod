@@ -2035,20 +2035,16 @@ exports.newfetchfeeds3 = async (req, res) => {
     const addp = [];
 
     //checking and removing posts with no communities
-    const p = await Post.find();
+    // const p = await Post.find();
 
-    for (let i = 0; i < p.length; i++) {
-      const com = await Community.findById(p[i].community);
-      if (!com) {
-        p[i].remove();
-      }
-    }
+    // for (let i = 0; i < p.length; i++) {
+    //   const com = await Community.findById(p[i].community);
+    //   if (!com) {
+    //     p[i].remove();
+    //   }
+    // }
+
     //fetching post
-
-    // const post = await Post.find()
-    //   .populate("community", "title members")
-    //   .populate("members", "profilepic fullname");
-
     const post = await Post.aggregate([
       {
         $lookup: {
