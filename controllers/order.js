@@ -25,7 +25,7 @@ const { Queue, Worker } = require("bullmq");
 
 const myQueue = new Queue("delivery-pending", {
   connection: {
-    host: "192.168.29.221",
+    host: "redi.grovyo.xyz",
     port: 6379,
   },
 });
