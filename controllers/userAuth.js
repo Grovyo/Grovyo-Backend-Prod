@@ -2581,7 +2581,7 @@ exports.magiccode = async (req, res) => {
     const check = await User.findOne({ email: email });
 
     if (check) {
-      const usercode = decryptaes(check.secretcode.toString());
+      const usercode = decryptaes(check?.secretcode?.toString());
 
       if (code === usercode) {
         res.status(200).json({ success: true });
