@@ -2176,12 +2176,12 @@ exports.createnewproductorder = async (req, res) => {
             console.log("Error sending message:", error);
           });
       }
-      const r = await myQueue.add(
-        "delivery-pending",
-        { order },
-        { removeOnComplete: true, removeOnFail: true }
-      );
-      console.log(r.id, "Added to delivery queue");
+      // const r = await myQueue.add(
+      //   "delivery-pending",
+      //   { order },
+      //   { removeOnComplete: true, removeOnFail: true }
+      // );
+      //  console.log(r.id, "Added to delivery queue");
 
       //creating and assigning deliveries
       // credeli({ id, pickupid, oid, total });

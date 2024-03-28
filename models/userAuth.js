@@ -113,7 +113,7 @@ const userSchema = new mongoose.Schema(
     paymenthistory: [{ type: ObjectId, ref: "Payment" }],
     moneyearned: { type: Number, default: 0 },
     earningtype: [{ how: { type: String }, when: { type: Number } }],
-    secretcode: { type: String },
+
     revenue: { type: Number, default: 0 },
     cart: [{ type: ObjectId, ref: "Cart" }],
     cartproducts: [{ type: "String" }],
