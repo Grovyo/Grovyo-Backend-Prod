@@ -52,6 +52,11 @@ const productSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  isverified: {
+    type: String,
+    enum: ["in review", "verified", "rejected"],
+    default: "in review",
+  },
   reviews: [{ type: ObjectId, ref: "Review" }],
   producthighlightskey: { type: [String] },
   producthighlightsvalue: { type: [String] },
@@ -72,7 +77,7 @@ const productSchema = new mongoose.Schema({
   // changed
   itemsold: { type: Number, default: 0 },
   collectionss: { type: ObjectId, ref: "Collectionss" },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model("Product", productSchema);

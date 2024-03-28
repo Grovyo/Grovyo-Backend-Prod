@@ -557,6 +557,13 @@ exports.createnewaccount = async (req, res) => {
         }
       );
 
+      //updating membership
+      user.ismembershipactive = true;
+      user.memberships.membership = "65671e5204b7d0d07ef0e796";
+      user.memberships.ending = "infinite";
+      user.memberships.status = true;
+      await user.save();
+
       //joining community by default of Grovyo
       let comId = "65d313d46a4e4ae4c6eabd15";
       let publictopic = [];

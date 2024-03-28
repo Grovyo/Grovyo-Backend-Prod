@@ -3336,7 +3336,7 @@ const createpdfs = async ({
             //res.status(400).json({ success: false });
           } else {
             // Delete local file after uploading
-            fs.unlinkSync(pdfFileName);
+            //fs.unlinkSync(pdfFileName);
             //res.status(200).json({ success: true });
           }
         }

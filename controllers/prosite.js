@@ -103,10 +103,10 @@ exports.fetchallglimpse = async (req, res) => {
 //fetch products
 exports.fetchproducts = async (req, res) => {
   const { userId, mainuserId } = req.params;
-  const product = await Product.find({ creator: userId }).populate(
-    "creator",
-    "fullname isverified"
-  );
+  const product = await Product.find({
+    creator: userId,
+    isverified: "verified",
+  }).populate("creator", "fullname isverified");
 
   const user = await User.findById(mainuserId).populate("cart", "product");
   try {
