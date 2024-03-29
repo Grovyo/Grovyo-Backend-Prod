@@ -3,6 +3,8 @@ const Order = require("../models/orders");
 const Post = require("../models/post");
 const Product = require("../models/product");
 const Comment = require("../models/comment");
+const Conversation = require("../models/conversation");
+const Msgs = require("../models/message");
 const Report = require("../models/reports");
 const Job = require("../models/jobs");
 const Revenue = require("../models/revenue");
@@ -501,14 +503,32 @@ exports.markreports = async (req, res) => {
 exports.getdp = async (req, res) => {
   const { userId } = req.params;
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId)
+      .select("profilepic conversations")
+      .lean();
     if (user) {
       const dp = process.env.URL + user.profilepic.toString();
+
       let isbanned = false;
       if (user.status === "Block") {
         isbanned = true;
       }
-      res.status(200).json({ success: true, dp, isbanned });
+
+      //unread msgs
+      let unread = 0;
+      const convs = user.conversations;
+      for (let i = 0; i < convs.length; i++) {
+        const conv = await Conversation.findById(convs[i]);
+        if (conv) {
+          const msgCount = await Msgs.countDocuments({
+            conversationId: conv._id,
+            status: "active",
+            readby: { $nin: [userId] },
+          }).lean();
+          unread += msgCount; // Increment unread count with the number of unread messages
+        }
+      }
+      res.status(200).json({ success: true, dp, isbanned, unread });
     } else {
       res.status(404).json({ message: "User not found", success: false });
     }
@@ -772,17 +792,24 @@ exports.creataccs = async (req, res) => {
 
 exports.changegender = async (req, res) => {
   try {
-    const user = await User.find();
+    const pro = await Product.find();
 
-    for (let i = 0; i < user.length; i++) {
-      const regexPattern = /\b(?:C|fem|A|B|f|l)\b/;
-      if (regexPattern.test(user[i].profilepic)) {
-        await User.updateOne(
-          { _id: user[i]._id },
-          { $set: { profilepic: "defaultuser.png" } }
-        );
-        console.log("true", user[i].gr);
-      }
+    // for (let i = 0; i < user.length; i++) {
+    //   const regexPattern = /\b(?:C|fem|A|B|f|l)\b/;
+    //   if (regexPattern.test(user[i].profilepic)) {
+    //     await User.updateOne(
+    //       { _id: user[i]._id },
+    //       { $set: { profilepic: "defaultuser.png" } }
+    //     );
+    //     console.log("true", user[i].gr);
+    //   }
+    // }
+
+    for (let i = 0; i < pro.length; i++) {
+      await Product.updateOne(
+        { _id: pro[i]._id },
+        { $set: { isverified: "verified" } }
+      );
     }
 
     res.status(200).json({ success: true });
