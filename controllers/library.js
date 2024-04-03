@@ -194,6 +194,7 @@ exports.fetchcart = async (req, res) => {
       const imgs = image;
 
       const merge = cart?.map((c, i) => ({ c, image: imgs[i] }));
+
       res.status(200).json({
         totalqty: totalqty,
         total: total,

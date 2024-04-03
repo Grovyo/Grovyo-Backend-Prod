@@ -1978,6 +1978,7 @@ exports.postanythings3 = async (req, res) => {
       }
 
       if (tokens?.length > 0) {
+        let link = process.env.POST_URL + post.post[0].content;
         const timestamp = `${new Date()}`;
         const msg = {
           notification: {
@@ -1991,6 +1992,8 @@ exports.postanythings3 = async (req, res) => {
             text: `${post.title}`,
             comId: `${community?._id}`,
             createdAt: `${timestamp}`,
+            type: "post",
+            link,
           },
           tokens: tokens,
         };

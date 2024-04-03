@@ -1380,7 +1380,7 @@ exports.fetchblocklist = async (req, res) => {
 };
 
 //find suggestions on the basis of contacts
-exports.contactsuggestions = async (req, res) => {
+exports.contactsuggestionss = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id);
@@ -1470,6 +1470,99 @@ exports.contactsuggestions = async (req, res) => {
     return res.status(500).json({ message: e.message, success: false });
   }
 };
+
+exports.contactsuggestions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "User not found", success: false });
+    }
+
+    let contactNumbers = [];
+
+    for (let i = 0; i < user?.contacts[0]?.length; i++) {
+      for (let j = 0; j < 4; j++) {
+        const phoneNumber = user?.contacts[0][i]?.phoneNumbers[j]?.number;
+
+        if (phoneNumber !== undefined) {
+          contactNumbers.push(phoneNumber);
+        }
+      }
+    }
+
+    const cleanedContactNumbers = contactNumbers.map((phone) =>
+      phone.replace(/[^0-9]/g, "")
+    );
+    //const contacts = await User.find({ phone: { $in: cleanedContactNumbers } });
+    const contacts = await User.find();
+    let data = [];
+
+    if (contacts?.length > 0) {
+      for (let i = 0; i < contacts?.length; i++) {
+        const isBlocked =
+          contacts[i].blockedpeople.find((f) => f.id.toString() === id) ||
+          user.blockedpeople.find(
+            (f) => f.id.toString() === contacts[i]._id.toString()
+          );
+
+        if (!isBlocked) {
+          let reqExists = false;
+
+          const checkMessageRequests = (reqList) => {
+            reqList.forEach((req) => {
+              if (req.id.toString() === contacts[i]._id.toString()) {
+                reqExists = true;
+              }
+            });
+          };
+
+          checkMessageRequests(user.messagerequests);
+          checkMessageRequests(user.msgrequestsent);
+          checkMessageRequests(contacts[i].msgrequestsent);
+          checkMessageRequests(contacts[i].messagerequests);
+
+          if (!reqExists) {
+            let profilePic = await generatePresignedUrl(
+              "images",
+              contacts[i].profilepic.toString(),
+              60 * 60
+            );
+
+            let suggestionData = {
+              id: contacts[i]._id,
+              name: contacts[i].fullname,
+              uname: contacts[i].username,
+              pic: profilePic,
+              isverified: contacts[i].isverified,
+            };
+
+            let chatExists = false;
+
+            if (user?.conversations?.length > 0) {
+              chatExists = user.conversations.some((convId) =>
+                contacts[i].conversations.includes(convId)
+              );
+            }
+
+            if (!chatExists) {
+              data.push(suggestionData);
+            }
+          }
+        }
+      }
+    }
+
+    return res.status(200).json({ data, success: true });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: e.message, success: false });
+  }
+};
+
 //check for latest conversations and fetch them in chats
 exports.checkconversations = async (req, res) => {
   try {
@@ -2132,6 +2225,10 @@ exports.fetchconvs = async (req, res) => {
         const url = process.env.MSG_URL + msg[i]?.content?.uri;
 
         messages.push({ ...msg[i].toObject(), url });
+      } else if (msg[i].typ === "gif") {
+        const url = msg[i]?.content?.uri;
+
+        messages.push({ ...msg[i].toObject(), url });
       } else {
         messages.push(msg[i].toObject());
       }
@@ -2243,25 +2340,29 @@ exports.sendchatfile = async (req, res) => {
     const data = JSON.parse(req.body.data);
 
     let pos = {};
-    const uuidString = uuid();
-    const bucketName = "messages";
-    const objectName = `${Date.now()}_${uuidString}_${
-      req.files[0].originalname
-    }`;
+    if (data?.typ !== "gif") {
+      const uuidString = uuid();
+      const bucketName = "messages";
+      const objectName = `${Date.now()}_${uuidString}_${
+        req.files[0].originalname
+      }`;
 
-    const result = await s3.send(
-      new PutObjectCommand({
-        Bucket: Msgbucket,
-        Key: objectName,
-        Body: req.files[0].buffer,
-        ContentType: req.files[0].mimetype,
-      })
-    );
-    pos.uri = objectName;
-    pos.type = req.files[0].mimetype;
-    pos.name = data?.content?.name;
-    pos.size = req.files[0].size;
-
+      const result = await s3.send(
+        new PutObjectCommand({
+          Bucket: Msgbucket,
+          Key: objectName,
+          Body: req.files[0].buffer,
+          ContentType: req.files[0].mimetype,
+        })
+      );
+      pos.uri = objectName;
+      pos.type = req.files[0].mimetype;
+      pos.name = data?.content?.name;
+      pos.size = req.files[0].size;
+    } else {
+      pos.uri = data?.url;
+      pos.type = "image/gif";
+    }
     const message = new Message({
       text: data?.text,
       sender: data?.sender_id,
@@ -2276,8 +2377,13 @@ exports.sendchatfile = async (req, res) => {
       content: pos,
     });
     await message.save();
-    const a = process.env.URL + message?.content?.uri;
-
+    let a;
+    if (data?.typ !== "gif") {
+      a = process.env.URL + message?.content?.uri;
+    } else {
+      a = message?.content?.uri;
+    }
+    console.log(data.url, a);
     res.status(200).json({ success: true, link: a });
   } catch (e) {
     console.log(e);
@@ -2318,6 +2424,10 @@ exports.loadmorechatmsgs = async (req, res) => {
           msg[i].typ === "doc"
         ) {
           const url = process.env.MSG_URL + msg[i]?.content?.uri;
+          messages.push({ ...msg[i].toObject(), url });
+        } else if (msg[i].typ === "gif") {
+          const url = msg[i]?.content?.uri;
+
           messages.push({ ...msg[i].toObject(), url });
         } else {
           messages.push(msg[i].toObject());

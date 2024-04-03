@@ -987,7 +987,19 @@ exports.gettopicmessages = async (req, res) => {
         .sort({ createdAt: -1 })
         .populate("sender", "profilepic fullname isverified");
 
-      const messages = msg.reverse();
+      let messages = [];
+
+      for (let i = 0; i < msg?.length; i++) {
+        if (msg[i].typ === "gif") {
+          const url = msg[i]?.content?.uri;
+
+          messages.push({ ...msg[i].toObject(), url });
+        } else {
+          messages.push(msg[i].toObject());
+        }
+      }
+
+      messages.reverse();
 
       //muted and unmuted topics
       let muted = null;
@@ -1090,7 +1102,7 @@ exports.loadmoremessages = async (req, res) => {
       let gt = parseInt(sequence) - 1;
       let lt = gt - 10;
 
-      const messages = await Message.find({
+      const msg = await Message.find({
         topicId: topicId,
         sequence: { $gte: lt >= 1 ? lt : 1, $lte: gt },
         deletedfor: { $nin: [user._id.toString()] },
@@ -1098,6 +1110,20 @@ exports.loadmoremessages = async (req, res) => {
         .limit(20)
         .sort({ sequence: 1 })
         .populate("sender", "profilepic fullname isverified");
+
+      let messages = [];
+
+      for (let i = 0; i < msg?.length; i++) {
+        if (msg[i].typ === "gif") {
+          const url = msg[i]?.content?.uri;
+
+          messages.push({ ...msg[i].toObject(), url });
+        } else {
+          messages.push(msg[i].toObject());
+        }
+      }
+
+      messages.reverse();
 
       if (!community[0].members.includes(user._id)) {
         res.status(203).json({
