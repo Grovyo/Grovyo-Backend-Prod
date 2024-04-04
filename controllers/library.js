@@ -306,6 +306,7 @@ exports.updateaddress = async (req, res) => {
     provider,
     accuracy,
     bearing,
+    phone,
   } = req.body;
 
   try {
@@ -328,7 +329,14 @@ exports.updateaddress = async (req, res) => {
     if (!user) {
       res.status(404).json({ message: "No user found", success: false });
     } else {
-      await User.updateOne({ _id: userId }, { $set: { address: address } });
+      if (phone) {
+        await User.updateOne(
+          { _id: userId },
+          { $set: { address: address, phone: phone } }
+        );
+      } else {
+        await User.updateOne({ _id: userId }, { $set: { address: address } });
+      }
       res.status(200).json({ success: true });
     }
   } catch (e) {

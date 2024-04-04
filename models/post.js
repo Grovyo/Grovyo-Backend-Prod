@@ -18,6 +18,11 @@ const PostSchema = new mongoose.Schema(
     isverified: { type: Boolean, default: false },
     commpic: { type: ObjectId, ref: "Community" },
     kind: { type: String, default: "post" },
+    reportstatus: {
+      type: String,
+      enum: ["unblock", "block"],
+      default: "unblock",
+    },
     post: [
       {
         content: { type: String },
