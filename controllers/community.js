@@ -1683,6 +1683,7 @@ exports.fetchallposts = async (req, res) => {
         for (let i = 0; i < vidad.length; i++) {
           let a = process.env.AD_URL + vidad[i].postid?.post[0].content;
           let comdp = process.env.URL + vidad[i].postid?.community?.dp;
+
           let final = {
             _id: vidad[i].postid?._id,
             likes: vidad[i].postid?.likes,
@@ -1737,6 +1738,7 @@ exports.fetchallposts = async (req, res) => {
           options: postold[i].options,
           createdAt: postold[i].createdAt,
           topicId: postold[i].topicId,
+          forwardid: postold[i].forwardid,
         };
         post.push(po);
       }
@@ -1829,6 +1831,9 @@ exports.fetchallposts = async (req, res) => {
             const t = process.env.POST_URL + post[i].post[j].thumbnail;
 
             ur.push({ content: a, thumbnail: t, type: post[i].post[j]?.type });
+          } else if (post[i].forwardid) {
+            const a = process.env.PRODUCT_URL + post[i].post[j].content;
+            ur.push({ content: a, type: post[i].post[j]?.type });
           } else {
             const a = process.env.POST_URL + post[i].post[j].content;
             ur.push({ content: a, type: post[i].post[j]?.type });

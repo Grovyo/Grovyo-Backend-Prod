@@ -8,9 +8,14 @@ const Test = require("../models/test");
 const uuid = require("uuid").v4;
 const sharp = require("sharp");
 const Conversation = require("../models/conversation");
+const Interest = require("../models/Interest");
 const Message = require("../models/message");
+const Post = require("../models/post");
+const Product = require("../models/product");
 const aesjs = require("aes-js");
 const Community = require("../models/community");
+const Tag = require("../models/Tags");
+const admin = require("../fireb");
 const Topic = require("../models/topic");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
@@ -2229,6 +2234,18 @@ exports.fetchconvs = async (req, res) => {
         const url = msg[i]?.content?.uri;
 
         messages.push({ ...msg[i].toObject(), url });
+      } else if (msg[i].typ === "post") {
+        const url = process.env.POST_URL + msg[i]?.content?.uri;
+        const post = await Post.findById(msg[i].forwardid);
+        messages.push({
+          ...msg[i].toObject(),
+          url,
+          comId: post.community,
+        });
+      } else if (msg[i].typ === "product") {
+        const url = process.env.PRODUCT_URL + msg[i]?.content?.uri;
+
+        messages.push({ ...msg[i].toObject(), url });
       } else {
         messages.push(msg[i].toObject());
       }
@@ -2911,5 +2928,372 @@ exports.createinvoice = async (req, res) => {
     res
       .status(400)
       .json({ success: false, message: "Something went wrong..." });
+  }
+};
+
+//fetch communites for forwarding
+exports.fcom = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (user) {
+      let comdata = [];
+      for (const comids of user.communitycreated) {
+        const coms = await Community.findById(comids);
+        if (coms) {
+          let data = {
+            dp: process.env.URL + coms.dp,
+            title: coms.title,
+            id: coms._id,
+            isverified: coms.isverified,
+            members: coms.memberscount,
+          };
+          comdata.push(data);
+        }
+      }
+      res.status(200).json({ success: true, comdata });
+    } else {
+      res.status(404).json({ success: false, message: "User not found" });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false, message: "Something went wrong" });
+  }
+};
+
+//fetch conversations for forwarding
+exports.fconv = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (user) {
+      let conv = [];
+      for (let i = 0; i < user.conversations.length; i++) {
+        const convs = await Conversation.findById(
+          user.conversations[i]
+        ).populate(
+          "members",
+          "fullname username profilepic isverified blockedpeople"
+        );
+        //if convs is null then remove it
+        if (!convs) {
+          convs.remove();
+        }
+
+        for (let j = 0; j < convs.members.length; j++) {
+          if (convs.members[j]._id?.toString() !== user._id.toString()) {
+            const pi = process.env.URL + convs?.members[j]?.profilepic;
+
+            //checking the blocking
+            let isblocked = false;
+            let other = await User.findById(convs.members[j]._id?.toString());
+            if (other) {
+              other.blockedpeople.forEach((p) => {
+                if (p?.id?.toString() === id) {
+                  isblocked = true;
+                }
+              });
+            }
+
+            let result = {
+              convid: convs?._id,
+              id: convs?.members[j]?._id,
+              fullname: convs?.members[j]?.fullname,
+              username: convs?.members[j]?.username,
+              isverified: convs?.members[j]?.isverified,
+              pic: pi,
+            };
+
+            conv.push(result);
+          } else {
+            null;
+          }
+        }
+      }
+      res.status(200).json({ success: true, conv });
+    } else {
+      res.status(404).json({ success: false, message: "User not found" });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false, message: "Something went wrong" });
+  }
+};
+
+//forwarding as post or as msg
+exports.forwcc = async (req, res) => {
+  try {
+    const { convs, coms, postid, productid, id } = req.body;
+
+    const user = await User.findById(id);
+    const newpost = await Post.findById(postid);
+    const product = await Product.findById(productid);
+    if (newpost && user) {
+      //post forwarded to a community
+      if (coms.length > 0) {
+        for (let i = 0; i < coms.length; i++) {
+          const community = await Community.findById(coms[i]);
+          if (community) {
+            const topic = await Topic.findOne({
+              community: community._id,
+              nature: "post",
+              title: "Posts",
+            });
+            const post = new Post({
+              title: newpost.title,
+              desc: newpost.desc,
+              community: community._id,
+              sender: user._id,
+              post: newpost.post,
+              tags: newpost.tags,
+              topicId: topic._id,
+              forwardid: newpost._id,
+            });
+            const savedpost = await post.save();
+
+            let tag = newpost.tags;
+            //updating tags and interests
+            const int = await Interest.findOne({ title: community.category });
+
+            for (let i = 0; i < tag?.length; i++) {
+              const t = await Tag.findOne({ title: tag[i].toLowerCase() });
+
+              if (t) {
+                await Tag.updateOne(
+                  { _id: t._id },
+                  { $inc: { count: 1 }, $addToSet: { post: savedpost._id } }
+                );
+                if (int) {
+                  await Interest.updateOne(
+                    { _id: int._id },
+                    {
+                      $inc: { count: 1 },
+                      $addToSet: { post: savedpost._id, tags: t._id },
+                    }
+                  );
+                }
+              } else {
+                const newtag = new Tag({
+                  title: tag[i].toLowerCase(),
+                  post: savedpost._id,
+                  count: 1,
+                });
+                await newtag.save();
+                if (int) {
+                  await Interest.updateOne(
+                    { _id: int._id },
+                    {
+                      $inc: { count: 1 },
+                      $addToSet: { post: savedpost._id, tags: newtag._id },
+                    }
+                  );
+                }
+              }
+            }
+
+            await Community.updateOne(
+              { _id: community._id },
+              { $push: { posts: savedpost._id }, $inc: { totalposts: 1 } }
+            );
+            await Topic.updateOne(
+              { _id: topic._id },
+              { $push: { posts: savedpost._id }, $inc: { postcount: 1 } }
+            );
+
+            let tokens = [];
+
+            for (let u of community.members) {
+              const user = await User.findById(u);
+
+              if (user.notificationtoken && user._id.toString() !== user._id) {
+                if (user.notificationtoken) {
+                  tokens.push(user.notificationtoken);
+                }
+              }
+            }
+
+            if (tokens?.length > 0) {
+              let link = process.env.POST_URL + savedpost.post[0].content;
+              const timestamp = `${new Date()}`;
+              const msg = {
+                notification: {
+                  title: `${community.title} - A new Post is Here!`,
+                  body: `${savedpost.title}`,
+                },
+                data: {
+                  screen: "CommunityChat",
+                  sender_fullname: `${user?.fullname}`,
+                  sender_id: `${user?._id}`,
+                  text: `${savedpost.title}`,
+                  comId: `${community?._id}`,
+                  createdAt: `${timestamp}`,
+                  type: "post",
+                  link,
+                },
+                tokens: tokens,
+              };
+
+              await admin
+                .messaging()
+                .sendMulticast(msg)
+                .then((response) => {
+                  console.log("Successfully sent message");
+                })
+                .catch((error) => {
+                  console.log("Error sending message:", error);
+                });
+            }
+          }
+        }
+      }
+
+      //post forwarding to a conversation
+      if (convs.length > 0) {
+        const mesId = Math.floor(Math.random() * 90000000) + 10000000;
+        const timestamp = `${new Date()}`;
+        for (var i = 0; i < convs.length; i++) {
+          const conversation = await Conversation.findById(convs[i]);
+
+          let sequence =
+            (await Message.countDocuments({ conversationId: convs[i] })) + 1;
+          if (conversation) {
+            const message = new Message({
+              text: newpost.title,
+              sender: user._id,
+              conversationId: convs[i],
+              typ: "post",
+              mesId: mesId,
+              isread: [],
+              sequence: sequence,
+              timestamp: timestamp,
+              forwardid: newpost._id,
+              isread: false,
+              readby: [user._id],
+              content: {
+                uri: newpost.post[0].content,
+                type: newpost.post[0].type,
+              },
+            });
+            await message.save();
+          }
+        }
+      }
+      res.status(200).json({ success: true });
+    } else if (product && user) {
+      //product forwarded to a community
+      if (coms.length > 0) {
+        for (let i = 0; i < coms.length; i++) {
+          const community = await Community.findById(coms[i]);
+          if (community) {
+            const topic = await Topic.findOne({
+              community: community._id,
+              nature: "post",
+              title: "Posts",
+            });
+            const post = new Post({
+              title: product.name,
+              desc: product.desc,
+              community: community._id,
+              sender: user._id,
+              post: product.images,
+              topicId: topic._id,
+              kind: "product",
+              forwardid: product._id,
+            });
+            const savedpost = await post.save();
+
+            await Community.updateOne(
+              { _id: community._id },
+              { $push: { posts: savedpost._id }, $inc: { totalposts: 1 } }
+            );
+            await Topic.updateOne(
+              { _id: topic._id },
+              { $push: { posts: savedpost._id }, $inc: { postcount: 1 } }
+            );
+
+            let tokens = [];
+
+            for (let u of community.members) {
+              const user = await User.findById(u);
+
+              if (user.notificationtoken && user._id.toString() !== user._id) {
+                if (user.notificationtoken) {
+                  tokens.push(user.notificationtoken);
+                }
+              }
+            }
+
+            if (tokens?.length > 0) {
+              let link = process.env.PRODUCT_URL + savedpost.post[0].content;
+              const timestamp = `${new Date()}`;
+              const msg = {
+                notification: {
+                  title: `${community.title} - Posted!`,
+                  body: `${savedpost.title}`,
+                },
+                data: {
+                  screen: "CommunityChat",
+                  sender_fullname: `${user?.fullname}`,
+                  sender_id: `${user?._id}`,
+                  text: `${savedpost.title}`,
+                  comId: `${community?._id}`,
+                  createdAt: `${timestamp}`,
+                  type: "post",
+                  link,
+                },
+                tokens: tokens,
+              };
+
+              await admin
+                .messaging()
+                .sendMulticast(msg)
+                .then((response) => {
+                  console.log("Successfully sent message");
+                })
+                .catch((error) => {
+                  console.log("Error sending message:", error);
+                });
+            }
+          }
+        }
+      }
+
+      //product forwarding to a conversation
+      if (convs.length > 0) {
+        const mesId = Math.floor(Math.random() * 90000000) + 10000000;
+        const timestamp = `${new Date()}`;
+        for (var i = 0; i < convs.length; i++) {
+          const conversation = await Conversation.findById(convs[i]);
+          let sequence =
+            (await Message.countDocuments({ conversationId: convs[i] })) + 1;
+          if (conversation) {
+            const message = new Message({
+              text: product.name,
+              sender: user._id,
+              conversationId: convs[i],
+              typ: "product",
+              mesId: mesId,
+              isread: [],
+              sequence: sequence,
+              timestamp: timestamp,
+              forwardid: product._id,
+              isread: false,
+              readby: [user._id],
+              content: {
+                uri: product.images[0].content,
+                type: product.images[0].type,
+              },
+            });
+            await message.save();
+          }
+        }
+      }
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ success: false, message: "Nothing found" });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(404).json({ success: false, message: "Something went wrong" });
   }
 };

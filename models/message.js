@@ -55,6 +55,8 @@ const messageSchema = new mongoose.Schema(
     timestamp: { type: String },
     isread: { type: Boolean, default: false },
     readby: [{ type: ObjectId, ref: "User" }],
+    desc: { type: String }, //for product desc
+    forwardid: { type: String }, //for forwarding
   },
   { timestamps: true }
 );

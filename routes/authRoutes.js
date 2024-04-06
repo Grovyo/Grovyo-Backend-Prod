@@ -54,6 +54,9 @@ const {
   ispasscorrect,
   updatenotificationdel,
   deletemessagestopic,
+  fcom,
+  fconv,
+  forwcc,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -127,6 +130,10 @@ router.post("/updatenotificationdelivery/:id", updatenotificationdel); //for del
 router.get("/v1/passexist/:id", passexist);
 router.post("/v1/newpasscode/:id", newpasscode);
 router.post("/v1/ispasscorrect/:id", ispasscorrect);
+
+router.get("/v1/fcom/:id", fcom);
+router.get("/v1/fconv/:id", fconv);
+router.post("/v1/forwcc", forwcc);
 
 router.param("userId", userbyId);
 
