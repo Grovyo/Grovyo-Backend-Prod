@@ -1353,7 +1353,9 @@ exports.create = async (req, res) => {
           $inc: { totaltopics: 2, totalcom: 1 },
         }
       );
-      res.status(200).json({ community: savedcom, success: true });
+      res
+        .status(200)
+        .json({ community: savedcom, topic: topic1._id, success: true });
     } catch (e) {
       res.status(400).json({ message: e.message, success: false });
     }

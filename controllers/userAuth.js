@@ -3297,3 +3297,82 @@ exports.forwcc = async (req, res) => {
     res.status(404).json({ success: false, message: "Something went wrong" });
   }
 };
+
+exports.addNumberr = async (req, res) => {
+  try {
+    const { phone } = req.body;
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+
+    console.log(user, "user");
+
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User Not Found!" });
+    }
+
+    if (!user.phone) {
+      user.phone = phone;
+    }
+    const saved = await user.save();
+
+    res.status(200).json({ success: true, phone: saved.phone });
+  } catch (error) {
+    res.status(400).json({ message: error.message, success: false });
+  }
+};
+
+exports.getguide = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User Not Found!" });
+    }
+
+    res.status(200).json({ success: true, guide: user.guide });
+  } catch (error) {
+    res.status(400).json({ message: error.message, success: false });
+  }
+};
+
+exports.postguide = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { guide } = req.body;
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User Not Found!" });
+    }
+
+    user.guide = guide;
+    const saved = await user.save();
+
+    res.status(200).json({ success: true, guide: saved.guide });
+  } catch (error) {
+    res.status(400).json({ message: error.message, success: false });
+  }
+};
+
+exports.usl = async (req, res) => {
+  try {
+    const lsit = [];
+    const u = await User.find({ gr: 1 });
+
+    for (let i = 100; i < 300; i++) {
+      lsit.push(u[i]._id);
+    }
+
+    res.send(lsit);
+  } catch (e) {
+    console.log(e);
+  }
+};
