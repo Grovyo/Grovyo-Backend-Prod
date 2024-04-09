@@ -528,7 +528,9 @@ exports.getdp = async (req, res) => {
           unread += msgCount; // Increment unread count with the number of unread messages
         }
       }
-      res.status(200).json({ success: true, dp, isbanned, unread });
+      res
+        .status(200)
+        .json({ success: true, dp, isbanned, unread, guide: user.guide });
     } else {
       res.status(404).json({ message: "User not found", success: false });
     }
