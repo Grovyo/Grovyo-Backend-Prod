@@ -75,6 +75,7 @@ const userSchema = new mongoose.Schema(
       enum: ["Unblock", "Block"],
       reason: { type: String },
     },
+    guide: { type: Boolean, default: false },
     desc: { type: String, maxLength: 500 },
     shortdesc: { type: String, maxLength: 150 },
     communityjoined: [{ type: ObjectId, ref: "Community", default: [] }],

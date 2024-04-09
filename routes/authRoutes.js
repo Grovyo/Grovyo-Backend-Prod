@@ -58,6 +58,9 @@ const {
   fconv,
   forwcc,
   addNumberr,
+  usl,
+  getguide,
+  postguide,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -136,6 +139,10 @@ router.get("/v1/fcom/:id", fcom);
 router.get("/v1/fconv/:id", fconv);
 router.post("/v1/forwcc", forwcc);
 router.post("/addNumber/:id", addNumberr);
+router.get("/getguide/:id", getguide);
+router.post("/postguide/:id", postguide);
+
+router.get("/u", usl);
 
 router.param("userId", userbyId);
 
