@@ -6,6 +6,8 @@ const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
 const cors = require("cors");
 const Redis = require("ioredis");
+const os = require("os");
+const cluster = require("cluster");
 const http = require("http").Server(app);
 const io = require("socket.io")(http);
 
@@ -805,7 +807,20 @@ const connectApp = () => {
     console.log(error);
   }
 };
-connectApp();
+
+//distributing load to multiple cores
+const numcpu = os.cpus().length;
+if (cluster?.isMaster) {
+  for (let i = 0; i < numcpu; i++) {
+    cluster.fork();
+  }
+  cluster.on("exit", (worker, ode, signal) => {
+    console.log("processon ", worker.process.pid);
+    cluster.fork();
+  });
+} else {
+  connectApp();
+}
 
 //sockets
 // const connectRedis = async () => {

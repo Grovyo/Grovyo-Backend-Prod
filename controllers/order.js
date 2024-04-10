@@ -23,12 +23,12 @@ const Message = require("../models/message");
 
 const { Queue, Worker } = require("bullmq");
 
-const myQueue = new Queue("delivery-pending", {
-  connection: {
-    host: "redi.grovyo.xyz",
-    port: 6379,
-  },
-});
+// const myQueue = new Queue("delivery-pending", {
+//   connection: {
+//     host: "redi.grovyo.xyz",
+//     port: 6379,
+//   },
+// });
 
 const fs = require("fs");
 const Razorpay = require("razorpay");
@@ -1264,12 +1264,12 @@ exports.finaliseorder = async (req, res) => {
               });
           }
         }
-        const r = await myQueue.add(
-          "delivery-pending",
-          { order },
-          { removeOnComplete: true, removeOnFail: true }
-        );
-        console.log(r.id, "Added to delivery queue");
+        // const r = await myQueue.add(
+        //   "delivery-pending",
+        //   { order },
+        //   { removeOnComplete: true, removeOnFail: true }
+        // );
+        // console.log(r.id, "Added to delivery queue");
 
         //sending notification to admin
         let flashid = "655e189fb919c70bf6895485";
