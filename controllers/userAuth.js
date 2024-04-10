@@ -3149,7 +3149,8 @@ exports.forwcc = async (req, res) => {
 
       //post forwarding to a conversation
       if (convs.length > 0) {
-        const mesId = Math.floor(Math.random() * 90000000) + 10000000;
+        const seed = Date.now();
+        const mesId = Math.floor(Math.random(seed) * 90000000) + 10000000;
         const timestamp = `${new Date()}`;
         for (var i = 0; i < convs.length; i++) {
           const conversation = await Conversation.findById(convs[i]);
@@ -3260,7 +3261,8 @@ exports.forwcc = async (req, res) => {
 
       //product forwarding to a conversation
       if (convs.length > 0) {
-        const mesId = Math.floor(Math.random() * 90000000) + 10000000;
+        const seed = Date.now();
+        const mesId = Math.floor(Math.random(seed) * 90000000) + 10000000;
         const timestamp = `${new Date()}`;
         for (var i = 0; i < convs.length; i++) {
           const conversation = await Conversation.findById(convs[i]);
