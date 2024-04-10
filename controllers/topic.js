@@ -4,6 +4,7 @@ const Community = require("../models/community");
 const User = require("../models/userAuth");
 const Minio = require("minio");
 const Subscription = require("../models/Subscriptions");
+const Analytics = require("../models/Analytics");
 const Razorpay = require("razorpay");
 const fs = require("fs");
 const {
@@ -830,6 +831,30 @@ exports.finalisetopicorder = async (req, res) => {
             },
           }
         );
+
+        //stats increase
+        let today = new Date();
+
+        let year = today.getFullYear();
+        let month = String(today.getMonth() + 1).padStart(2, "0");
+        let day = String(today.getDate()).padStart(2, "0");
+
+        let formattedDate = `${day}/${month}/${year}`;
+
+        let analytcis = await Analytics.findOne({
+          date: formattedDate,
+          id: community._id,
+        });
+
+        //Graph Stats
+        if (!analytcis.paidmembers.includes(user._id)) {
+          await Analytics.updateOne(
+            { _id: analytcis._id },
+            {
+              $addToSet: { paidmembers: user._id },
+            }
+          );
+        }
 
         // const sub = await Subscription.countDocuments();
 

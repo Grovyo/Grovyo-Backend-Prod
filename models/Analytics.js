@@ -13,6 +13,11 @@ const Analytics = new mongoose.Schema({
   cpc: { type: Number, default: 0 },
   cost: { type: Number, default: 0 },
   views: { type: Number, default: 0 },
+  activemembers: [{ type: ObjectId, ref: "User" }],
+  newmembers: [{ type: ObjectId, ref: "User" }],
+  paidmembers: [{ type: ObjectId, ref: "User" }],
+  newvisitor: [{ type: ObjectId, ref: "User" }],
+  returningvisitor: [{ type: ObjectId, ref: "User" }],
 });
 
 module.exports = mongoose.model("Analytics", Analytics);

@@ -117,11 +117,18 @@ const communitySchema = new mongoose.Schema(
       uttarakhand: { type: Number, default: 0 },
       "west bengal": { type: Number, default: 0 },
     },
+    paidmemberscount: { type: Number, default: 0 },
     visitors: { type: Number, default: 0 },
+    returningvisitor: { type: Number, default: 0 },
+    newvisitor: { type: Number, default: 0 },
+    activemembers: [{ type: ObjectId, ref: "User" }],
+    uniquemembers: [{ type: ObjectId, ref: "User" }],
+
     newmemberscount: { type: Number, default: 0 },
     newmembers: [{ type: ObjectId, ref: "User" }],
-    paidmemberscount: { type: Number, default: 0 },
+
     ismonetized: { type: Boolean, default: false },
+
     reportstatus: {
       type: String,
       enum: ["unblock", "block"],

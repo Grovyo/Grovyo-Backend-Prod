@@ -2938,8 +2938,10 @@ exports.fcom = async (req, res) => {
     const user = await User.findById(id);
     if (user) {
       let comdata = [];
+
       for (const comids of user.communitycreated) {
         const coms = await Community.findById(comids);
+
         if (coms) {
           let data = {
             dp: process.env.URL + coms.dp,

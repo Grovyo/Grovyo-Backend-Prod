@@ -447,6 +447,8 @@ exports.joinmember = async (req, res) => {
           date: formattedDate,
           id: community._id,
         });
+
+        //Graph Stats
         if (analytcis) {
           await Analytics.updateOne(
             { _id: analytcis._id },
@@ -463,6 +465,16 @@ exports.joinmember = async (req, res) => {
             Y1: 1,
           });
           await an.save();
+        }
+
+        //Community Stats
+        if (!analytcis.newmembers.includes(user._id)) {
+          await Analytics.updateOne(
+            { _id: analytcis._id },
+            {
+              $addToSet: { newmembers: user._id },
+            }
+          );
         }
 
         let address = user?.address?.state
@@ -795,6 +807,8 @@ exports.compostfeed = async (req, res) => {
         date: formattedDate,
         id: community._id,
       });
+
+      //Graph stats
       if (analytcis) {
         await Analytics.updateOne(
           { _id: analytcis._id },
@@ -821,6 +835,23 @@ exports.compostfeed = async (req, res) => {
           },
         }
       );
+
+      //community based stats
+      if (analytcis.activemembers.includes(user._id)) {
+        await Analytics.updateOne(
+          { _id: analytcis._id },
+          {
+            $addToSet: { returningvisitor: user._id },
+          }
+        );
+      } else {
+        await Analytics.updateOne(
+          { _id: analytcis._id },
+          {
+            $addToSet: { activemembers: user._id, newvisitor: user._id },
+          }
+        );
+      }
 
       //creator data
       const creatordp = process.env.URL + community.creator.profilepic;
