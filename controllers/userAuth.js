@@ -2240,7 +2240,7 @@ exports.fetchconvs = async (req, res) => {
         messages.push({
           ...msg[i].toObject(),
           url,
-          comId: post.community,
+          comId: post?.community,
         });
       } else if (msg[i].typ === "product") {
         const url = process.env.PRODUCT_URL + msg[i]?.content?.uri;

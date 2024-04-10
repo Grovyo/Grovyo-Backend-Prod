@@ -102,12 +102,15 @@ exports.fetchorders = async (req, res) => {
       const image = [];
       if (orders) {
         for (let j = 0; j < orders.length; j++) {
-          if (orders[j]) {
+          console.log(orders[j].productId[0]);
+          if (orders[j].productId[0]) {
             const a =
               process.env.PRODUCT_URL +
               orders[j].productId[0].images[0].content;
 
             image.push(a);
+          } else {
+            orders[j].remove();
           }
         }
       }
