@@ -810,27 +810,27 @@ const connectApp = () => {
 
 //distributing load to multiple cores
 const numcpu = os.cpus().length;
-if (cluster.isMaster) {
-  console.log(`Master ${process.pid} is running`);
+// if (cluster.isMaster) {
+//   console.log(`Master ${process.pid} is running`);
 
-  // Fork workers
-  for (let i = 0; i < numcpu; i++) {
-    cluster.fork();
-  }
+//   // Fork workers
+//   for (let i = 0; i < numcpu; i++) {
+//     cluster.fork();
+//   }
 
-  // Handle worker exit
-  cluster.on("exit", (worker, code, signal) => {
-    console.log(`Worker ${worker.process.pid} died`);
-    // Only restart the worker if the exit was unexpected
-    if (code !== 0) {
-      console.log(`Restarting worker...`);
-      cluster.fork();
-    }
-  });
-} else {
-  console.log(`Worker ${process.pid} started`);
-  connectApp();
-}
+//   // Handle worker exit
+//   cluster.on("exit", (worker, code, signal) => {
+//     console.log(`Worker ${worker.process.pid} died`);
+//     // Only restart the worker if the exit was unexpected
+//     if (code !== 0) {
+//       console.log(`Restarting worker...`);
+//       cluster.fork();
+//     }
+//   });
+// } else {
+//   console.log(`Worker ${process.pid} started`);
+connectApp();
+//}
 //sockets
 // const connectRedis = async () => {
 //   try {

@@ -504,7 +504,7 @@ exports.getdp = async (req, res) => {
   const { userId } = req.params;
   try {
     const user = await User.findById(userId)
-      .select("profilepic conversations")
+      .select("profilepic conversations guide")
       .lean();
     if (user) {
       const dp = process.env.URL + user.profilepic.toString();
@@ -528,6 +528,7 @@ exports.getdp = async (req, res) => {
           unread += msgCount; // Increment unread count with the number of unread messages
         }
       }
+
       res
         .status(200)
         .json({ success: true, dp, isbanned, unread, guide: user.guide });
