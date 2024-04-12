@@ -3832,6 +3832,7 @@ exports.fecthallprods = async (req, res) => {
           pic: process.env.PRODUCT_URL + order.productId[i].images[0].content,
           price: order?.data[i].price,
           qty: order?.data[i].qty,
+          prodId: order?.productId[i],
         });
       }
 
@@ -3844,6 +3845,46 @@ exports.fecthallprods = async (req, res) => {
         mode: order.paymentMode,
         placeon: order.createdAt,
         data,
+        success: true,
+      });
+    } else {
+      res.status(404).json({ message: "User not found!", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};
+
+//cancelprod
+exports.cancelprod = async (req, res) => {
+  try {
+    const { userId, ordid, prodId } = req.params;
+    const user = await User.findById(userId);
+    if (user) {
+      const order = await Order.findById(ordid).populate(
+        "productId",
+        "name price images"
+      );
+
+      const sellerOrders = await SellerOrder.find({
+        orderId: order.orderId,
+      });
+
+      let productId = null;
+
+      for (let i = 0; i < sellerOrders.length; i++) {
+        if (prodId === sellerOrders[i].productId.toString()) {
+          productId = sellerOrders[i]._id;
+        }
+      }
+
+      await SellerOrder.updateOne(
+        { _id: productId },
+        { $set: { currentStatus: "cancelled" } }
+      );
+
+      res.status(200).json({
         success: true,
       });
     } else {

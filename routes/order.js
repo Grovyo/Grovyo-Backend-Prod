@@ -22,6 +22,7 @@ const {
   cancelao,
   bao,
   fecthallprods,
+  cancelprod,
 } = require("../controllers/order");
 
 router.post("/neworder/:userId/:productId", create);
@@ -59,7 +60,7 @@ router.post("/cancelao/:id/:ordid", cancelao);
 router.post("/bao/:userId/:ordid", bao);
 
 //cancel a product
-router.post("/cancelpro/:userId/:ordid", bao);
+router.post("/cancelpro/:userId/:ordid/:prodId", cancelprod);
 
 //fetch all products all
 router.get("/fetchallprods/:userId/:ordid", fecthallprods);
