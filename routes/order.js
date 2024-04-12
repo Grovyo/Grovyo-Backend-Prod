@@ -19,6 +19,8 @@ const {
   deliverycreate,
   resenotpflash,
   fetchanorder,
+  cancelao,
+  bao,
 } = require("../controllers/order");
 
 router.post("/neworder/:userId/:productId", create);
@@ -48,5 +50,11 @@ router.post("/resenotpflash/:id/:delid", resenotpflash);
 
 //fetchanorder
 router.post("/fetchanorder/:id/:ordid", fetchanorder);
+
+//cancel an order
+router.post("/cancelao/:id/:ordid", cancelao);
+
+//buy again an order
+router.post("/bao/:userId/:ordid", bao);
 
 module.exports = router;
