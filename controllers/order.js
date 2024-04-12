@@ -3813,3 +3813,44 @@ exports.getorderpdf = async (req, res) => {
     res.status(400).json({ message: "Something went wrong", success: false });
   }
 };
+
+//fetch all products from an order
+exports.fecthallprods = async (req, res) => {
+  try {
+    const { userId, ordid } = req.params;
+    const user = await User.findById(userId);
+    if (user) {
+      const order = await Order.findById(ordid).populate(
+        "productId",
+        "name price images"
+      );
+      let data = [];
+
+      for (let i = 0; i < order.productId.length; i++) {
+        data.push({
+          name: order.productId[i].name,
+          pic: process.env.PRODUCT_URL + order.productId[i].images[0].content,
+          price: order?.data[i].price,
+          qty: order?.data[i].qty,
+        });
+      }
+
+      res.status(200).json({
+        totalprice: order.total,
+        tax: order.taxes,
+        delcharge: order.deliverycharges,
+        totalqty: order.quantity,
+        orderId: order.orderId,
+        mode: order.paymentMode,
+        placeon: order.createdAt,
+        data,
+        success: true,
+      });
+    } else {
+      res.status(404).json({ message: "User not found!", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ message: "Something went wrong", success: false });
+  }
+};

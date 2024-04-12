@@ -21,6 +21,7 @@ const {
   fetchanorder,
   cancelao,
   bao,
+  fecthallprods,
 } = require("../controllers/order");
 
 router.post("/neworder/:userId/:productId", create);
@@ -51,10 +52,16 @@ router.post("/resenotpflash/:id/:delid", resenotpflash);
 //fetchanorder
 router.post("/fetchanorder/:id/:ordid", fetchanorder);
 
-//cancel an order
+//cancel an order(whole bucket)
 router.post("/cancelao/:id/:ordid", cancelao);
 
-//buy again an order
+//buy again an order(whole bucket)
 router.post("/bao/:userId/:ordid", bao);
+
+//cancel a product
+router.post("/cancelpro/:userId/:ordid", bao);
+
+//fetch all products all
+router.get("/fetchallprods/:userId/:ordid", fecthallprods);
 
 module.exports = router;
