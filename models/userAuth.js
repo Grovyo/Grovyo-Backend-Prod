@@ -271,6 +271,11 @@ const userSchema = new mongoose.Schema(
         Sales: { type: Number },
       },
     ],
+    useDefaultProsite: { type: Boolean, default: false },
+    recentPrositeSearches: [{ type: ObjectId, ref: "User", default: [] }],
+    recentCommunitySearches: [
+      { type: ObjectId, ref: "Community", default: [] },
+    ],
   },
   { timestamps: false, strict: false }
 );

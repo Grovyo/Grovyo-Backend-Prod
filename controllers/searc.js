@@ -116,19 +116,14 @@ exports.searchpros = async (req, res) => {
 exports.fetchingprosite = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "User Not Found" });
-    }
-    const user = await User.findById(id);
+    const user = await User.findOne({ username: id }).select("-password");
     if (!user) {
       return res
         .status(400)
         .json({ success: false, message: "User Not Found" });
     }
     const community = [];
-    const com = await Community.find({ creator: id });
+    const com = await Community.find({ creator: user._id });
     for (let i = 0; i < com.length; i++) {
       const id = com[i];
       let comm = await Community.findById(id).populate("members", "dp");
@@ -160,7 +155,7 @@ exports.fetchingprosite = async (req, res) => {
       return { ...f.toObject(), dps: communityDps[i], membersdp: membersdp[i] };
     });
 
-    const products = await Product.find({ creator: id });
+    const products = await Product.find({ creator: user._id });
 
     const productdps = await Promise.all(
       products.map(async (product) => {
@@ -204,6 +199,140 @@ exports.fetchingprosite = async (req, res) => {
 
     res.status(200).json({ success: true, data, user });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ message: error.message, success: false });
+  }
+};
+
+exports.removeRecentSearchProsite = async (req, res) => {
+  try {
+    const { sId } = req.body;
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
+    }
+    user.recentCommunitySearches = user.recentCommunitySearches.filter(
+      (searchId) => searchId !== sId
+    );
+    await user.save();
+    return res
+      .status(200)
+      .json({ success: true, message: "Search Prosite removed successfully" });
+  } catch (error) {
+    return res.status(400).json({ message: error.message, success: false });
+  }
+};
+
+exports.removeRecentSearchCommunity = async (req, res) => {
+  try {
+    const { sId } = req.body;
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
+    }
+    user.recentCommunitySearches = user.recentCommunitySearches.filter(
+      (searchId) => searchId !== sId
+    );
+    await user.save();
+    return res.status(200).json({
+      success: true,
+      message: "Search Community removed successfully",
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message, success: false });
+  }
+};
+
+exports.addRecentSearchCommunity = async (req, res) => {
+  try {
+    const { sId } = req.body;
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
+    }
+    if (!user.recentCommunitySearches.includes(sId)) {
+      user.recentCommunitySearches.push(sId);
+      await user.save();
+      return res.status(201).json({ success: true, message: "Added!" });
+    } else {
+      return res
+        .status(200)
+        .json({ success: true, message: "Already Present!" });
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message, success: false });
+  }
+};
+
+exports.addRecentSearchProsite = async (req, res) => {
+  try {
+    const { sId } = req.body;
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
+    }
+    if (!user.recentPrositeSearches.includes(sId)) {
+      user.recentPrositeSearches.push(sId);
+      await user.save();
+      return res.status(201).json({ success: true, message: "Added!" });
+    } else {
+      return res
+        .status(200)
+        .json({ success: true, message: "Already Present!" });
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message, success: false });
+  }
+};
+
+exports.mobileSearch = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found!" });
+    }
+    const recentSearchesProsites = [];
+    const recentSearchesCommunity = [];
+    for (let i = 0; i < user.recentPrositeSearches.length; i++) {
+      const anotherUsers = await User.findById(user.recentPrositeSearches[i]);
+      const data = {
+        id: anotherUsers?._id,
+        fullname: anotherUsers.fullname,
+        username: anotherUsers.username,
+        dp: process.env.URL + user.profilepic,
+      };
+      recentSearchesProsites.push(data);
+    }
+    for (let i = 0; i < user.recentCommunitySearches.length; i++) {
+      const anotherCommunity = await Community.findById(
+        user.recentCommunitySearches[i]
+      );
+      const data = {
+        id: anotherCommunity?._id,
+        title: anotherCommunity?.title,
+        dp: process.env.URL + anotherCommunity.dp,
+      };
+      recentSearchesCommunity.push(data);
+    }
+    res
+      .status(200)
+      .json({ success: true, recentSearchesCommunity, recentSearchesProsites });
+  } catch (error) {
+    res.status(400).json({ success: false, message: "Something Went Wrong!" });
   }
 };

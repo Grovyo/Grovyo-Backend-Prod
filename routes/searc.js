@@ -6,6 +6,11 @@ const {
   searchcoms,
   searchpros,
   fetchingprosite,
+  mobileSearch,
+  addRecentSearchProsite,
+  addRecentSearchCommunity,
+  removeRecentSearchCommunity,
+  removeRecentSearchProsite,
 } = require("../controllers/searc");
 
 const storage = multer.memoryStorage();
@@ -21,5 +26,11 @@ router.post("/searchcoms/:id", searchcoms);
 router.post("/searchpros", searchpros);
 
 router.get("/getprositedetails/:id", fetchingprosite);
+
+router.get("/recentSearches/:id", mobileSearch);
+router.post("/addRecentSearchProsite/:id", addRecentSearchProsite);
+router.post("/addRecentSearchCommunity/:id", addRecentSearchCommunity);
+router.post("/removeRecentSearchCommunity/:id", removeRecentSearchCommunity);
+router.post("/removeRecentSearchProsite/:id", removeRecentSearchProsite);
 
 module.exports = router;
