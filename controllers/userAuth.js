@@ -3381,25 +3381,26 @@ exports.usl = async (req, res) => {
   }
 };
 
-// const findUser = async () => {
-//   try {
-//     const users = await User.find();
-//     const reverseusers = users.reverse();
-//     let data = [];
-//     const onlyseven = reverseusers.slice(0, 7);
-//     for (let i = 0; i < onlyseven.length; i++) {
-//       const d = {
-//         fullname: onlyseven[i].fullname,
-//         id: onlyseven[i]._id,
-//         email: onlyseven[i].email,
-//         phone: onlyseven[i].phone,
-//       };
-//       data.push(d);
-//     }
-//     console.log(data);
-//   } catch (error) {
-//     console.log(error);
-//   }
-// };
+const findUser = async () => {
+  try {
+    const users = await User.find();
+    const reverseusers = users.reverse();
+    let data = [];
+    const onlyseven = reverseusers.slice(0, 7);
+    for (let i = 0; i < onlyseven.length; i++) {
+      const d = {
+        fullname: onlyseven[i].fullname,
+        id: onlyseven[i]._id,
+        email: onlyseven[i].email,
+        phone: onlyseven[i].phone,
+        username: onlyseven[i].username,
+      };
+      data.push(d);
+    }
+    console.log(data);
+  } catch (error) {
+    console.log(error);
+  }
+};
 
-// findUser();
+//findUser();

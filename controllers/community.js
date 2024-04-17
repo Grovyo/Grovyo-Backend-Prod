@@ -837,7 +837,7 @@ exports.compostfeed = async (req, res) => {
       );
 
       //community based stats
-      if (analytcis.activemembers.includes(user._id)) {
+      if (analytcis?.activemembers.includes(user._id)) {
         await Analytics.updateOne(
           { _id: analytcis._id },
           {

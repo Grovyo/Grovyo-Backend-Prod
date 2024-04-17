@@ -214,9 +214,10 @@ exports.removeRecentSearchProsite = async (req, res) => {
         .status(400)
         .json({ success: false, message: "User not found" });
     }
-    user.recentCommunitySearches = user.recentCommunitySearches.filter(
-      (searchId) => searchId !== sId
+    user.recentPrositeSearches = user.recentPrositeSearches.filter(
+      (searchId) => searchId.toString() !== sId
     );
+
     await user.save();
     return res
       .status(200)
@@ -237,7 +238,7 @@ exports.removeRecentSearchCommunity = async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
     user.recentCommunitySearches = user.recentCommunitySearches.filter(
-      (searchId) => searchId !== sId
+      (searchId) => searchId.toString() !== sId
     );
     await user.save();
     return res.status(200).json({
@@ -283,6 +284,7 @@ exports.addRecentSearchProsite = async (req, res) => {
         .status(400)
         .json({ success: false, message: "User not found" });
     }
+
     if (!user.recentPrositeSearches.includes(sId)) {
       user.recentPrositeSearches.push(sId);
       await user.save();
@@ -308,6 +310,7 @@ exports.mobileSearch = async (req, res) => {
     }
     const recentSearchesProsites = [];
     const recentSearchesCommunity = [];
+
     for (let i = 0; i < user.recentPrositeSearches.length; i++) {
       const anotherUsers = await User.findById(user.recentPrositeSearches[i]);
       const data = {
@@ -315,6 +318,7 @@ exports.mobileSearch = async (req, res) => {
         fullname: anotherUsers.fullname,
         username: anotherUsers.username,
         dp: process.env.URL + user.profilepic,
+        isverified: anotherUsers.isverified,
       };
       recentSearchesProsites.push(data);
     }
@@ -326,13 +330,17 @@ exports.mobileSearch = async (req, res) => {
         id: anotherCommunity?._id,
         title: anotherCommunity?.title,
         dp: process.env.URL + anotherCommunity.dp,
+        member: anotherCommunity.memberscount,
+        isverified: anotherCommunity.isverified,
       };
+
       recentSearchesCommunity.push(data);
     }
     res
       .status(200)
       .json({ success: true, recentSearchesCommunity, recentSearchesProsites });
   } catch (error) {
+    console.log(error);
     res.status(400).json({ success: false, message: "Something Went Wrong!" });
   }
 };
