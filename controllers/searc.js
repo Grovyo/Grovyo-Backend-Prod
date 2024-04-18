@@ -317,7 +317,7 @@ exports.mobileSearch = async (req, res) => {
         id: anotherUsers?._id,
         fullname: anotherUsers.fullname,
         username: anotherUsers.username,
-        dp: process.env.URL + user.profilepic,
+        dp: process.env.URL + anotherUsers.profilepic,
         isverified: anotherUsers.isverified,
       };
       recentSearchesProsites.push(data);
