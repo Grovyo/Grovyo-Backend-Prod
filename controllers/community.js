@@ -818,6 +818,22 @@ exports.compostfeed = async (req, res) => {
             },
           }
         );
+        //community based stats
+        if (analytcis?.activemembers.includes(user._id)) {
+          await Analytics.updateOne(
+            { _id: analytcis._id },
+            {
+              $addToSet: { returningvisitor: user._id },
+            }
+          );
+        } else {
+          await Analytics.updateOne(
+            { _id: analytcis._id },
+            {
+              $addToSet: { activemembers: user._id, newvisitor: user._id },
+            }
+          );
+        }
       } else {
         const an = new Analytics({
           date: formattedDate,
@@ -825,6 +841,22 @@ exports.compostfeed = async (req, res) => {
           Y2: 1,
         });
         await an.save();
+        //community based stats
+        if (an?.activemembers.includes(user._id)) {
+          await Analytics.updateOne(
+            { _id: an._id },
+            {
+              $addToSet: { returningvisitor: user._id },
+            }
+          );
+        } else {
+          await Analytics.updateOne(
+            { _id: an._id },
+            {
+              $addToSet: { activemembers: user._id, newvisitor: user._id },
+            }
+          );
+        }
       }
 
       await Community.updateOne(
@@ -835,23 +867,6 @@ exports.compostfeed = async (req, res) => {
           },
         }
       );
-
-      //community based stats
-      if (analytcis?.activemembers.includes(user._id)) {
-        await Analytics.updateOne(
-          { _id: analytcis._id },
-          {
-            $addToSet: { returningvisitor: user._id },
-          }
-        );
-      } else {
-        await Analytics.updateOne(
-          { _id: analytcis._id },
-          {
-            $addToSet: { activemembers: user._id, newvisitor: user._id },
-          }
-        );
-      }
 
       //creator data
       const creatordp = process.env.URL + community.creator.profilepic;
