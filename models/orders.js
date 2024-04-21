@@ -56,6 +56,7 @@ const OrderSchema = new mongoose.Schema(
       C: { type: String },
       D: { type: String },
     },
+    reason: { type: String },
     discountamount: { type: Number, min: 0 },
     finalprice: { type: Number, min: 0 },
     paymentId: { type: String },
