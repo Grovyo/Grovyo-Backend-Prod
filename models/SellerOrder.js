@@ -34,6 +34,7 @@ const SellerOrderSchema = new mongoose.Schema(
       ],
       default: "pending",
     },
+    reason: { type: String },
     orderId: { type: String },
     onlineorderid: { type: String },
     deliverycharges: { type: Number, min: 0 },
