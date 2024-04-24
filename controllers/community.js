@@ -1875,7 +1875,7 @@ exports.fetchallposts = async (req, res) => {
       for (let i = 0; i < post?.length; i++) {
         for (let j = 0; j < post[i]?.post?.length; j++) {
           if (post[i].post[j].thumbnail) {
-            if (post[i].post[j].link) {
+            if (post[i].post[j].link === true) {
               const a =
                 process.env.POST_URL + post[i].post[j].content + "640.mp4";
               const t = process.env.POST_URL + post[i].post[j].thumbnail;
@@ -1884,6 +1884,11 @@ exports.fetchallposts = async (req, res) => {
                 content: a,
                 thumbnail: t,
                 type: post[i].post[j]?.type,
+                link: true,
+                links: {
+                  low: a,
+                  high: process.env.POST_URL + post[i].post[j].content,
+                },
               });
             } else {
               const a = process.env.POST_URL + post[i].post[j].content;

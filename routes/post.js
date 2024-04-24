@@ -26,6 +26,7 @@ const {
   postanythings3,
   fetchinterest,
   reseteverycart,
+  fetchmoredata,
 } = require("../controllers/post");
 const { votenowpoll } = require("../controllers/community");
 
@@ -37,7 +38,7 @@ router.post("/postanything/:userId/:comId", upload.any(), postanythings3);
 // router.post("/createvideo/:userId/:commId", upload.any(), createVideo);
 // router.get("/getfeed/:userId", fetchfeed);
 router.get("/v1/getfeed/:userId", newfetchfeeds3);
-router.get("/fetchmore/:userId", fetchmore);
+router.get("/v1/fetchmore/:userId", fetchmoredata);
 router.get("/fetchonepost/:postId", fetchonepost);
 router.get("/getfollowingfeed/:userId", joinedcom);
 router.get("/v1/getfollowingfeed/:userId", joinedcomnews3);

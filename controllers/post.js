@@ -2091,7 +2091,7 @@ exports.newfetchfeeds3 = async (req, res) => {
           "communityInfo.category": { $in: user.interest },
         },
       },
-      { $sample: { size: 100 } },
+      { $sample: { size: 10 } },
       {
         $lookup: {
           from: "users",
@@ -2147,7 +2147,7 @@ exports.newfetchfeeds3 = async (req, res) => {
       },
       {
         $match: {
-          "community.type": { $eq: "public" }, // Exclude posts with community type other than "public"
+          "community.type": { $eq: "public" }, // Excluding posts with community type other than "public"
         },
       },
       {
@@ -2405,7 +2405,7 @@ exports.joinedcomnews3 = async (req, res) => {
       for (let j = 0; j < post[0]?.post?.length; j++) {
         if (post[0].post[j].thumbnail) {
           const a =
-            post[i].post[j].link === true
+            post[0].post[j].link === true
               ? process.env.POST_URL + post[0].post[j].content + "640.mp4"
               : process.env.POST_URL + post[0].post[j].content;
           const t = process.env.POST_URL + post[0].post[j].thumbnail;
@@ -2527,21 +2527,31 @@ exports.fetchmoredata = async (req, res) => {
     const addp = [];
 
     //checking and removing posts with no communities
-    const p = await Post.find();
+    // const p = await Post.find();
 
-    for (let i = 0; i < p.length; i++) {
-      const com = await Community.findById(p[i].community);
-      if (!com) {
-        p[i].remove();
-      }
-    }
+    // for (let i = 0; i < p.length; i++) {
+    //   const com = await Community.findById(p[i].community);
+    //   if (!com) {
+    //     p[i].remove();
+    //   }
+    // }
+
     //fetching post
-
-    // const post = await Post.find()
-    //   .populate("community", "title members")
-    //   .populate("members", "profilepic fullname");
     const post = await Post.aggregate([
-      { $sample: { size: 20 } },
+      {
+        $lookup: {
+          from: "communities",
+          localField: "community",
+          foreignField: "_id",
+          as: "communityInfo",
+        },
+      },
+      {
+        $match: {
+          "communityInfo.category": { $in: user.interest },
+        },
+      },
+      { $sample: { size: 10 } },
       {
         $lookup: {
           from: "users",
@@ -2597,7 +2607,7 @@ exports.fetchmoredata = async (req, res) => {
       },
       {
         $match: {
-          "community.type": { $eq: "public" }, // Exclude posts with community type other than "public"
+          "community.type": { $eq: "public" }, // Excluding posts with community type other than "public"
         },
       },
       {
@@ -2646,7 +2656,7 @@ exports.fetchmoredata = async (req, res) => {
       .populate({
         path: "postid",
         select:
-          "desc post title kind likes comments members community cta ctalink sender totalcomments adtype date createdAt",
+          "desc post title kind likes likedby comments members community cta ctalink sender totalcomments adtype date createdAt",
         populate: [
           {
             path: "community",
@@ -2664,7 +2674,7 @@ exports.fetchmoredata = async (req, res) => {
     }).populate({
       path: "postid",
       select:
-        "desc post title kind likes comments community cta ctalink sender totalcomments adtype date createdAt",
+        "desc post title kind likes comments community cta ctalink likedby sender totalcomments adtype date createdAt",
       populate: [
         {
           path: "community",
@@ -2688,11 +2698,18 @@ exports.fetchmoredata = async (req, res) => {
     //merging ads
     if (firstad) {
       post.unshift(firstad.postid);
+    }
+
+    if (
+      feedad?.length > 0 &&
+      (!feedad.includes(null) || !feedad.includes("null"))
+    ) {
       for (let i = 0; i < feedad.length; i++) {
         const randomIndex = getRandomIndex();
         post.splice(randomIndex, 0, feedad[i]);
       }
     }
+
     for (let i = 0; i < post.length; i++) {
       if (
         post[i].likedby?.some((id) => id.toString() === user._id.toString())
@@ -2726,7 +2743,10 @@ exports.fetchmoredata = async (req, res) => {
       for (let i = 0; i < post?.length; i++) {
         for (let j = 0; j < post[i]?.post?.length; j++) {
           if (post[i].post[j].thumbnail) {
-            const a = process.env.POST_URL + post[i].post[j].content;
+            const a =
+              post[i].post[j].link === true
+                ? process.env.POST_URL + post[i].post[j].content + "640.mp4"
+                : process.env.POST_URL + post[i].post[j].content;
             const t = process.env.POST_URL + post[i].post[j].thumbnail;
 
             ur.push({ content: a, thumbnail: t, type: post[i].post[j]?.type });
