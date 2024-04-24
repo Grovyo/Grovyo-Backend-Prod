@@ -30,6 +30,8 @@ const PostSchema = new mongoose.Schema(
         type: { type: String },
         size: { type: String },
         thumbnail: { type: String },
+        resolution: { type: String, default: "original" },
+        link: { type: Boolean, default: false },
       },
     ],
     topicId: { type: ObjectId, ref: "Topic" },

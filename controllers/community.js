@@ -1875,10 +1875,26 @@ exports.fetchallposts = async (req, res) => {
       for (let i = 0; i < post?.length; i++) {
         for (let j = 0; j < post[i]?.post?.length; j++) {
           if (post[i].post[j].thumbnail) {
-            const a = process.env.POST_URL + post[i].post[j].content;
-            const t = process.env.POST_URL + post[i].post[j].thumbnail;
+            if (post[i].post[j].link) {
+              const a =
+                process.env.POST_URL + post[i].post[j].content + "640.mp4";
+              const t = process.env.POST_URL + post[i].post[j].thumbnail;
 
-            ur.push({ content: a, thumbnail: t, type: post[i].post[j]?.type });
+              ur.push({
+                content: a,
+                thumbnail: t,
+                type: post[i].post[j]?.type,
+              });
+            } else {
+              const a = process.env.POST_URL + post[i].post[j].content;
+              const t = process.env.POST_URL + post[i].post[j].thumbnail;
+
+              ur.push({
+                content: a,
+                thumbnail: t,
+                type: post[i].post[j]?.type,
+              });
+            }
           } else if (post[i].forwardid) {
             const a = process.env.PRODUCT_URL + post[i].post[j].content;
             ur.push({ content: a, type: post[i].post[j]?.type });

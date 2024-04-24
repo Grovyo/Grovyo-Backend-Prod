@@ -78,6 +78,9 @@ const productSchema = new mongoose.Schema({
   itemsold: { type: Number, default: 0 },
   collectionss: { type: ObjectId, ref: "Collectionss" },
   createdAt: { type: Date, default: Date.now },
+  variants: [
+    { Name: { type: String }, contents: [{ types: { type: String } }] },
+  ],
 });
 
 module.exports = mongoose.model("Product", productSchema);

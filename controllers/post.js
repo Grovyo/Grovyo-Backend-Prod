@@ -11,6 +11,7 @@ const ffmpeg = require("fluent-ffmpeg");
 const Ads = require("../models/Ads");
 const Tag = require("../models/Tags");
 const Interest = require("../models/Interest");
+const stream = require("stream");
 const {
   S3Client,
   PutObjectCommand,
@@ -30,6 +31,15 @@ const s3 = new S3Client({
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY,
     secretAccessKey: process.env.AWS_SECRET_KEY,
+  },
+});
+
+const { Queue, Worker } = require("bullmq");
+
+const compressqueue = new Queue("compress-pending", {
+  connection: {
+    host: "139.59.84.102",
+    port: 6379,
   },
 });
 
@@ -1920,6 +1930,24 @@ exports.postanythings3 = async (req, res) => {
       });
       const savedpost = await post.save();
 
+      //sending video to a queue for compression
+      if (type === "video") {
+        for (let i = 0; i < req.files.length; i++) {
+          if (req.files[i].fieldname !== "thumbnail") {
+            // const readableStream = new stream.PassThrough();
+            // readableStream.end(req.files[i].buffer);
+            // console.log(req.files[i].buffer, readableStream);
+            // compressVideo(readableStream);
+            const r = await compressqueue.add(
+              "compress-pending",
+              { data: savedpost },
+              { removeOnComplete: true, removeOnFail: true }
+            );
+            console.log(r.id, "Added to compression queue...");
+          }
+        }
+      }
+
       //updating tags and interests
       const int = await Interest.findOne({ title: category });
 
@@ -2008,6 +2036,7 @@ exports.postanythings3 = async (req, res) => {
             console.log("Error sending message:", error);
           });
       }
+
       res.status(200).json({ savedpost, success: true });
     } else {
       res.status(404).json({
@@ -2254,7 +2283,10 @@ exports.newfetchfeeds3 = async (req, res) => {
       for (let i = 0; i < post?.length; i++) {
         for (let j = 0; j < post[i]?.post?.length; j++) {
           if (post[i].post[j].thumbnail) {
-            const a = process.env.POST_URL + post[i].post[j].content;
+            const a =
+              post[i].post[j].link === true
+                ? process.env.POST_URL + post[i].post[j].content + "640.mp4"
+                : process.env.POST_URL + post[i].post[j].content;
             const t = process.env.POST_URL + post[i].post[j].thumbnail;
 
             ur.push({ content: a, thumbnail: t, type: post[i].post[j]?.type });
@@ -2372,7 +2404,10 @@ exports.joinedcomnews3 = async (req, res) => {
       let ur = [];
       for (let j = 0; j < post[0]?.post?.length; j++) {
         if (post[0].post[j].thumbnail) {
-          const a = process.env.POST_URL + post[0].post[j].content;
+          const a =
+            post[i].post[j].link === true
+              ? process.env.POST_URL + post[i].post[j].content + "640.mp4"
+              : process.env.POST_URL + post[0].post[j].content;
           const t = process.env.POST_URL + post[0].post[j].thumbnail;
 
           ur.push({ content: a, thumbnail: t, type: post[0].post[j]?.type });
@@ -2746,3 +2781,22 @@ exports.fetchmoredata = async (req, res) => {
     res.status(500).json({ message: err, success: false });
   }
 };
+
+async function compressVideo(filePath) {
+  try {
+    new ffmpeg({ source: filePath })
+      .withSize("640x?")
+      .on("error", function (err) {
+        console.log("An error occurred: " + err.message);
+      })
+      .on("end", function () {
+        console.log("Processing finished!");
+      })
+      .saveToFile("output.mp4");
+  } catch (e) {
+    console.log(e.code);
+    console.log(e.msg);
+  }
+}
+
+// compressVideo("f.mp4");
