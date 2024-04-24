@@ -2406,7 +2406,7 @@ exports.joinedcomnews3 = async (req, res) => {
         if (post[0].post[j].thumbnail) {
           const a =
             post[i].post[j].link === true
-              ? process.env.POST_URL + post[i].post[j].content + "640.mp4"
+              ? process.env.POST_URL + post[0].post[j].content + "640.mp4"
               : process.env.POST_URL + post[0].post[j].content;
           const t = process.env.POST_URL + post[0].post[j].thumbnail;
 
