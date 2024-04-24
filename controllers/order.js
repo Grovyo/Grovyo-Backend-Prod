@@ -2225,6 +2225,7 @@ exports.createnewproductorder = async (req, res) => {
 exports.cancelao = async (req, res) => {
   try {
     const { id, ordid } = req.params;
+    const { reason } = req.body;
     const user = await User.findById(id);
     const order = await Order.findById(ordid);
 
@@ -2233,7 +2234,7 @@ exports.cancelao = async (req, res) => {
     } else {
       await Order.updateOne(
         { _id: order._id },
-        { $set: { currentStatus: "cancelled" } }
+        { $set: { currentStatus: "cancelled", reason: reason } }
       );
 
       res.status(200).json({ success: true });
@@ -3859,7 +3860,7 @@ exports.fecthallprods = async (req, res) => {
 //cancelprod
 exports.cancelprod = async (req, res) => {
   try {
-    const { userId, ordid, prodId } = req.params;
+    const { userId, ordid, prodId, reason } = req.params;
     const user = await User.findById(userId);
     if (user) {
       const order = await Order.findById(ordid).populate(
@@ -3881,7 +3882,7 @@ exports.cancelprod = async (req, res) => {
 
       await SellerOrder.updateOne(
         { _id: productId },
-        { $set: { currentStatus: "cancelled" } }
+        { $set: { currentStatus: "cancelled", reason: reason } }
       );
 
       res.status(200).json({
