@@ -134,6 +134,10 @@ const communitySchema = new mongoose.Schema(
       enum: ["unblock", "block"],
       default: "unblock",
     },
+
+    impressions: { type: Number, default: 0 },
+    cpc: { type: Number, default: 0 },
+    cpm: { type: Number, default: 0 },
   },
   { timestamps: false, strict: false }
 );

@@ -1031,7 +1031,7 @@ exports.likepost = async (req, res) => {
     try {
       await Post.updateOne(
         { _id: postId },
-        { $push: { likedby: user._id }, $inc: { likes: 1 } }
+        { $push: { likedby: user._id }, $inc: { likes: 1, views: 4 } }
       );
       await User.updateOne(
         { _id: userId },

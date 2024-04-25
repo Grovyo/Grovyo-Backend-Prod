@@ -2398,9 +2398,9 @@ exports.sendchatfile = async (req, res) => {
     if (data?.typ !== "gif") {
       a = process.env.URL + message?.content?.uri;
     } else {
-      a = message?.content?.uri;
+      a = process.env.URL + message?.content?.uri;
     }
-    console.log(data.url, a);
+
     res.status(200).json({ success: true, link: a });
   } catch (e) {
     console.log(e);
