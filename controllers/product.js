@@ -285,49 +285,124 @@ exports.getaproduct = async (req, res) => {
     if (!product) {
       res.status(404).json({ message: "Product not found", success: false });
     } else {
-      const urls = [];
-      let review = [];
-      let isreviewed = false;
-      let incart = false;
-      if (
-        product.reviewed.includes(user?._id) &&
-        user.puchase_products.includes(product?._id)
-      ) {
-        isreviewed = true;
-      }
-      if (user.cartproducts.includes(product?._id)) {
-        incart = true;
-      }
-      for (let i = 0; i < product.images.length; i++) {
-        if (product.images[i] !== null) {
-          const a = process.env.PRODUCT_URL + product.images[i].content;
-
-          urls.push(a);
+      if (product.isvariant === false) {
+        const urls = [];
+        let review = [];
+        let isreviewed = false;
+        let incart = false;
+        if (
+          product.reviewed.includes(user?._id) &&
+          user.puchase_products.includes(product?._id)
+        ) {
+          isreviewed = true;
         }
-      }
-      if (product?.reviews?.length > 0) {
-        for (let i = 0; i < product.reviews.length; i++) {
-          if (product.reviews[i] !== null) {
-            const a = process.env.URL + product.reviews[i].dp;
+        if (user.cartproducts.includes(product?._id)) {
+          incart = true;
+        }
+        for (let i = 0; i < product.images.length; i++) {
+          if (product.images[i] !== null) {
+            const a = process.env.PRODUCT_URL + product.images[i].content;
 
-            review.push({ review: product.reviews[i], dp: a });
+            urls.push(a);
           }
         }
-      }
+        if (product?.reviews?.length > 0) {
+          for (let i = 0; i < product.reviews.length; i++) {
+            if (product.reviews[i] !== null) {
+              const a = process.env.URL + product.reviews[i].dp;
 
-      res.status(200).json({
-        data: {
-          incart,
-          canreview: isreviewed,
-          totalreviews: product?.reviewed?.length,
-          product,
-          urls,
-          review,
-          success: true,
-        },
-      });
+              review.push({ review: product.reviews[i], dp: a });
+            }
+          }
+        }
+
+        res.status(200).json({
+          data: {
+            incart,
+            canreview: isreviewed,
+            totalreviews: product?.reviewed?.length,
+            product,
+
+            urls,
+            isvariant: product.isvariant,
+            review,
+            success: true,
+          },
+        });
+      } else {
+        const urls = [];
+        let review = [];
+        let isreviewed = false;
+        let incart = false;
+        if (
+          product.reviewed.includes(user?._id) &&
+          user.puchase_products.includes(product?._id)
+        ) {
+          isreviewed = true;
+        }
+        if (user.cartproducts.includes(product?._id)) {
+          incart = true;
+        }
+        for (let i = 0; i < product.images.length; i++) {
+          if (product.images[i] !== null) {
+            const a = process.env.PRODUCT_URL + product.images[i].content;
+
+            urls.push(a);
+          }
+        }
+        if (product?.reviews?.length > 0) {
+          for (let i = 0; i < product.reviews.length; i++) {
+            if (product.reviews[i] !== null) {
+              const a = process.env.URL + product.reviews[i].dp;
+
+              review.push({ review: product.reviews[i], dp: a });
+            }
+          }
+        }
+
+        // const size = [];
+        // const color = [];
+
+        // for (let i = 0; i < product.variants.length; i++) {
+
+        // }
+        const color = product.variants.map((d) => d.value);
+        const size = product.variants[0]?.category.map((d) => d.name);
+
+        const updateVariant = [];
+
+        for (let i = 0; i < product.variants.length; i++) {
+          const v = product.variants[i].category.map((d) => {
+            return {
+              ...d.toObject(),
+              imageUrl: process.env.PRODUCT_URL + d.content,
+            };
+          });
+
+          const obj = { ...product.variants[i].toObject(), category: v };
+
+          updateVariant.push(obj);
+        }
+
+        res.status(200).json({
+          data: {
+            color,
+            size,
+            incart,
+            canreview: isreviewed,
+            totalreviews: product?.reviewed?.length,
+            product,
+            variants: updateVariant,
+            isvariant: product.isvariant,
+            urls,
+            review,
+            success: true,
+          },
+        });
+      }
     }
   } catch (e) {
+    console.log(e);
     res.status(400).json({ message: e.message, success: false });
   }
 };

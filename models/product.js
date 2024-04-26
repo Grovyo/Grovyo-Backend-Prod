@@ -81,6 +81,23 @@ const productSchema = new mongoose.Schema({
   variants: [
     { Name: { type: String }, contents: [{ types: { type: String } }] },
   ],
+  isvariant: { type: Boolean, default: false },
+  variants: [
+    {
+      name: { type: String }, //size
+      value: { type: String }, //color
+      category: [
+        {
+          name: String, //xl
+          price: Number, //amount,
+          discountedprice: Number,
+          content: String, //dp
+          quantity: Number,
+        },
+      ],
+      isactive: { type: Boolean, default: false },
+    },
+  ],
 });
 
 module.exports = mongoose.model("Product", productSchema);
