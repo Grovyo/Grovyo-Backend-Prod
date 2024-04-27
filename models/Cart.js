@@ -7,6 +7,7 @@ const CartSchema = new mongoose.Schema(
     status: { type: String, default: "pending" },
     delivery: { type: String },
     quantity: { type: Number },
+    conf: { type: Object },
   },
   { timestamps: true }
 );

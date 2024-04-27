@@ -116,27 +116,44 @@ exports.fetchproducts = async (req, res) => {
       const urls = [];
 
       let ur = [];
-
-      for (let i = 0; i < product.length; i++) {
-        for (let j = 0; j < product[i].images.length; j++) {
-          const a = process.env.PRODUCT_URL + product[i].images[j].content;
-
-          ur.push({ content: a, type: product[i].images[j].type });
-        }
-        urls.push(ur);
-        ur = [];
-      }
-
       const cId = [];
       const qty = [];
 
-      product.forEach((p) => {
-        const matchingProduct = user.cartproducts.some((cartItem) => {
-          return p._id && p._id.toString() === cartItem.toString();
-        });
-        cId.push(matchingProduct);
-      });
+      for (let i = 0; i < product.length; i++) {
+        if (product[i].isvariant === false) {
+          for (let j = 0; j < product[i].images.length; j++) {
+            const a = process.env.PRODUCT_URL + product[i].images[j].content;
 
+            ur.push({ content: a, type: product[i].images[j].type });
+          }
+          urls.push(ur);
+          ur = [];
+
+          product.forEach((p) => {
+            const matchingProduct = user.cartproducts.some((cartItem) => {
+              return p._id && p._id.toString() === cartItem.toString();
+            });
+            cId.push(matchingProduct);
+          });
+        } else {
+          for (let j = 0; j < product[i].variants.length; j++) {
+            const a =
+              process.env.PRODUCT_URL +
+              product[i].variants[j].category[0].content;
+
+            ur.push({ content: a, type: "image" });
+          }
+          urls.push(ur);
+          ur = [];
+
+          product.forEach((p) => {
+            const matchingProduct = user.cartproducts.some((cartItem) => {
+              return p._id && p._id.toString() === cartItem.toString();
+            });
+            cId.push(matchingProduct);
+          });
+        }
+      }
       const urlData = urls;
       const productData = product;
       const cartId = cId;
@@ -149,6 +166,7 @@ exports.fetchproducts = async (req, res) => {
       res.status(200).json({ mergedData, success: true });
     }
   } catch (e) {
+    console.log(e);
     res.status(400).json({ message: e.message, success: false });
   }
 };

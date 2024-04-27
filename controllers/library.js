@@ -151,10 +151,13 @@ exports.fetchcart = async (req, res) => {
 
       if (user) {
         for (let j = 0; j < user.cart.length; j++) {
-          const a =
-            process.env.PRODUCT_URL + user.cart[j].product.images[0].content;
+          //  console.log(user.cart[j].product.images);
+          if (user.cart[j].product.images?.length > 0) {
+            const a =
+              process.env.PRODUCT_URL + user.cart[j].product.images[0].content;
 
-          image.push(a);
+            image.push(a);
+          }
         }
       }
 
@@ -210,6 +213,7 @@ exports.fetchcart = async (req, res) => {
       });
     }
   } catch (e) {
+    console.log(e);
     res.status(400).json({ message: e.message, success: false });
   }
 };
@@ -217,7 +221,7 @@ exports.fetchcart = async (req, res) => {
 //add to cart
 exports.addtocart = async (req, res) => {
   const { userId, productId } = req.params;
-  const { quantity, cartId, action } = req.body;
+  const { quantity, cartId, action, cat } = req.body;
   try {
     const user = await User.findById(userId);
     if (!user) {
@@ -225,7 +229,11 @@ exports.addtocart = async (req, res) => {
     } else {
       const cart = await Cart.findById(cartId);
       if (!cart) {
-        const c = new Cart({ product: productId, quantity: quantity });
+        const c = new Cart({
+          product: productId,
+          quantity: quantity,
+          conf: cat,
+        });
         await c.save();
         await User.updateOne({ _id: userId }, { $push: { cart: c._id } });
         await User.updateOne(
