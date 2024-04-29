@@ -804,3 +804,158 @@ exports.fetchallchatsnew = async (req, res) => {
     res.status(400).json({ message: "Something went wrong", success: false });
   }
 };
+
+//hidden code forgot reset
+exports.resethidden = async (req, res) => {
+  try {
+    const { id } = req.body;
+    const user = await User.findById(id);
+
+    //generating mesId
+    function msgid() {
+      return Math.floor(100000 + Math.random() * 900000);
+    }
+
+    function generateRandomCode() {
+      const randomNumber = Math.floor(Math.random() * 900000) + 100000;
+
+      const randomCode = randomNumber.toString();
+
+      return randomCode;
+    }
+
+    if (user) {
+      let code = generateRandomCode();
+      await User.updateOne({ _id: user._id }, { $set: { passcode: code } });
+
+      const grovyo = await User.findById("65a666a3e953a4573e6c7ecf");
+      const convs = await Conversation.findOne({
+        members: { $all: [user?._id, grovyo._id] },
+      });
+      const senderpic = process.env.URL + grovyo.profilepic;
+      const recpic = process.env.URL + user.profilepic;
+      const timestamp = `${new Date()}`;
+      const mesId = msgid();
+      if (convs) {
+        let data = {
+          conversationId: convs._id,
+          sender: grovyo._id,
+          text: `Your code to access your Hidden Chats is ${code}.`,
+          mesId: mesId,
+        };
+        const m = new Message(data);
+        await m.save();
+
+        if (user?.notificationtoken) {
+          const msg = {
+            notification: {
+              title: `Grovyo`,
+              body: `Your code to access your Hidden Chats is ${code}.`,
+            },
+            data: {
+              screen: "Conversation",
+              sender_fullname: `${grovyo?.fullname}`,
+              sender_id: `${grovyo?._id}`,
+              text: `Your code to access your Hidden Chats is ${code}.`,
+              convId: `${convs?._id}`,
+              createdAt: `${timestamp}`,
+              mesId: `${mesId}`,
+              typ: `message`,
+              senderuname: `${grovyo?.username}`,
+              senderverification: `${grovyo.isverified}`,
+              senderpic: `${senderpic}`,
+              reciever_fullname: `${user.fullname}`,
+              reciever_username: `${user.username}`,
+              reciever_isverified: `${user.isverified}`,
+              reciever_pic: `${recpic}`,
+              reciever_id: `${user._id}`,
+            },
+            token: user?.notificationtoken,
+          };
+
+          await admin
+            .messaging()
+            .send(msg)
+            .then((response) => {
+              console.log("Successfully sent message");
+            })
+            .catch((error) => {
+              console.log("Error sending message:", error);
+            });
+        }
+      } else {
+        const conv = new Conversation({
+          members: [grovyo._id, user._id],
+        });
+        const savedconv = await conv.save();
+        let data = {
+          conversationId: conv._id,
+          sender: grovyo._id,
+          text: `Your code for your Hidden Chats is ${code}.`,
+          mesId: mesId,
+        };
+        await User.updateOne(
+          { _id: grovyo._id },
+          {
+            $addToSet: {
+              conversations: savedconv?._id,
+            },
+          }
+        );
+        await User.updateOne(
+          { _id: user._id },
+          {
+            $addToSet: {
+              conversations: savedconv?._id,
+            },
+          }
+        );
+
+        const m = new Message(data);
+        await m.save();
+
+        const msg = {
+          notification: {
+            title: `Grovyo`,
+            body: `Your code to access your Hidden Chats is ${code}.`,
+          },
+          data: {
+            screen: "Conversation",
+            sender_fullname: `${grovyo?.fullname}`,
+            sender_id: `${grovyo?._id}`,
+            text: `Your code to access your Hidden Chats is ${code}.`,
+            convId: `${convs?._id}`,
+            createdAt: `${timestamp}`,
+            mesId: `${mesId}`,
+            typ: `message`,
+            senderuname: `${grovyo?.username}`,
+            senderverification: `${grovyo.isverified}`,
+            senderpic: `${senderpic}`,
+            reciever_fullname: `${user.fullname}`,
+            reciever_username: `${user.username}`,
+            reciever_isverified: `${user.isverified}`,
+            reciever_pic: `${recpic}`,
+            reciever_id: `${user._id}`,
+          },
+          token: user?.notificationtoken,
+        };
+
+        await admin
+          .messaging()
+          .send(msg)
+          .then((response) => {
+            console.log("Successfully sent message");
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+      }
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ message: "User not found", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};

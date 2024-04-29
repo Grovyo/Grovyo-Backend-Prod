@@ -989,11 +989,12 @@ exports.randomcomments = async (req, res) => {
     const { list, postId } = req.body;
 
     for (let i = 0; i < list.length; i++) {
-      const user = await User.findOne({});
+      const user = await User.find({ gr: 1 }).limit(30);
       const newComment = new Comment({
-        senderId: user._id,
+        senderId: user[i]._id,
         postId: postId,
         text: list[i],
+        createdAt: Date.now(),
       });
       await newComment.save();
       await Post.updateOne(

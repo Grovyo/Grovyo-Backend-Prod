@@ -152,11 +152,18 @@ exports.fetchcart = async (req, res) => {
       if (user) {
         for (let j = 0; j < user.cart.length; j++) {
           //  console.log(user.cart[j].product.images);
-          if (user.cart[j].product.images?.length > 0) {
-            const a =
-              process.env.PRODUCT_URL + user.cart[j].product.images[0].content;
+          if (user.cart[j].product.isvariant) {
+            const a = user.cart[j].conf.pic;
 
             image.push(a);
+          } else {
+            if (user.cart[j].product.images?.length > 0) {
+              const a =
+                process.env.PRODUCT_URL +
+                user.cart[j].product.images[0].content;
+
+              image.push(a);
+            }
           }
         }
       }
@@ -168,10 +175,18 @@ exports.fetchcart = async (req, res) => {
       let countdis = 0;
       let qty = 0;
       for (let i = 0; i < user.cart.length; i++) {
-        const t = user.cart[i].product.price * user?.cart[i].quantity;
-        count += t;
-        const d = user.cart[i].product.discountedprice * user?.cart[i].quantity;
-        countdis += d;
+        if (user.cart[i].product?.isvariant) {
+          const t = user.cart[i].conf.price * user?.cart[i].quantity;
+          count += t;
+          const d = user.cart[i].conf.discountedprice * user?.cart[i].quantity;
+          countdis += d;
+        } else {
+          const t = user.cart[i].product.price * user?.cart[i].quantity;
+          count += t;
+          const d =
+            user.cart[i].product.discountedprice * user?.cart[i].quantity;
+          countdis += d;
+        }
         const q = user?.cart[i].quantity;
         qty += q;
       }
@@ -224,17 +239,38 @@ exports.addtocart = async (req, res) => {
   const { quantity, cartId, action, cat } = req.body;
   try {
     const user = await User.findById(userId);
+    const prod = await Product.findById(productId);
     if (!user) {
       res.status(404).json({ message: "No user found", success: false });
     } else {
       const cart = await Cart.findById(cartId);
       if (!cart) {
-        const c = new Cart({
-          product: productId,
-          quantity: quantity,
-          conf: cat,
-        });
-        await c.save();
+        let c;
+        if (cat) {
+          console.log(cat);
+          c = new Cart({
+            product: productId,
+            quantity: quantity,
+            conf: cat,
+          });
+          await c.save();
+        } else {
+          let cate = {
+            variant: prod?.variants[0]?.name,
+            category: prod?.variants[0]?.category[0]?.name,
+            pic:
+              process?.env?.PRODUCT_URL +
+              prod?.variants[0]?.category[0]?.content,
+            price: prod?.variants[0]?.category[0]?.price,
+            discountedprice: prod?.variants[0]?.category[0]?.discountedprice,
+          };
+          c = new Cart({
+            product: productId,
+            quantity: quantity,
+            conf: cate,
+          });
+          await c.save();
+        }
         await User.updateOne({ _id: userId }, { $push: { cart: c._id } });
         await User.updateOne(
           { _id: userId },
