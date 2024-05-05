@@ -187,6 +187,7 @@ exports.fetchcart = async (req, res) => {
             user.cart[i].product.discountedprice * user?.cart[i].quantity;
           countdis += d;
         }
+
         const q = user?.cart[i].quantity;
         qty += q;
       }

@@ -4,6 +4,7 @@ const User = require("../models/userAuth");
 const Minio = require("minio");
 const Product = require("../models/product");
 const { default: mongoose } = require("mongoose");
+const Cancellation = require("../models/cancellation");
 
 require("dotenv").config();
 
@@ -202,7 +203,13 @@ exports.fetchingprosite = async (req, res) => {
 
     const productdps = await Promise.all(
       products.map(async (product) => {
-        const a = process.env.PRODUCT_URL + product.images[0].content;
+        let a;
+        if (product.isvariant) {
+          a =
+            process.env.PRODUCT_URL + product?.variants[0].category[0].content;
+        } else {
+          a = process.env.PRODUCT_URL + product?.images[0]?.content;
+        }
         return a;
       })
     );
@@ -248,7 +255,6 @@ exports.fetchingprosite = async (req, res) => {
     res.status(500).json({ message: error.message, success: false });
   }
 };
-
 exports.removeRecentSearchProsite = async (req, res) => {
   try {
     const { sId } = req.body;
@@ -386,6 +392,22 @@ exports.mobileSearch = async (req, res) => {
       .json({ success: true, recentSearchesCommunity, recentSearchesProsites });
   } catch (error) {
     console.log(error);
+    res.status(400).json({ success: false, message: "Something Went Wrong!" });
+  }
+};
+
+exports.cancellationrequest = async (req, res) => {
+  try {
+    const { userid, orderId } = req.params;
+    const { reason } = req.body;
+    const cancel = new Cancellation({
+      userid,
+      orderId,
+      reason,
+    });
+    await cancel.save();
+    res.status(200).json({ success: true });
+  } catch (error) {
     res.status(400).json({ success: false, message: "Something Went Wrong!" });
   }
 };

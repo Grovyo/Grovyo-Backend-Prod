@@ -12,6 +12,7 @@ const {
   removeRecentSearchCommunity,
   removeRecentSearchProsite,
   recentSearch,
+  cancellationrequest,
 } = require("../controllers/searc");
 
 const storage = multer.memoryStorage();
@@ -33,5 +34,6 @@ router.post("/addRecentSearchProsite/:id", addRecentSearchProsite);
 router.post("/addRecentSearchCommunity/:id", addRecentSearchCommunity);
 router.post("/removeRecentSearchCommunity/:id", removeRecentSearchCommunity);
 router.post("/removeRecentSearchProsite/:id", removeRecentSearchProsite);
+router.post("/cancellationrequest/:userid/:orderId", cancellationrequest);
 
 module.exports = router;
