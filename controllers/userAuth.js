@@ -2380,6 +2380,7 @@ exports.sendchatfile = async (req, res) => {
       pos.uri = data?.url;
       pos.type = "image/gif";
     }
+    console.log(data?.text);
     const message = new Message({
       text: data?.text,
       sender: data?.sender_id,
@@ -2392,11 +2393,14 @@ exports.sendchatfile = async (req, res) => {
       sequence: data?.sequence,
       timestamp: data?.timestamp,
       content: pos,
+      comId: data?.comId,
+      topicId: data?.sendtopicId,
     });
     await message.save();
+
     let a;
     if (data?.typ !== "gif") {
-      a = process.env.URL + message?.content?.uri;
+      a = process.env.MSG_URL + message?.content?.uri;
     } else {
       a = process.env.URL + message?.content?.uri;
     }

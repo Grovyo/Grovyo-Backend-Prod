@@ -465,16 +465,15 @@ exports.joinmember = async (req, res) => {
             Y1: 1,
           });
           await an.save();
-        }
-
-        //Community Stats
-        if (!analytcis.newmembers.includes(user._id)) {
-          await Analytics.updateOne(
-            { _id: analytcis._id },
-            {
-              $addToSet: { newmembers: user._id },
-            }
-          );
+          //Community Stats
+          if (!an?.newmembers?.includes(user._id)) {
+            await Analytics.updateOne(
+              { _id: an._id },
+              {
+                $addToSet: { newmembers: user._id },
+              }
+            );
+          }
         }
 
         let address = user?.address?.state
@@ -1036,8 +1035,29 @@ exports.gettopicmessages = async (req, res) => {
       let messages = [];
 
       for (let i = 0; i < msg?.length; i++) {
-        if (msg[i].typ === "gif") {
+        if (
+          msg[i].typ === "image" ||
+          msg[i].typ === "video" ||
+          msg[i].typ === "doc" ||
+          msg[i].typ === "glimpse"
+        ) {
+          const url = process.env.MSG_URL + msg[i]?.content?.uri;
+
+          messages.push({ ...msg[i].toObject(), url });
+        } else if (msg[i].typ === "gif") {
           const url = msg[i]?.content?.uri;
+
+          messages.push({ ...msg[i].toObject(), url });
+        } else if (msg[i].typ === "post") {
+          const url = process.env.POST_URL + msg[i]?.content?.uri;
+          const post = await Post.findById(msg[i].forwardid);
+          messages.push({
+            ...msg[i].toObject(),
+            url,
+            comId: post?.community,
+          });
+        } else if (msg[i].typ === "product") {
+          const url = process.env.PRODUCT_URL + msg[i]?.content?.uri;
 
           messages.push({ ...msg[i].toObject(), url });
         } else {
