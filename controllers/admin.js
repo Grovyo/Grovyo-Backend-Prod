@@ -822,34 +822,6 @@ exports.changegender = async (req, res) => {
   }
 };
 
-exports.recentSearch = async (req, res) => {
-  try {
-    const users = [];
-    if (req.body.length > 0) {
-      for (let i = 0; i < req.body.length; i++) {
-        const id = decryptaes(req.body[i]);
-        const userselect = await User.findById(id);
-        const dp = process.env.URL + userselect.profilepic;
-
-        const user = {
-          dp,
-          fullname: userselect.fullname,
-          username: userselect.username,
-          id: userselect._id,
-        };
-        users.push(user);
-      }
-
-      res.status(200).json({ success: true, users });
-    } else {
-      res.status(400).json({ success: false, message: "No Recent Searchs!" });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message, success: false });
-    console.log(error);
-  }
-};
-
 exports.countactive = async (req, res) => {
   try {
     const active = await Adm.findById("");

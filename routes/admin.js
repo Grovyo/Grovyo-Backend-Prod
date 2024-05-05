@@ -22,7 +22,6 @@ const {
   trnsfrcommems,
   creataccs,
   changegender,
-  recentSearch,
   increasefollowers,
   inclike,
   randomcomments,
@@ -56,7 +55,6 @@ router.post("/approvalactions/:userId", approvalactions);
 router.post("/trnsfrcommems/:comId", trnsfrcommems);
 router.post("/creataccs", creataccs);
 router.post("/changegender", changegender);
-router.post("/recentSearch", recentSearch);
 
 //inc
 router.post("/incf", increasefollowers);

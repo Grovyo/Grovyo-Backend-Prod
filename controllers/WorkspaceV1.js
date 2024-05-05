@@ -62,7 +62,7 @@ async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
 }
 
 //function for decryption of data
-const decryptaes = async (data) => {
+const decryptaes = (data) => {
   try {
     const encryptedBytes = aesjs.utils.hex.toBytes(data);
     const aesCtr = new aesjs.ModeOfOperation.ctr(

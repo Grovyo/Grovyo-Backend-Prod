@@ -86,6 +86,49 @@ exports.searchcoms = async (req, res) => {
 
 //search prosites
 
+const decryptaes = (data) => {
+  try {
+    const encryptedBytes = aesjs.utils.hex.toBytes(data);
+    const aesCtr = new aesjs.ModeOfOperation.ctr(
+      JSON.parse(process.env.key),
+      new aesjs.Counter(5)
+    );
+    const decryptedBytes = aesCtr.decrypt(encryptedBytes);
+    const decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
+    return decryptedText;
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+exports.recentSearch = async (req, res) => {
+  try {
+    if (req.body.length > 0) {
+      for (let i = 0; i < req.body.length; i++) {
+        const id = decryptaes(req.body[i]);
+        const userselect = await User.findById(id).select(
+          "profilepic isverified fullname username"
+        );
+        const dp = process.env.URL + userselect.profilepic;
+
+        const user = {
+          dp,
+          isverified: userselect.isverified,
+          fullname: userselect.fullname,
+          username: userselect.username,
+          id: userselect._id,
+        };
+        users.push(user);
+      }
+      res.status(200).json({ success: true, users });
+    } else {
+      res.status(400).json({ success: false, message: "No Recent Searchs!" });
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message, success: false });
+  }
+};
+
 exports.searchpros = async (req, res) => {
   const { query } = req.query;
   try {
@@ -175,9 +218,11 @@ exports.fetchingprosite = async (req, res) => {
       bio: user.desc,
       phone: user.phone,
       username: user.username,
+      isverified: user.isverified,
       fullname: user.fullname,
       dp: process.env.URL + user.profilepic,
       isStore: user.showStoreSection,
+      useDefaultProsite: user.useDefaultProsite,
       isAbout: user.showAboutSection,
       isCommunity: user.showCommunitySection,
       temp: user.prositeweb_template,

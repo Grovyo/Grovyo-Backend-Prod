@@ -540,6 +540,7 @@ exports.userprositedetails = async (req, res) => {
     const userDetails = {
       prositemobile: user.prositemob_template,
       prositeweb: user.prositeweb_template,
+      useDefaultProsite: user.useDefaultProsite,
     };
     res.status(200).json({ success: true, userDetails });
   } catch (error) {
