@@ -1921,8 +1921,13 @@ exports.fetchallposts = async (req, res) => {
               });
             }
           } else if (post[i].forwardid) {
-            const a = process.env.PRODUCT_URL + post[i].post[j].content;
-            ur.push({ content: a, type: post[i].post[j]?.type });
+            if (post[i].kind === "post") {
+              const a = process.env.POST_URL + post[i].post[j].content;
+              ur.push({ content: a, type: post[i].post[j]?.type });
+            } else {
+              const a = process.env.PRODUCT_URL + post[i].post[j].content;
+              ur.push({ content: a, type: post[i].post[j]?.type });
+            }
           } else {
             const a = process.env.POST_URL + post[i].post[j].content;
             ur.push({ content: a, type: post[i].post[j]?.type });
