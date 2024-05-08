@@ -1990,7 +1990,18 @@ exports.fetchallposts = async (req, res) => {
           members: topic?.memberscount,
           name: topic?.title,
         };
-
+        console.log(
+          topic.purchased.some(
+            (memberId) => memberId.id.toString() === user._id.toString()
+          ),
+          isWithin30Days,
+          "@",
+          topic?.members.some((memberId) => memberId.equals(user?._id))
+        );
+        topic.purchased.some((memberId) =>
+          console.log(memberId.id.toString(), user._id.toString())
+        );
+        topic?.members.some((memberId) => console.log(memberId, user?._id));
         if (
           topic.type !== "paid" &&
           topic?.members.some((memberId) => memberId.equals(user?._id))
