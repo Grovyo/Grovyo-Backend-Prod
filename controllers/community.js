@@ -1974,14 +1974,16 @@ exports.fetchallposts = async (req, res) => {
         );
 
         const timestamp = topic.purchased[purchaseindex]?.broughton || 0;
-        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
 
-        const currentTimestamp = Date.now();
-
-        const difference = currentTimestamp - timestamp;
+        function isWithin30Day(timestamp) {
+          const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+          const currentTimestamp = Date.now();
+          const difference = currentTimestamp - timestamp;
+          return difference < thirtyDaysInMs;
+        }
 
         const isWithin30Days =
-          topic?.title === "Posts" ? true : difference <= thirtyDaysInMs;
+          topic?.title === "Posts" ? true : isWithin30Day(timestamp);
 
         let topicdetail = {
           id: topic?._id,
@@ -1990,18 +1992,7 @@ exports.fetchallposts = async (req, res) => {
           members: topic?.memberscount,
           name: topic?.title,
         };
-        console.log(
-          topic.purchased.some(
-            (memberId) => memberId.id.toString() === user._id.toString()
-          ),
-          isWithin30Days,
-          "@",
-          topic?.members.some((memberId) => memberId.equals(user?._id))
-        );
-        topic.purchased.some((memberId) =>
-          console.log(memberId.id.toString(), user._id.toString())
-        );
-        topic?.members.some((memberId) => console.log(memberId, user?._id));
+
         if (
           topic.type !== "paid" &&
           topic?.members.some((memberId) => memberId.equals(user?._id))
@@ -2020,9 +2011,6 @@ exports.fetchallposts = async (req, res) => {
                 (memberId) => memberId.id.toString() === user._id.toString()
               ) &&
               isWithin30Days
-              // topic.purchased.some(
-              //   (memberId) => memberId.id.equals(user?._id) && isWithin30Days
-              // )
             ) {
               res.status(200).json({
                 muted,
