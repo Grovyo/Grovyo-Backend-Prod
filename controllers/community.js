@@ -1982,6 +1982,7 @@ exports.fetchallposts = async (req, res) => {
 
         const isWithin30Days =
           topic?.title === "Posts" ? true : difference <= thirtyDaysInMs;
+
         let topicdetail = {
           id: topic?._id,
           price: topic?.price,
@@ -2005,8 +2006,12 @@ exports.fetchallposts = async (req, res) => {
           if (topic?.type === "paid") {
             if (
               topic.purchased.some(
-                (memberId) => memberId.id.equals(user?._id) && isWithin30Days
-              )
+                (memberId) => memberId.id.toString() === user._id.toString()
+              ) &&
+              isWithin30Days
+              // topic.purchased.some(
+              //   (memberId) => memberId.id.equals(user?._id) && isWithin30Days
+              // )
             ) {
               res.status(200).json({
                 muted,
@@ -2016,6 +2021,7 @@ exports.fetchallposts = async (req, res) => {
                 topicjoined: true,
               });
             } else {
+              console.log("Not joined by", user.fullname);
               res.status(203).json({
                 messages: "Not joined",
                 success: true,

@@ -1281,16 +1281,9 @@ exports.finaliseorder = async (req, res) => {
           return Math.floor(100000 + Math.random() * 900000);
         }
 
-        const senderpic = await generatePresignedUrl(
-          "images",
-          flash.profilepic.toString(),
-          60 * 60
-        );
-        const recpic = await generatePresignedUrl(
-          "images",
-          mainuser.profilepic.toString(),
-          60 * 60
-        );
+        const senderpic = process.env.URL + flash.profilepic;
+
+        const recpic = process.env.URL + mainuser.profilepic;
 
         const mesId = msgid();
         const convs = await Conversation.findOne({
