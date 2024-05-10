@@ -973,6 +973,19 @@ exports.compostfeed = async (req, res) => {
         }
       }
 
+      //topics with msg counts
+      let topic = [];
+
+      for (let i = 0; i < community.topics.length; i++) {
+        const msg = await Message.countDocuments({
+          topicId: community.topics[i],
+          readby: { $nin: [user._id], $exists: true },
+        });
+
+        let d = { ...community.topics[i].toObject(), msg };
+        topic.push(d);
+      }
+
       //mergeing all the data
       const urlData = urls;
       const postData = posts;
@@ -1001,6 +1014,7 @@ exports.compostfeed = async (req, res) => {
         canedit,
         canpost,
         ismember,
+        topic,
         category: community?.category,
         success: true,
       });
@@ -1012,6 +1026,28 @@ exports.compostfeed = async (req, res) => {
     res
       .status(400)
       .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+//read all topic messages
+exports.readalltcm = async (req, res) => {
+  try {
+    const { id, topicid } = req.params;
+
+    const user = await User.findById(id);
+
+    if (user) {
+      await Message.updateMany(
+        { topicId: topicid },
+        { $addToSet: { readby: user._id } }
+      );
+      res.status(200).json({ success: true });
+    } else {
+      res.status(404).json({ success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
   }
 };
 
@@ -1043,11 +1079,19 @@ exports.gettopicmessages = async (req, res) => {
         ) {
           const url = process.env.MSG_URL + msg[i]?.content?.uri;
 
-          messages.push({ ...msg[i].toObject(), url });
+          messages.push({
+            ...msg[i].toObject(),
+            url,
+            dp: process.env.URL + msg[i].sender.profilepic,
+          });
         } else if (msg[i].typ === "gif") {
           const url = msg[i]?.content?.uri;
 
-          messages.push({ ...msg[i].toObject(), url });
+          messages.push({
+            ...msg[i].toObject(),
+            url,
+            dp: process.env.URL + msg[i].sender.profilepic,
+          });
         } else if (msg[i].typ === "post") {
           const url = process.env.POST_URL + msg[i]?.content?.uri;
           const post = await Post.findById(msg[i].forwardid);
@@ -1055,13 +1099,21 @@ exports.gettopicmessages = async (req, res) => {
             ...msg[i].toObject(),
             url,
             comId: post?.community,
+            dp: process.env.URL + msg[i].sender.profilepic,
           });
         } else if (msg[i].typ === "product") {
           const url = process.env.PRODUCT_URL + msg[i]?.content?.uri;
 
-          messages.push({ ...msg[i].toObject(), url });
+          messages.push({
+            ...msg[i].toObject(),
+            url,
+            dp: process.env.URL + msg[i].sender.profilepic,
+          });
         } else {
-          messages.push(msg[i].toObject());
+          messages.push({
+            ...msg[i].toObject(),
+            dp: process.env.URL + msg[i].sender.profilepic,
+          });
         }
       }
 
@@ -1180,12 +1232,49 @@ exports.loadmoremessages = async (req, res) => {
       let messages = [];
 
       for (let i = 0; i < msg?.length; i++) {
-        if (msg[i].typ === "gif") {
+        if (
+          msg[i].typ === "image" ||
+          msg[i].typ === "video" ||
+          msg[i].typ === "doc" ||
+          msg[i].typ === "glimpse"
+        ) {
+          const url = process.env.MSG_URL + msg[i]?.content?.uri;
+
+          messages.push({
+            ...msg[i].toObject(),
+            url,
+            dp: process.env.URL + msg[i].sender.profilepic,
+          });
+        } else if (msg[i].typ === "gif") {
           const url = msg[i]?.content?.uri;
 
-          messages.push({ ...msg[i].toObject(), url });
+          messages.push({
+            ...msg[i].toObject(),
+            url,
+            dp: process.env.URL + msg[i].sender.profilepic,
+          });
+        } else if (msg[i].typ === "post") {
+          const url = process.env.POST_URL + msg[i]?.content?.uri;
+          const post = await Post.findById(msg[i].forwardid);
+          messages.push({
+            ...msg[i].toObject(),
+            url,
+            comId: post?.community,
+            dp: process.env.URL + msg[i].sender.profilepic,
+          });
+        } else if (msg[i].typ === "product") {
+          const url = process.env.PRODUCT_URL + msg[i]?.content?.uri;
+
+          messages.push({
+            ...msg[i].toObject(),
+            url,
+            dp: process.env.URL + msg[i].sender.profilepic,
+          });
         } else {
-          messages.push(msg[i].toObject());
+          messages.push({
+            ...msg[i].toObject(),
+            dp: process.env.URL + msg[i].sender.profilepic,
+          });
         }
       }
 

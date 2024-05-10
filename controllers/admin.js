@@ -9,6 +9,7 @@ const Report = require("../models/reports");
 const Job = require("../models/jobs");
 const Revenue = require("../models/revenue");
 const Advertiser = require("../models/Advertiser");
+const Message = require("../models/message");
 const DelUser = require("../models/deluser");
 const Community = require("../models/community");
 const Interest = require("../models/Interest");
@@ -795,24 +796,10 @@ exports.creataccs = async (req, res) => {
 
 exports.changegender = async (req, res) => {
   try {
-    const pro = await Product.find();
-
-    // for (let i = 0; i < user.length; i++) {
-    //   const regexPattern = /\b(?:C|fem|A|B|f|l)\b/;
-    //   if (regexPattern.test(user[i].profilepic)) {
-    //     await User.updateOne(
-    //       { _id: user[i]._id },
-    //       { $set: { profilepic: "defaultuser.png" } }
-    //     );
-    //     console.log("true", user[i].gr);
-    //   }
-    // }
+    const pro = await Message.find({ readby: { $exists: false } });
 
     for (let i = 0; i < pro.length; i++) {
-      await Product.updateOne(
-        { _id: pro[i]._id },
-        { $set: { isverified: "verified" } }
-      );
+      await Message.updateOne({ _id: pro[i]._id }, { $unset: { readby: [] } });
     }
 
     res.status(200).json({ success: true });

@@ -11,6 +11,7 @@ const ffmpeg = require("fluent-ffmpeg");
 const Ads = require("../models/Ads");
 const Tag = require("../models/Tags");
 const Interest = require("../models/Interest");
+const Message = require("../models/message");
 const stream = require("stream");
 const {
   S3Client,
@@ -2352,7 +2353,8 @@ exports.joinedcomnews3 = async (req, res) => {
       members: { $in: user._id },
     })
       .populate("members", "profilepic")
-      .populate("creator", "fullname");
+      .populate("creator", "fullname")
+      .populate("topics", "title nature");
 
     const ownedcoms = await Community.find({ creator: user._id.toString() });
 
@@ -2361,6 +2363,7 @@ exports.joinedcomnews3 = async (req, res) => {
       return;
     }
 
+    let topic = [];
     const dps = [];
     const urls = [];
     const posts = [];
@@ -2376,6 +2379,23 @@ exports.joinedcomnews3 = async (req, res) => {
     });
 
     for (const community of communities) {
+      let nontopic = [];
+      for (let i = 0; i < community.topics.length; i++) {
+        const msg = await Message.countDocuments({
+          topicId: community.topics[i],
+          readby: { $nin: [user._id], $exists: true },
+        });
+
+        let d = {
+          title: community.topics[i]?.title,
+          _id: community.topics[i]?._id,
+          msg,
+          nature: community.topics[i]?.nature,
+          index: i,
+        };
+        nontopic.push(d);
+      }
+      topic.push(nontopic);
       const post = await Post.find({
         community: community._id,
         type: "Post",
@@ -2438,6 +2458,7 @@ exports.joinedcomnews3 = async (req, res) => {
       liked: likeData[i],
       community: c,
       posts: postData[i],
+      topics: topic[i],
     }));
 
     //arrange acc ot latest post first
@@ -2454,6 +2475,7 @@ exports.joinedcomnews3 = async (req, res) => {
       cancreate: ownedcoms?.length >= 2 ? false : true,
     });
   } catch (e) {
+    console.log(e);
     res.status(400).json({ message: e.message, success: false });
   }
 };

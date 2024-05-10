@@ -22,6 +22,7 @@ const {
   forcejoincom,
   setcomtype,
   reporting,
+  readalltcm,
 } = require("../controllers/community");
 
 const storage = multer.memoryStorage();
@@ -75,5 +76,8 @@ router.post("/v1/setcomtype/:id/:comId", setcomtype);
 
 //reporting
 router.post("/v1/reporting/:userid", reporting);
+
+//read topic messages
+router.post(`/v1/readalltcm/:id/:topicid`, readalltcm);
 
 module.exports = router;
