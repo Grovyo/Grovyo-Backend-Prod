@@ -171,7 +171,9 @@ exports.fetchingprosite = async (req, res) => {
     const com = await Community.find({ creator: user._id });
     for (let i = 0; i < com.length; i++) {
       const id = com[i];
-      let comm = await Community.findById(id).populate("members", "dp");
+      let comm = await Community.findById(id)
+        .populate("members", "dp")
+        .populate("posts");
       community.push(comm);
     }
 
@@ -180,6 +182,24 @@ exports.fetchingprosite = async (req, res) => {
         const imageforCommunity = process.env.URL + d.dp;
 
         return imageforCommunity;
+      })
+    );
+
+    const communityWithPosts = await Promise.all(
+      community.map(async (d) => {
+        const id = d?.posts;
+        const data = [];
+        const posts = await Post.find({ _id: id }).sort({ likes: -1 }).limit(5);
+
+        for (let i = 0; i < posts.length; i++) {
+          const obj = {
+            title: posts[i].title,
+            dp: process.env.POST_URL + posts[i].post[0].content,
+            type: posts[i].post[0].type,
+          };
+          data.push(obj);
+        }
+        return data;
       })
     );
 
@@ -197,7 +217,12 @@ exports.fetchingprosite = async (req, res) => {
     );
 
     const communitywithDps = community.map((f, i) => {
-      return { ...f.toObject(), dps: communityDps[i], membersdp: membersdp[i] };
+      return {
+        ...f.toObject(),
+        dps: communityDps[i],
+        membersdp: membersdp[i],
+        communityWithPosts: communityWithPosts[i],
+      };
     });
 
     const products = await Product.find({ creator: user._id });
@@ -214,6 +239,22 @@ exports.fetchingprosite = async (req, res) => {
         return a;
       })
     );
+
+    // const posts = await Post.find({}).sort({ likes: -1 }).limit(3);
+
+    // const postdp = await Promise.all(
+    //   posts.map(async (post) => {
+    //     const a = process.env.POST_URL + post.post[0].content
+    //     return a;
+    //   })
+    // );
+
+    // const postsWithDps = posts.map((post, index) => {
+    //   return {
+    //     ...post.toObject(),
+    //     dp: postdp[index],
+    //   };
+    // });
 
     const productsWithDps = products.map((product, index) => {
       return {
@@ -247,6 +288,7 @@ exports.fetchingprosite = async (req, res) => {
     const data = {
       communitywithDps,
       productsWithDps,
+
       userDetails,
     };
 
