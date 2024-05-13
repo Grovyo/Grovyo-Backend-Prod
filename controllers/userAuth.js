@@ -2432,7 +2432,7 @@ exports.loadmorechatmsgs = async (req, res) => {
         hidden: { $nin: [user._id.toString()] },
         //status: "active",
       })
-        .limit(20)
+        .limit(10)
         .sort({ sequence: 1 })
         .populate("sender", "profilepic fullname isverified");
 

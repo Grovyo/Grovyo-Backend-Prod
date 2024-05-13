@@ -1225,7 +1225,7 @@ exports.loadmoremessages = async (req, res) => {
         sequence: { $gte: lt >= 1 ? lt : 1, $lte: gt },
         deletedfor: { $nin: [user._id.toString()] },
       })
-        .limit(20)
+        .limit(10)
         .sort({ sequence: 1 })
         .populate("sender", "profilepic fullname isverified");
 
