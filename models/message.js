@@ -10,6 +10,10 @@ const messageSchema = new mongoose.Schema(
       type: ObjectId,
       ref: "User",
     },
+    rec: {
+      type: ObjectId,
+      ref: "User",
+    },
     text: {
       type: String,
     },
@@ -57,6 +61,7 @@ const messageSchema = new mongoose.Schema(
     readby: [{ type: ObjectId, ref: "User" }],
     desc: { type: String }, //for product desc
     forwardid: { type: String }, //for forwarding
+    issent: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
