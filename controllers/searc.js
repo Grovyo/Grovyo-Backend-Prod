@@ -167,6 +167,8 @@ exports.fetchingprosite = async (req, res) => {
         .status(400)
         .json({ success: false, message: "User Not Found" });
     }
+
+    console.log(user.fullname);
     const community = [];
     const com = await Community.find({ creator: user._id });
     for (let i = 0; i < com.length; i++) {
@@ -232,7 +234,8 @@ exports.fetchingprosite = async (req, res) => {
         let a;
         if (product.isvariant) {
           a =
-            process.env.PRODUCT_URL + product?.variants[0].category[0].content;
+            process.env.PRODUCT_URL +
+            product?.variants[0]?.category[0]?.content;
         } else {
           a = process.env.PRODUCT_URL + product?.images[0]?.content;
         }
@@ -274,6 +277,7 @@ exports.fetchingprosite = async (req, res) => {
       useDefaultProsite: user.useDefaultProsite,
       isAbout: user.showAboutSection,
       isCommunity: user.showCommunitySection,
+      location: user.address,
       temp: user.prositeweb_template,
       temp1: user.prositemob_template,
       email: user.email,
@@ -298,6 +302,7 @@ exports.fetchingprosite = async (req, res) => {
     res.status(500).json({ message: error.message, success: false });
   }
 };
+
 exports.removeRecentSearchProsite = async (req, res) => {
   try {
     const { sId } = req.body;
