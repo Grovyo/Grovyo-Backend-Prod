@@ -2008,6 +2008,7 @@ exports.postanythings3 = async (req, res) => {
 
       if (tokens?.length > 0) {
         let link = process.env.POST_URL + post.post[0].content;
+        let comdp = process.env.URL + community.dp;
         const timestamp = `${new Date()}`;
         const msg = {
           notification: {
@@ -2023,6 +2024,7 @@ exports.postanythings3 = async (req, res) => {
             createdAt: `${timestamp}`,
             type: "post",
             link,
+            comdp,
           },
           tokens: tokens,
         };
@@ -2842,3 +2844,46 @@ async function compressVideo(filePath) {
 }
 
 // compressVideo("f.mp4");
+
+//notification testing
+const postdemo = async () => {
+  try {
+    let link =
+      process.env.POST_URL +
+      "1708152827116_3d5cf442-21d2-483a-a0a0-bd994b1fc701_post.jpg";
+    let comdp =
+      process.env.POST_URL +
+      "1708152827116_3d5cf442-21d2-483a-a0a0-bd994b1fc701_post.jpg";
+    const timestamp = `${new Date()}`;
+    const msg = {
+      //notification:{Title:"sd",body:"s"},
+      data: {
+        screen: "CommunityChat",
+        sender_fullname: `Demo fullname`,
+        sender_id: `65d053c3c2a9e7250ada84b6`,
+        text: `ttitlw`,
+        comId: `65d055d6c2a9e7250adaa33d`,
+        createdAt: `${timestamp}`,
+        type: "post",
+        link,
+        comdp,
+      },
+      token:
+        "dKYDLCDSRWSbvig0Ruagm5:APA91bGkhT0LmOQK_d12_GPG2SNDrteO2bgjtxLWzoo5pG2n1NcVzFXjalA2kflmLffrgsYeOlAekiG0grhqylCK-h8fYhmVUHrO6waohP7p91ixckKO-AARFeSllRVsvEnlSCWGJulb",
+    };
+
+    await admin
+      .messaging()
+      .send(msg)
+      .then((response) => {
+        console.log("Successfully sent message");
+      })
+      .catch((error) => {
+        console.log("Error sending message:", error);
+      });
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+// postdemo();

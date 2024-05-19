@@ -2380,7 +2380,7 @@ exports.sendchatfile = async (req, res) => {
       pos.uri = data?.url;
       pos.type = "image/gif";
     }
-    console.log(data?.text);
+
     const message = new Message({
       text: data?.text,
       sender: data?.sender_id,
