@@ -57,10 +57,11 @@ exports.searchcoms = async (req, res) => {
     if (!query) {
       res.status(400).json({ success: false });
     } else {
+      const processedQuery = query.trim().toLowerCase();
       const dps = [];
       const creatordps = [];
       const coms = await Community.find({
-        title: { $regex: `.*${query}.*`, $options: "i" },
+        title: { $regex: `.*${processedQuery}.*`, $options: "i" },
         type: "public",
         blocked: { $nin: id },
       })
@@ -137,9 +138,13 @@ exports.searchpros = async (req, res) => {
     if (!query) {
       res.status(400).json({ success: false });
     } else {
+      const processedQuery = query.trim().toLowerCase();
       const dps = [];
       const pros = await User.find({
-        fullname: { $regex: `.*${query}.*`, $options: "i" },
+        $or: [
+          { fullname: { $regex: `.*${processedQuery}.*`, $options: "i" } },
+          { username: { $regex: `.*${processedQuery}.*`, $options: "i" } },
+        ],
       })
         .select("fullname profilepic username isverified createdAt")
         .lean()
