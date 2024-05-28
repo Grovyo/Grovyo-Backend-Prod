@@ -13,13 +13,15 @@ const {
   removeRecentSearchProsite,
   recentSearch,
   cancellationrequest,
+  addRecentPosts,
+  removeRecentPost,
 } = require("../controllers/searc");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 //search posts
-router.post("/searchnow", searchnow);
+router.post("/searchnow/:id", searchnow);
 
 //search communities
 router.post("/searchcoms/:id", searchcoms);
@@ -32,8 +34,10 @@ router.post("/web/recentSearch", recentSearch);
 router.get("/recentSearches/:id", mobileSearch);
 router.post("/addRecentSearchProsite/:id", addRecentSearchProsite);
 router.post("/addRecentSearchCommunity/:id", addRecentSearchCommunity);
+router.post("/addRecentPosts/:id", addRecentPosts);
 router.post("/removeRecentSearchCommunity/:id", removeRecentSearchCommunity);
 router.post("/removeRecentSearchProsite/:id", removeRecentSearchProsite);
+router.post("/removeRecentPost/:id", removeRecentPost);
 router.post("/cancellationrequest/:userid/:orderId", cancellationrequest);
 
 module.exports = router;
