@@ -10,6 +10,8 @@ const membership = new mongoose.Schema({
   discountedprice: { type: Number },
   plantype: { type: String, enum: ["monthly", "yearly"], default: "monthly" },
   percentoff: { type: Number },
+  dms: { type: Number, default: 0 },
+  tagging: { type: Number, default: 0 },
   broughtby: [
     {
       user: { type: ObjectId, ref: "User" },

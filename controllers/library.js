@@ -146,18 +146,23 @@ exports.fetchcart = async (req, res) => {
       const ids = [];
       const image = [];
       for (let j = 0; j < user.cart.length; j++) {
-        ids.push(user.cart[j].product._id);
+        if (user.cart[j].product) {
+          ids.push(user.cart[j].product._id);
+        }
       }
 
       if (user) {
         for (let j = 0; j < user.cart.length; j++) {
           //  console.log(user.cart[j].product.images);
-          if (user.cart[j].product.isvariant) {
+          if (user.cart[j].product && user.cart[j].product.isvariant) {
             const a = user.cart[j].conf.pic;
 
             image.push(a);
           } else {
-            if (user.cart[j].product.images?.length > 0) {
+            if (
+              user.cart[j].product &&
+              user.cart[j].product.images?.length > 0
+            ) {
               const a =
                 process.env.PRODUCT_URL +
                 user.cart[j].product.images[0].content;
@@ -175,21 +180,24 @@ exports.fetchcart = async (req, res) => {
       let countdis = 0;
       let qty = 0;
       for (let i = 0; i < user.cart.length; i++) {
-        if (user.cart[i].product?.isvariant) {
-          const t = user.cart[i].conf.price * user?.cart[i].quantity;
-          count += t;
-          const d = user.cart[i].conf.discountedprice * user?.cart[i].quantity;
-          countdis += d;
-        } else {
-          const t = user.cart[i].product.price * user?.cart[i].quantity;
-          count += t;
-          const d =
-            user.cart[i].product.discountedprice * user?.cart[i].quantity;
-          countdis += d;
-        }
+        if (user.cart[i].product) {
+          if (user.cart[i].product?.isvariant) {
+            const t = user.cart[i].conf.price * user?.cart[i].quantity;
+            count += t;
+            const d =
+              user.cart[i].conf.discountedprice * user?.cart[i].quantity;
+            countdis += d;
+          } else {
+            const t = user.cart[i].product.price * user?.cart[i].quantity;
+            count += t;
+            const d =
+              user.cart[i].product.discountedprice * user?.cart[i].quantity;
+            countdis += d;
+          }
 
-        const q = user?.cart[i].quantity;
-        qty += q;
+          const q = user?.cart[i].quantity;
+          qty += q;
+        }
       }
       total.push(count);
       discountedTotal.push(countdis);
@@ -197,7 +205,7 @@ exports.fetchcart = async (req, res) => {
       const discount = [];
       let dis = 0;
       for (let i = 0; i < user.cart.length; i++) {
-        const t = user.cart[i].product.percentoff;
+        const t = user.cart[i].product ? user.cart[i].product.percentoff : 0;
         dis += t;
       }
       discount.push(dis);

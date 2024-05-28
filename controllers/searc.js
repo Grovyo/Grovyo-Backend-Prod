@@ -39,13 +39,46 @@ exports.searchnow = async (req, res) => {
     if (!query) {
       res.status(400).json({ success: false });
     } else {
+      const processedQuery = query.trim().toLowerCase();
       const posts = await Post.find({
-        title: { $regex: `.*${query}.*`, $options: "i" },
-      }).exec();
-      res.status(200).json(posts);
+        title: { $regex: `.*${processedQuery}.*`, $options: "i" },
+        desc: { $regex: `.*${processedQuery}.*`, $options: "i" },
+        status: "Unblock",
+      })
+        .select("title desc post topicId community sender")
+        .limit(100)
+        .populate("community", "dp title createdAt")
+        .populate("sender", "fullname")
+        .lean()
+        .exec();
+
+      let imgs = [];
+      for (let i = 0; i < posts.length; i++) {
+        if (posts[i].post[0].type === "image/jpg") {
+          imgs.push(process.env.POST_URL + posts[i].post[0].content);
+        } else {
+          if (posts[i].post[0].thumbnail) {
+            imgs.push(process.env.POST_URL + posts[i].post[0].thumbnail);
+          } else {
+            imgs.push(process.env.POST_URL + posts[i].post[0].content);
+          }
+        }
+      }
+
+      let dp = [];
+      for (let i = 0; i < posts.length; i++) {
+        if (posts[i].community) {
+          dp.push(process.env.URL + posts[i].community.dp);
+        } else {
+          dp.push(process.env.URL + "default.png");
+        }
+      }
+
+      res.status(200).json({ success: true, posts, imgs, dp });
     }
   } catch (e) {
-    res.status(400).json(e.message);
+    console.log(e);
+    res.status(400).json({ success: false, message: e.message });
   }
 };
 
@@ -353,6 +386,28 @@ exports.removeRecentSearchCommunity = async (req, res) => {
     res.status(400).json({ message: error.message, success: false });
   }
 };
+exports.removeRecentPost = async (req, res) => {
+  try {
+    const { sId } = req.body;
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
+    }
+    user.recentPosts = user.recentPosts.filter(
+      (searchId) => searchId.toString() !== sId
+    );
+    await user.save();
+    return res.status(200).json({
+      success: true,
+      message: "Search Post removed successfully",
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message, success: false });
+  }
+};
 
 exports.addRecentSearchCommunity = async (req, res) => {
   try {
@@ -403,6 +458,31 @@ exports.addRecentSearchProsite = async (req, res) => {
   }
 };
 
+exports.addRecentPosts = async (req, res) => {
+  try {
+    const { sId } = req.body;
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (!user.recentPosts.includes(sId)) {
+      user.recentPosts.push(sId);
+      await user.save();
+      return res.status(201).json({ success: true, message: "Added!" });
+    } else {
+      return res
+        .status(200)
+        .json({ success: true, message: "Already Present!" });
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message, success: false });
+  }
+};
+
 exports.mobileSearch = async (req, res) => {
   try {
     const { id } = req.params;
@@ -414,6 +494,7 @@ exports.mobileSearch = async (req, res) => {
     }
     const recentSearchesProsites = [];
     const recentSearchesCommunity = [];
+    const recentPost = [];
 
     for (let i = 0; i < user.recentPrositeSearches.length; i++) {
       const anotherUsers = await User.findById(user.recentPrositeSearches[i]);
@@ -440,9 +521,34 @@ exports.mobileSearch = async (req, res) => {
 
       recentSearchesCommunity.push(data);
     }
-    res
-      .status(200)
-      .json({ success: true, recentSearchesCommunity, recentSearchesProsites });
+    for (let i = 0; i < user.recentPosts.length; i++) {
+      const anotherCommunity = await Post.findById(
+        user.recentPosts[i]
+      ).populate("community", "memberscount ");
+      const data = {
+        id: anotherCommunity?._id,
+        title: anotherCommunity?.title,
+        dp:
+          anotherCommunity.post[0].type === "image/jpg" ||
+          anotherCommunity.post[0].type === "image/jpeg"
+            ? process.env.POST_URL + anotherCommunity.post[0].content
+            : anotherCommunity.post[0].thumbnail
+            ? process.env.POST_URL + anotherCommunity.post[0].thumbnail
+            : process.env.POST_URL + anotherCommunity.post[0].content,
+        desc: anotherCommunity.desc,
+        comId: anotherCommunity.community,
+        topicId: anotherCommunity.topicId,
+        createdAt: anotherCommunity.createdAt,
+      };
+
+      recentPost.push(data);
+    }
+    res.status(200).json({
+      success: true,
+      recentSearchesCommunity,
+      recentSearchesProsites,
+      recentPost,
+    });
   } catch (error) {
     console.log(error);
     res.status(400).json({ success: false, message: "Something Went Wrong!" });

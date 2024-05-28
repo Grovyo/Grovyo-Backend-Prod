@@ -3408,3 +3408,14 @@ const findUser = async () => {
 };
 
 // findUser();
+const findComs = async () => {
+  try {
+    const coms = await Community.find({ totalposts: { $lte: 5 } });
+
+    console.log(coms.length);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+// findComs();

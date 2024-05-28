@@ -276,6 +276,7 @@ const userSchema = new mongoose.Schema(
     recentCommunitySearches: [
       { type: ObjectId, ref: "Community", default: [] },
     ],
+    recentPosts: [{ type: ObjectId, ref: "Posts", default: [] }],
   },
   { timestamps: false, strict: false }
 );
