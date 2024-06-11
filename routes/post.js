@@ -31,7 +31,7 @@ const {
 const { votenowpoll } = require("../controllers/community");
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage, limits: { fileSize: 100000000 } });
+const upload = multer({ storage: storage, limits: { fileSize: 1000000000 } });
 
 // router.post("/createphoto/:userId/:commId", upload.any(), createPhoto);
 router.post("/postanything/:userId/:comId", upload.any(), postanythings3);

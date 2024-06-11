@@ -65,7 +65,7 @@ const {
 const { userbyId } = require("../controllers/user");
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage, limits: { fileSize: 1000000000 } });
 
 router.post("/signup", signup);
 router.post("/signup-mobile", signupmobile); //for app

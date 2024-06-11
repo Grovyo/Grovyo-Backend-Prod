@@ -742,7 +742,7 @@ exports.fetchallchatsnew = async (req, res) => {
           .limit(1)
           .sort({ createdAt: -1 });
 
-        for (let j = 0; j < convs.members.length; j++) {
+        for (let j = 0; j < convs?.members?.length; j++) {
           if (convs.members[j]._id?.toString() !== user._id.toString()) {
             const pi = process.env.URL + convs?.members[j]?.profilepic;
 
