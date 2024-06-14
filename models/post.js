@@ -56,6 +56,7 @@ const PostSchema = new mongoose.Schema(
     type: { type: String, default: "Post" },
     promoid: { type: ObjectId, ref: "Post" },
     isPromoted: { type: Boolean, default: false },
+    peopletags: [{ type: ObjectId, ref: "User" }],
   },
   { timestamps: true, strict: false }
 );
