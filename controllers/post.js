@@ -2848,28 +2848,26 @@ async function compressVideo(filePath) {
 //notification testing
 const postdemo = async () => {
   try {
-    let link =
+    let dp =
       process.env.POST_URL +
       "1708152827116_3d5cf442-21d2-483a-a0a0-bd994b1fc701_post.jpg";
-    let comdp =
-      process.env.POST_URL +
-      "1708152827116_3d5cf442-21d2-483a-a0a0-bd994b1fc701_post.jpg";
+
     const timestamp = `${new Date()}`;
     const msg = {
-      //notification:{Title:"sd",body:"s"},
+      notification: { title: "sd", body: "s" },
       data: {
-        screen: "CommunityChat",
+        screen: "OngoingCall",
+        type: "incoming",
         sender_fullname: `Demo fullname`,
         sender_id: `65d053c3c2a9e7250ada84b6`,
         text: `ttitlw`,
-        comId: `65d055d6c2a9e7250adaa33d`,
-        createdAt: `${timestamp}`,
-        type: "post",
-        link,
-        comdp,
+        callconvId: `65d055d6c2a9e7250adaa33d`,
+        timestamp: `${timestamp}`,
+        dp,
+        name: "Name",
       },
       token:
-        "cMKADb7gS2yaJyKpH9y3c-:APA91bFiAtIOPqSvR91Z3i8W4wOGr3aaQ4OfBHyUK0-lRbw__olHuTcUnVq9ZA_45fCt2W4TMS4EfJKbpWsd39rGTyAT30sdarye6wIWNlHDi8DnY7k8oHhvQj1tG6TV9ljG9y62XQlh",
+        "dKYDLCDSRWSbvig0Ruagm5:APA91bGkhT0LmOQK_d12_GPG2SNDrteO2bgjtxLWzoo5pG2n1NcVzFXjalA2kflmLffrgsYeOlAekiG0grhqylCK-h8fYhmVUHrO6waohP7p91ixckKO-AARFeSllRVsvEnlSCWGJulb",
     };
 
     await admin
@@ -2886,4 +2884,4 @@ const postdemo = async () => {
   }
 };
 
-// postdemo();
+postdemo();

@@ -211,7 +211,6 @@ router.get("/getmessage/:conversationId", async (req, res) => {
     res.status(500).json({ message: e.message, success: false });
   }
 });
-module.exports = router;
 
 router.post("/hide/:mesId/:id", async (req, res) => {
   try {
@@ -336,3 +335,5 @@ router.get("/getvotes/:mesId", async (req, res) => {
     res.status(500).json({ message: e.message, success: false });
   }
 });
+
+module.exports = router;
