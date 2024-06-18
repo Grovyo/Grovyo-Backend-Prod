@@ -7,7 +7,7 @@ const InterestSchema = new mongoose.Schema(
     desc: { type: String },
     post: [{ type: ObjectId, ref: "Post" }],
     count: { type: Number },
-    tags: [{ type: String }],
+    tags: [{ type: ObjectId, ref: "Tags" }],
     pic: { type: String },
   },
   { timestamps: true }
