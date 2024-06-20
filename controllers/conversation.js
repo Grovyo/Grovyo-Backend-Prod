@@ -257,6 +257,71 @@ exports.acceptorrejectmesgreq = async (req, res) => {
   }
 };
 
+//dm
+exports.dm = async (req, res) => {
+  const { sender, reciever } = req.body;
+  try {
+    try {
+      const conv = await Conversation.findOne({
+        members: { $all: [sender, reciever] },
+      });
+      const user = await User.findById(reciever);
+      if (conv) {
+        res.status(203).json({ success: false, covId: conv._id });
+      } else if (!user) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      } else {
+        await User.updateOne(
+          { _id: reciever },
+          {
+            $pull: {
+              messagerequests: { id: sender },
+            },
+          }
+        );
+        await User.updateOne(
+          { _id: sender },
+          {
+            $pull: {
+              msgrequestsent: { id: reciever },
+            },
+          }
+        );
+        const conv = new Conversation({
+          members: [sender, reciever],
+        });
+        const savedconv = await conv.save();
+        await User.updateOne(
+          { _id: sender },
+          {
+            $push: {
+              conversations: savedconv?._id,
+            },
+          }
+        );
+        await User.updateOne(
+          { _id: reciever },
+          {
+            $push: {
+              conversations: savedconv?._id,
+            },
+          }
+        );
+        res.status(200).json({ convId: savedconv?._id, success: true });
+      }
+    } catch (e) {
+      console.log(e);
+      res.status(500).json({ message: e.message, success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({ message: e.message, success: false });
+  }
+};
+
 //fetch all msg reqs
 exports.fetchallmsgreqs = async (req, res) => {
   const { id } = req.params;

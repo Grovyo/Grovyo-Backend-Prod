@@ -11,6 +11,8 @@ const cluster = require("cluster");
 const http = require("http").Server(app);
 const io = require("socket.io")(http);
 
+const puppeteer = require("puppeteer");
+
 //Redis
 // const redis = new Redis("redis://192.168.29.221:6379");
 // const subscriber = new Redis("redis://192.168.29.221:6379");
@@ -75,6 +77,44 @@ app.use("/api", testRoutes);
 app.use("/api", workRoutes);
 app.use("/api", adRoutes);
 app.use("/api", Deliveryroutes);
+
+app.get("/geocode", async (req, res) => {
+  const { address } = req.body; // Example address
+  const encodedAddress = encodeURIComponent(address);
+  const searchUrl = `https://www.google.com/maps/search/${encodedAddress}`;
+
+  try {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.goto(searchUrl, { waitUntil: "networkidle0" });
+
+    // Extract coordinates using JavaScript in the context of the page
+    const coordinates = await page.evaluate(() => {
+      const url = window.location.href;
+      const matches = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+
+      if (!matches || matches.length < 3) {
+        throw new Error("Coordinates not found");
+      }
+
+      return {
+        latitude: parseFloat(matches[1]),
+        longitude: parseFloat(matches[2]),
+      };
+    });
+
+    await browser.close();
+
+    res.json({
+      address: address,
+      searchUrl: searchUrl,
+      coordinates: coordinates,
+    });
+  } catch (error) {
+    console.error("Error:", error.message);
+    res.status(500).json({ error: "Failed to extract coordinates" });
+  }
+});
 
 // app.use("/api/v1", workspacev1);
 

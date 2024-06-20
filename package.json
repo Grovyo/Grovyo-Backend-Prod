@@ -54,6 +54,7 @@
     "nodemailer": "^6.9.7",
     "nodemon": "^2.0.20",
     "pdfkit": "^0.14.0",
+    "puppeteer": "^22.11.2",
     "razorpay": "^2.9.2",
     "redis": "^4.6.11",
     "sharp": "^0.32.1",

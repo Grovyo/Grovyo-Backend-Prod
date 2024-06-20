@@ -13,6 +13,7 @@ const {
   createmessagereqnew,
   fetchallchatsnew,
   resethidden,
+  dm,
 } = require("../controllers/conversation");
 const router = express.Router();
 
@@ -54,5 +55,8 @@ router.post("/v1/fetchallchatsnew/:id", fetchallchatsnew);
 
 //reset hidden chats
 router.post("/v1/resethidden", resethidden);
+
+//dm
+router.post("/v1/dm", dm);
 
 module.exports = router;
