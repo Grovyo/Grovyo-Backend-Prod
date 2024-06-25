@@ -6,6 +6,7 @@ const Product = require("../models/product");
 const Order = require("../models/orders");
 const Cart = require("../models/Cart");
 const Subscriptions = require("../models/Subscriptions");
+const { default: axios } = require("axios");
 require("dotenv").config();
 
 const minioClient = new Minio.Client({
@@ -368,44 +369,44 @@ exports.updateaddress = async (req, res) => {
   try {
     let address;
     const user = await User.findById(userId);
+
     if (!user) {
       res.status(404).json({ message: "No user found", success: false });
     } else {
-      if (phone) {
-        const apiKey = process.env.GEOCODE;
+      const apiKey = process.env.GEOCODE;
 
-        const endpoint = "https://maps.googleapis.com/maps/api/geocode/json";
-        const params = {
-          address: address,
-          key: apiKey,
+      const endpoint = "https://maps.googleapis.com/maps/api/geocode/json";
+      const params = {
+        address: streetaddress + city + pincode + state,
+        key: apiKey,
+      };
+
+      const response = await axios.get(endpoint, { params });
+      const data = response.data;
+      if (data.status === "OK") {
+        const location = data.results[0].geometry.location;
+        const latitude = location.lat;
+        const longitude = location.lng;
+
+        address = {
+          streetaddress: streetaddress,
+          state: state,
+          city: city,
+          landmark: landmark,
+          pincode: pincode,
+          coordinates: {
+            latitude: latitude,
+            longitude: longitude,
+            altitude: altitude,
+            provider: provider,
+            accuracy: accuracy,
+            bearing: bearing,
+          },
         };
-
-        const response = await axios.get(endpoint, { params });
-        const data = response.data;
-        if (data.status === "OK") {
-          const location = data.results[0].geometry.location;
-          const latitude = location.lat;
-          const longitude = location.lng;
-
-          address = {
-            streetaddress: streetaddress,
-            state: state,
-            city: city,
-            landmark: landmark,
-            pincode: pincode,
-            coordinates: {
-              latitude: latitude,
-              longitude: longitude,
-              altitude: altitude,
-              provider: provider,
-              accuracy: accuracy,
-              bearing: bearing,
-            },
-          };
-        } else {
-          console.log("Geocoding API request failed");
-        }
-
+      } else {
+        console.log("Geocoding API request failed");
+      }
+      if (phone) {
         await User.updateOne(
           { _id: userId },
           { $set: { address: address, phone: phone } }
@@ -417,6 +418,7 @@ exports.updateaddress = async (req, res) => {
       res.status(200).json({ success: true });
     }
   } catch (e) {
+    console.log(e);
     res.status(400).json({ message: e.message, success: false });
   }
 };
