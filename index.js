@@ -45,6 +45,7 @@ const memRoutes = require("./routes/membership");
 const Community = require("./models/community");
 const Order = require("./models/orders");
 const Deliveryroutes = require("./routes/delivery");
+const { default: axios } = require("axios");
 
 require("dotenv").config();
 
@@ -79,40 +80,54 @@ app.use("/api", adRoutes);
 app.use("/api", Deliveryroutes);
 
 app.get("/geocode", async (req, res) => {
-  const { address } = req.body; // Example address
-  const encodedAddress = encodeURIComponent(address);
-  const searchUrl = `https://www.google.com/maps/search/${encodedAddress}`;
+  const { address } = req.body;
+  const apiKey = process.env.GEOCODE;
+
+  const endpoint = "https://maps.googleapis.com/maps/api/geocode/json";
+  const params = {
+    address: address,
+    key: apiKey,
+  };
 
   try {
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-    await page.goto(searchUrl, { waitUntil: "networkidle0" });
-
-    // Extract coordinates using JavaScript in the context of the page
-    const coordinates = await page.evaluate(() => {
-      const url = window.location.href;
-      const matches = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-
-      if (!matches || matches.length < 3) {
-        throw new Error("Coordinates not found");
-      }
-
-      return {
-        latitude: parseFloat(matches[1]),
-        longitude: parseFloat(matches[2]),
-      };
-    });
-
-    await browser.close();
-
-    res.json({
-      address: address,
-      searchUrl: searchUrl,
-      coordinates: coordinates,
-    });
+    const response = await axios.get(endpoint, { params });
+    const data = response.data;
+    if (data.status === "OK") {
+      const location = data.results[0].geometry.location;
+      const latitude = location.lat;
+      const longitude = location.lng;
+      res.json({ latitude, longitude });
+    } else {
+      res.status(400).json({ error: "Geocoding API request failed" });
+    }
   } catch (error) {
-    console.error("Error:", error.message);
-    res.status(500).json({ error: "Failed to extract coordinates" });
+    console.error("Error fetching geocoding API:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/reversegeocode", async (req, res) => {
+  const { latitude, longitude } = req.body;
+  const apiKey = process.env.GEOCODE;
+
+  const endpoint = "https://maps.googleapis.com/maps/api/geocode/json";
+  const params = {
+    latlng: `${latitude},${longitude}`,
+    key: apiKey,
+  };
+
+  try {
+    const response = await axios.get(endpoint, { params });
+    const data = response.data;
+    if (data.status === "OK") {
+      const address = data.results[0].formatted_address;
+      res.json({ address });
+    } else {
+      res.status(400).json({ error: "Reverse Geocoding API request failed" });
+    }
+  } catch (error) {
+    console.error("Error fetching reverse geocoding API:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

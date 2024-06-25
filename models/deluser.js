@@ -141,6 +141,9 @@ const deluser = new mongoose.Schema({
     latitude: { type: Number },
     longitude: { type: Number },
   },
+  primaryloc: {
+    type: String,
+  }, // for city
   bank: {
     accno: { type: String },
     ifsccode: { type: String },
@@ -158,7 +161,7 @@ const deluser = new mongoose.Schema({
     {
       amount: { type: Number },
       time: { type: Number },
-      delid: { type: ObjectId, ref: "Delivery" },
+      delid: { type: ObjectId, ref: "DeliveriesSchema" },
       mode: { type: String, default: "Cash" },
     },
   ],

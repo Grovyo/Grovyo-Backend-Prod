@@ -366,26 +366,46 @@ exports.updateaddress = async (req, res) => {
   } = req.body;
 
   try {
-    const address = {
-      streetaddress: streetaddress,
-      state: state,
-      city: city,
-      landmark: landmark,
-      pincode: pincode,
-      coordinates: {
-        latitude: latitude,
-        longitude: longitude,
-        altitude: altitude,
-        provider: provider,
-        accuracy: accuracy,
-        bearing: bearing,
-      },
-    };
+    let address;
     const user = await User.findById(userId);
     if (!user) {
       res.status(404).json({ message: "No user found", success: false });
     } else {
       if (phone) {
+        const apiKey = process.env.GEOCODE;
+
+        const endpoint = "https://maps.googleapis.com/maps/api/geocode/json";
+        const params = {
+          address: address,
+          key: apiKey,
+        };
+
+        const response = await axios.get(endpoint, { params });
+        const data = response.data;
+        if (data.status === "OK") {
+          const location = data.results[0].geometry.location;
+          const latitude = location.lat;
+          const longitude = location.lng;
+
+          address = {
+            streetaddress: streetaddress,
+            state: state,
+            city: city,
+            landmark: landmark,
+            pincode: pincode,
+            coordinates: {
+              latitude: latitude,
+              longitude: longitude,
+              altitude: altitude,
+              provider: provider,
+              accuracy: accuracy,
+              bearing: bearing,
+            },
+          };
+        } else {
+          console.log("Geocoding API request failed");
+        }
+
         await User.updateOne(
           { _id: userId },
           { $set: { address: address, phone: phone } }
@@ -393,6 +413,7 @@ exports.updateaddress = async (req, res) => {
       } else {
         await User.updateOne({ _id: userId }, { $set: { address: address } });
       }
+
       res.status(200).json({ success: true });
     }
   } catch (e) {

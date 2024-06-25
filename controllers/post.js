@@ -1119,7 +1119,7 @@ exports.deletepost = async (req, res) => {
         nature: "post",
         title: "Posts",
       });
-      console.log(topic, "topic");
+
       if (topic) {
         await Topic.updateOne(
           { _id: topic._id },
@@ -1853,7 +1853,7 @@ exports.datadownload2 = async (req, res) => {
 exports.postanythings3 = async (req, res) => {
   const { userId, comId, topicId } = req.params;
   try {
-    const { title, desc, tags, category, type } = req.body;
+    const { title, desc, tags, category, type, people } = req.body;
     const tag = tags.split(",");
 
     const user = await User.findById(userId);
@@ -1928,6 +1928,7 @@ exports.postanythings3 = async (req, res) => {
         post: pos,
         tags: tag,
         topicId: topicId,
+        peopletags: people,
       });
       const savedpost = await post.save();
 
@@ -2222,6 +2223,7 @@ exports.newfetchfeeds3 = async (req, res) => {
       status: "active",
       $or: [{ type: "banner" }],
     })
+      .sort({ cpa: -1 })
       .populate({
         path: "postid",
         select:

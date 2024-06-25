@@ -23,6 +23,7 @@ const {
   bao,
   fecthallprods,
   cancelprod,
+  cod,
 } = require("../controllers/order");
 
 router.post("/neworder/:userId/:productId", create);
@@ -35,7 +36,7 @@ router.get("/orderdetails/:userId/:orderId", details);
 router.post("/createpdf", createpdf);
 router.post("/createrzporder/:id", createrzporder);
 router.post("/finaliseorder/:id/:ordId", finaliseorder);
-router.post("/createnewproductorder/:userId", createnewproductorder);
+router.post("/createnewproductorder/:userId", cod);
 router.post("/removecartorder/:id/:cartId/:productId", removecartorder);
 
 //testing

@@ -65,6 +65,7 @@ const AdsSchema = new mongoose.Schema(
     views: { type: Number, default: 0 },
     impressions: { type: Number, default: 0 },
     cpc: { type: Number, default: 0 },
+    cpa: { type: Number, default: 0 },
     clicks: { type: Number, default: 0 },
     stopreason: { type: String },
   },

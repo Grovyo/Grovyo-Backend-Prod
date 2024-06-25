@@ -3,9 +3,10 @@ const { ObjectId } = mongoose.Schema;
 
 const Deliveries = new mongoose.Schema({
   title: { type: String },
-  amount: { type: Number },
+  amount: { type: Number }, //to be collected
   orderId: { type: Number },
   time: { type: Number },
+  earning: { type: Number },
   partner: { type: ObjectId, ref: "DelUser" },
   status: { type: String, default: "Not started" },
   type: { type: String },
@@ -49,15 +50,28 @@ const Deliveries = new mongoose.Schema({
   phonenumber: { type: Number },
   remarks: { type: String },
   timing: { type: String },
-  data: [
+  data: Array,
+  // data: [
+  //   {
+  //     product: { type: ObjectId, ref: "Product" },
+  //     qty: { type: Number },
+  //     seller: { type: ObjectId, ref: "User" },
+  //     price: { type: Number, default: 0 },
+  //   },
+  // ],
+  verifypic: [{ type: String }],
+  marks: [
     {
-      product: { type: ObjectId, ref: "Product" },
-      qty: { type: Number },
-      seller: { type: ObjectId, ref: "User" },
-      price: { type: Number, default: 0 },
+      latitude: String,
+      longitude: String,
+      address: Object,
+      done: Boolean,
+      pic: String,
     },
   ],
-  verifypic: [{ type: String }],
+  where: { type: String, enum: ["affiliate", "customer"] },
+  affid: { type: ObjectId, ref: "DelUser" },
+  buyer: { type: ObjectId, ref: "User" },
 });
 
 Deliveries.index({ title: "text" });
