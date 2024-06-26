@@ -20,6 +20,7 @@ const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 const fs = require("fs");
 require("dotenv").config();
 const Subscriptions = require("../models/Subscriptions");
+const { Types } = require("mongoose");
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
 const POST_BUCKET = process.env.POST_BUCKET;
@@ -1683,26 +1684,78 @@ exports.blockpcom = async (req, res) => {
 //vote in community poll
 exports.votenowpoll = async (req, res) => {
   try {
+    function calculateVoteStrengths(votedCount, totalVotes) {
+      if (totalVotes === 0) return 0;
+      return (votedCount / totalVotes) * 100;
+    }
+
     const { id, postId, opId } = req.params;
     const user = await User.findById(id);
+
     if (!user) {
-      res.status(404).json({ success: false, message: "User not found" });
-    } else {
-      await Post.updateOne(
-        { _id: postId, "options._id": opId },
-        {
-          $inc: { "options.$.strength": 1, totalvotes: 1 },
-          $addToSet: { "options.$.votedby": user._id, votedby: user._id },
-        }
-      );
-      res.status(200).json({ success: true });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
-  } catch (e) {
-    console.log(e);
+
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Post not found" });
+    }
+
+    // Clone the post object deeply
+    const clonedPost = JSON.parse(JSON.stringify(post));
+
+    // Find the option within clonedPost.options based on opId
+    const prevopid = clonedPost.options.find((option) =>
+      option._id.equals(Types.ObjectId(opId))
+    );
+
+    if (!prevopid) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Option not found in post" });
+    }
+
+    // Perform operations on the cloned object
+    if (clonedPost.votedby.includes(id)) {
+      // Decrease total votes and remove user from votedby
+      clonedPost.totalvotes -= 1;
+      clonedPost.votedby = clonedPost.votedby.filter(
+        (voterId) => !voterId.equals(user._id)
+      );
+
+      // Remove user from prevopid.votedby
+      const index = prevopid.votedby.indexOf(user._id);
+      if (index !== -1) {
+        prevopid.votedby.splice(index, 1);
+      }
+    }
+
+    // Increase total votes and add user to votedby of the selected option
+    clonedPost.totalvotes += 1;
+    prevopid.votedby.push(user._id);
+
+    // Update strength for each option in clonedPost
+    clonedPost.options.forEach((option) => {
+      option.strength = calculateVoteStrengths(
+        option.votedby.length,
+        clonedPost.totalvotes
+      );
+    });
+
+    // Save the clonedPost back to the database
+    await Post.findByIdAndUpdate(postId, clonedPost);
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error(error);
     res.status(400).json({ message: "Something went wrong", success: false });
   }
 };
-
 //remove the community along posts
 exports.removecomwithposts = async (req, res) => {
   try {
