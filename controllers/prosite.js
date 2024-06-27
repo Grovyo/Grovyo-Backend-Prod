@@ -7,6 +7,7 @@ const Minio = require("minio");
 const Post = require("../models/post");
 const Prosite = require("../models/prosite");
 const sharp = require("sharp");
+const Membership = require("../models/membership");
 require("dotenv").config();
 
 const minioClient = new Minio.Client({
@@ -202,6 +203,9 @@ exports.getcommunities = async (req, res) => {
   const user = await User.findById(userId);
   const time = new Date(Date.now() - 24 * 60 * 60 * 1000);
   try {
+    const membershipid = user.memberships.membership;
+    const membership = await Membership.findById(membershipid);
+
     const community = await Community.find({ creator: userId }).populate(
       "members",
       "profilepic"
@@ -263,7 +267,16 @@ exports.getcommunities = async (req, res) => {
       }
 
       res.status(200).json({
-        data: { community, memdps, posts, dps, urls, liked },
+        data: {
+          community,
+          memdps,
+          posts,
+          dps,
+          urls,
+          liked,
+          limit: membership.communitylimit,
+          taglimit: membership.tagging,
+        },
         success: true,
       });
     }
@@ -276,6 +289,7 @@ exports.getcommunities = async (req, res) => {
 exports.getbio = async (req, res) => {
   const { userId } = req.params;
   const user = await User.findById(userId);
+  console.log(user, "user");
   try {
     if (!user) {
       res.status(404).json({ message: "No user found", success: false });

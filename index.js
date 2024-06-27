@@ -72,6 +72,7 @@ app.use("/api", replyRoutes);
 app.use("/api", questionsRoutes);
 app.use("/api", searchRoutes);
 app.use("/api", adminRoutes);
+app.use("/api", memRoutes);
 app.use("/api", notificationRoutes);
 app.use("/api", libraryRoutes);
 app.use("/api", testRoutes);

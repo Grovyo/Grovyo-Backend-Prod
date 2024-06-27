@@ -20,7 +20,11 @@ const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 const fs = require("fs");
 require("dotenv").config();
 const Subscriptions = require("../models/Subscriptions");
+<<<<<<< Updated upstream
 const { Types } = require("mongoose");
+=======
+const Membership = require("../models/membership");
+>>>>>>> Stashed changes
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
 const POST_BUCKET = process.env.POST_BUCKET;
@@ -657,7 +661,13 @@ exports.getcommunity = async (req, res) => {
         60 * 60
       );
 
-      res.status(200).json({ dp, community, subs, canedit, success: true });
+      res.status(200).json({
+        dp,
+        community,
+        subs,
+        canedit,
+        success: true,
+      });
     }
   } catch (e) {
     res.status(400).json(e.message);
@@ -1682,6 +1692,7 @@ exports.blockpcom = async (req, res) => {
 };
 
 //vote in community poll
+<<<<<<< Updated upstream
 exports.votenowpoll = async (req, res) => {
   try {
     function calculateVoteStrengths(votedCount, totalVotes) {
@@ -1747,7 +1758,6 @@ exports.votenowpoll = async (req, res) => {
     res.status(400).json({ message: "Something went wrong", success: false });
   }
 };
-
 //remove the community along posts
 exports.removecomwithposts = async (req, res) => {
   try {

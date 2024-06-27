@@ -39,10 +39,21 @@ const PostSchema = new mongoose.Schema(
       {
         title: String,
         strength: { type: Number, default: 0 },
-        votedby: [{ type: ObjectId, ref: "User" }],
+        // votedby: [{ type: ObjectId, ref: "User" }],
+        votedby: [
+          {
+            user: { type: ObjectId, ref: "User" },
+            option: { type: ObjectId },
+          },
+        ],
       },
     ],
-    votedby: [{ type: ObjectId, ref: "User" }],
+    votedby: [
+      {
+        user: { type: ObjectId, ref: "User" },
+        option: { type: ObjectId },
+      },
+    ],
     totalvotes: { type: Number, default: 0 },
     contenttype: { type: [String] },
     user: { type: String },
