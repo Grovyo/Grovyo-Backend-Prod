@@ -1691,71 +1691,63 @@ exports.votenowpoll = async (req, res) => {
 
     const { id, postId, opId } = req.params;
     const user = await User.findById(id);
-
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
+      res.status(404).json({ success: false, message: "User not found" });
+    } else {
+      const post = await Post.findById(postId);
 
-    const post = await Post.findById(postId);
-
-    if (!post) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Post not found" });
-    }
-
-    // Clone the post object deeply
-    const clonedPost = JSON.parse(JSON.stringify(post));
-
-    // Find the option within clonedPost.options based on opId
-    const prevopid = clonedPost.options.find((option) =>
-      option._id.equals(Types.ObjectId(opId))
-    );
-
-    if (!prevopid) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Option not found in post" });
-    }
-
-    // Perform operations on the cloned object
-    if (clonedPost.votedby.includes(id)) {
-      // Decrease total votes and remove user from votedby
-      clonedPost.totalvotes -= 1;
-      clonedPost.votedby = clonedPost.votedby.filter(
-        (voterId) => !voterId.equals(user._id)
-      );
-
-      // Remove user from prevopid.votedby
-      const index = prevopid.votedby.indexOf(user._id);
-      if (index !== -1) {
-        prevopid.votedby.splice(index, 1);
+      if (!post) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Post not found" });
       }
-    }
 
-    // Increase total votes and add user to votedby of the selected option
-    clonedPost.totalvotes += 1;
-    prevopid.votedby.push(user._id);
-
-    // Update strength for each option in clonedPost
-    clonedPost.options.forEach((option) => {
-      option.strength = calculateVoteStrengths(
-        option.votedby.length,
-        clonedPost.totalvotes
+      const prevopid = post.options.find((option) =>
+        option._id.equals(Types.ObjectId(opId))
       );
-    });
 
-    // Save the clonedPost back to the database
-    await Post.findByIdAndUpdate(postId, clonedPost);
+      if (post.votedby.includes(id)) {
+        await Post.updateOne(
+          { _id: postId },
+          {
+            $inc: { totalvotes: -1 },
+            $pull: { votedby: user._id },
+          }
+        );
 
-    res.status(200).json({ success: true });
-  } catch (error) {
-    console.error(error);
+        const index = prevopid.votedby.indexOf(user._id);
+        if (index !== -1) {
+          prevopid.votedby.splice(index, 1);
+          await post.save();
+        }
+      }
+
+      await Post.updateOne(
+        { _id: postId, "options._id": opId },
+        {
+          $inc: { totalvotes: 1 },
+          $addToSet: { "options.$.votedby": user._id, votedby: user._id },
+        }
+      );
+
+      const updatedPost = await Post.findById(postId);
+      updatedPost.options.forEach((option) => {
+        option.strength = calculateVoteStrengths(
+          option.votedby.length,
+          updatedPost.totalvotes
+        );
+      });
+      console.log("removeed", updatedPost.options);
+      await updatedPost.save();
+
+      res.status(200).json({ success: true });
+    }
+  } catch (e) {
+    console.log(e);
     res.status(400).json({ message: "Something went wrong", success: false });
   }
 };
+
 //remove the community along posts
 exports.removecomwithposts = async (req, res) => {
   try {
