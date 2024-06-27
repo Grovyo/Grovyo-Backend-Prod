@@ -61,6 +61,8 @@ const userSchema = new mongoose.Schema(
     notifications: {
       type: [String],
     },
+    dm: { type: Number, default: 0 },
+    tagging: { type: Number, default: 0 },
     location: { type: String },
     isverified: {
       type: Boolean,

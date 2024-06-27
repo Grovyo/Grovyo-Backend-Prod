@@ -8,8 +8,12 @@ const {
   createmembership,
   buymembership,
 } = require("../controllers/membership");
+const { verifydm, reducedm, createconv } = require("../controllers/dm");
 
 router.post("/createmembership", createmembership);
 router.post("/buymembership/:id/:membershipid", buymembership);
+router.post("/verifydm/:userId", verifydm);
+router.post("/reducedm/:userId", reducedm);
+router.post("/createconv/:sender/:reciever", createconv);
 
 module.exports = router;

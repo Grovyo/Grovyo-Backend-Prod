@@ -20,7 +20,11 @@ const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 const fs = require("fs");
 require("dotenv").config();
 const Subscriptions = require("../models/Subscriptions");
+<<<<<<< Updated upstream
 const { Types } = require("mongoose");
+=======
+const Membership = require("../models/membership");
+>>>>>>> Stashed changes
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
 const POST_BUCKET = process.env.POST_BUCKET;
@@ -657,7 +661,13 @@ exports.getcommunity = async (req, res) => {
         60 * 60
       );
 
-      res.status(200).json({ dp, community, subs, canedit, success: true });
+      res.status(200).json({
+        dp,
+        community,
+        subs,
+        canedit,
+        success: true,
+      });
     }
   } catch (e) {
     res.status(400).json(e.message);
@@ -1682,6 +1692,7 @@ exports.blockpcom = async (req, res) => {
 };
 
 //vote in community poll
+<<<<<<< Updated upstream
 exports.votenowpoll = async (req, res) => {
   try {
     function calculateVoteStrengths(votedCount, totalVotes) {
@@ -1756,6 +1767,146 @@ exports.votenowpoll = async (req, res) => {
     res.status(400).json({ message: "Something went wrong", success: false });
   }
 };
+=======
+// exports.votenowpoll = async (req, res) => {
+//   try {
+//     const { id, postId, opId } = req.params;
+//     const user = await User.findById(id);
+//     if (!user) {
+//       res.status(404).json({ success: false, message: "User not found" });
+//     } else {
+//       const post = await Post.findById(postId).populate("votedby");
+
+//       const hasvoted = post.votedby.some(
+//         (option) =>
+//           option.option.toString() === opId.toString() &&
+//           option.user.toString() === id.toString()
+//       );
+//       //  console.log(hasvoted, "hasvoted");
+//       if (hasvoted) {
+//         await Post.updateOne(
+//           { _id: postId, "options._id": opId },
+//           {
+//             $inc: { "options.$.strength": -1, totalvotes: -1 },
+//             $pull: {
+//               "options.$.votedby": { user: user._id, option: opId },
+//               votedby: { user: user._id, option: opId },
+//             },
+//           }
+//         );
+
+//         res.status(200).json({
+//           success: true,
+//           message: "Vote removed successfully",
+//           data: post,
+//         });
+//       } else {
+//         if (
+//           post.votedby.some(
+//             (option) =>
+//               option.option.toString() != opId.toString() &&
+//               option.user.toString() === id.toString()
+//           )
+//         ) {
+//           const remoption = await Post.findById(postId).populate(
+//             "options.votedby"
+//           );
+//           const previouslyVotedOption = remoption.options.find((d) =>
+//             d.votedby.some((e) => e.user.toString() === id.toString())
+//           );
+//           if (previouslyVotedOption) {
+//             await Post.updateOne(
+//               { _id: postId, "options._id": previouslyVotedOption._id },
+//               {
+//                 $inc: { "options.$.strength": -1 },
+//                 $pull: {
+//                   "options.$.votedby": {
+//                     user: user._id,
+//                     option: previouslyVotedOption._id,
+//                   },
+//                 },
+//               }
+//             );
+//             await Post.updateOne(
+//               { _id: postId },
+//               {
+//                 $pull: {
+//                   votedby: {
+//                     user: user._id,
+//                     option: previouslyVotedOption._id,
+//                   },
+//                 },
+//               }
+//             );
+//           }
+//           await Post.updateOne(
+//             { _id: postId, "options._id": opId },
+//             {
+//               $inc: { "options.$.strength": 1, totalvotes: 0 },
+//               $addToSet: {
+//                 //"options.$.votedby": user._id,
+//                 // votedby: user._id,
+//                 "options.$.votedby": { user: user._id, option: opId },
+//                 votedby: { user: user._id, option: opId },
+//               },
+//             }
+//           );
+//           res.status(200).json({
+//             success: true,
+//             message: "Vote changed successfully",
+//             data: post,
+//             options: remoption,
+//           });
+//         } else {
+//           await Post.updateOne(
+//             { _id: postId, "options._id": opId },
+//             {
+//               $inc: { "options.$.strength": 1, totalvotes: 1 },
+//               $addToSet: {
+//                 //"options.$.votedby": user._id,
+//                 // votedby: user._id,
+//                 "options.$.votedby": { user: user._id, option: opId },
+//                 votedby: { user: user._id, option: opId },
+//               },
+//             }
+//           );
+//           res.status(200).json({
+//             success: true,
+//             message: "Vote added successfully",
+//             data: post,
+//           });
+//         }
+//       }
+//     }
+//   } catch (e) {
+//     console.log(e);
+//     res.status(400).json({ message: "Something went wrong", success: false });
+//   }
+// };
+// getvote
+// exports.getvotes = async (req, res) => {
+//   try {
+//     const { id, postId } = req.params;
+//     const user = await User.findById(id);
+//     const post = await Post.findById(postId).populate("options.votedby");
+
+//     if (!user) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Post not found" });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       data: post,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ success: false, message: "Server Error" });
+//   }
+// };
+
+>>>>>>> Stashed changes
 //remove the community along posts
 exports.removecomwithposts = async (req, res) => {
   try {

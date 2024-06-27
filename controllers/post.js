@@ -1855,7 +1855,8 @@ exports.postanythings3 = async (req, res) => {
   try {
     const { title, desc, tags, category, type, people } = req.body;
     const tag = tags.split(",");
-
+    const peoplee = JSON.parse(people);
+    // console.log(JSON.parse(people), "people", typeof JSON.parse(people));
     const user = await User.findById(userId);
     const community = await Community.findById(comId);
     const topic = await Topic.findById(topicId);
@@ -1868,7 +1869,7 @@ exports.postanythings3 = async (req, res) => {
         for (let i = 0; i < req?.files?.length; i++) {
           const uuidString = uuid();
           const bucketName = "posts";
-          const objectName = `${Date.now()}_${uuidString}_${
+          const objectName = `${Date.now()}${uuidString}${
             req.files[i].originalname
           }`;
 
@@ -1896,7 +1897,7 @@ exports.postanythings3 = async (req, res) => {
         for (let i = 0; i < req?.files?.length; i++) {
           const uuidString = uuid();
           const bucketName = "posts";
-          const objectName = `${Date.now()}_${uuidString}_${
+          const objectName = `${Date.now()}${uuidString}${
             req.files[i].originalname
           }`;
 
@@ -1928,7 +1929,11 @@ exports.postanythings3 = async (req, res) => {
         post: pos,
         tags: tag,
         topicId: topicId,
+<<<<<<< Updated upstream
         peopletags: people,
+=======
+        peopletags: peoplee,
+>>>>>>> Stashed changes
       });
       const savedpost = await post.save();
 
@@ -2000,9 +2005,9 @@ exports.postanythings3 = async (req, res) => {
       for (let u of community.members) {
         const user = await User.findById(u);
 
-        if (user.notificationtoken && user._id.toString() !== userId) {
-          if (user.notificationtoken) {
-            tokens.push(user.notificationtoken);
+        if (user?.notificationtoken && user._id.toString() !== userId) {
+          if (user?.notificationtoken) {
+            tokens.push(user?.notificationtoken);
           }
         }
       }
@@ -2874,42 +2879,42 @@ async function compressVideo(filePath) {
 // compressVideo("f.mp4");
 
 //notification testing
-const postdemo = async () => {
-  try {
-    let dp =
-      process.env.POST_URL +
-      "1708152827116_3d5cf442-21d2-483a-a0a0-bd994b1fc701_post.jpg";
+// const postdemo = async () => {
+//   try {
+//     let dp =
+//       process.env.POST_URL +
+//       "1708152827116_3d5cf442-21d2-483a-a0a0-bd994b1fc701_post.jpg";
 
-    const timestamp = `${new Date()}`;
-    const msg = {
-      notification: { title: "sd", body: "s" },
-      data: {
-        screen: "OngoingCall",
-        type: "incoming",
-        sender_fullname: `Demo fullname`,
-        sender_id: `65d053c3c2a9e7250ada84b6`,
-        text: `ttitlw`,
-        callconvId: `65d055d6c2a9e7250adaa33d`,
-        timestamp: `${timestamp}`,
-        dp,
-        name: "Name",
-      },
-      token:
-        "dKYDLCDSRWSbvig0Ruagm5:APA91bGkhT0LmOQK_d12_GPG2SNDrteO2bgjtxLWzoo5pG2n1NcVzFXjalA2kflmLffrgsYeOlAekiG0grhqylCK-h8fYhmVUHrO6waohP7p91ixckKO-AARFeSllRVsvEnlSCWGJulb",
-    };
+//     const timestamp = `${new Date()}`;
+//     const msg = {
+//       notification: { title: "sd", body: "s" },
+//       data: {
+//         screen: "OngoingCall",
+//         type: "incoming",
+//         sender_fullname: `Demo fullname`,
+//         sender_id: `65d053c3c2a9e7250ada84b6`,
+//         text: `ttitlw`,
+//         callconvId: `65d055d6c2a9e7250adaa33d`,
+//         timestamp: `${timestamp}`,
+//         dp,
+//         name: "Name",
+//       },
+//       token:
+//         "dKYDLCDSRWSbvig0Ruagm5:APA91bGkhT0LmOQK_d12_GPG2SNDrteO2bgjtxLWzoo5pG2n1NcVzFXjalA2kflmLffrgsYeOlAekiG0grhqylCK-h8fYhmVUHrO6waohP7p91ixckKO-AARFeSllRVsvEnlSCWGJulb",
+//     };
 
-    await admin
-      .messaging()
-      .send(msg)
-      .then((response) => {
-        console.log("Successfully sent message");
-      })
-      .catch((error) => {
-        console.log("Error sending message:", error);
-      });
-  } catch (e) {
-    console.log(e);
-  }
-};
+//     await admin
+//       .messaging()
+//       .send(msg)
+//       .then((response) => {
+//         console.log("Successfully sent message");
+//       })
+//       .catch((error) => {
+//         console.log("Error sending message:", error);
+//       });
+//   } catch (e) {
+//     console.log(e);
+//   }
+// };
 
 // postdemo();
