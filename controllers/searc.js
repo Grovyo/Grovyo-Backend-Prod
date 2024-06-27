@@ -254,13 +254,14 @@ const decryptaes = (data) => {
 
 exports.recentSearch = async (req, res) => {
   try {
+    let users = [];
     if (req.body.length > 0) {
       for (let i = 0; i < req.body.length; i++) {
         const id = decryptaes(req.body[i]);
         const userselect = await User.findById(id).select(
           "profilepic isverified fullname username"
         );
-        const dp = process.env.URL + userselect.profilepic;
+        const dp = process.env.URL + userselect?.profilepic;
 
         const user = {
           dp,
@@ -498,6 +499,7 @@ exports.removeRecentSearchCommunity = async (req, res) => {
       message: "Search Community removed successfully",
     });
   } catch (error) {
+    console.log(error);
     res.status(400).json({ message: error.message, success: false });
   }
 };
@@ -617,7 +619,7 @@ exports.mobileSearch = async (req, res) => {
         id: anotherUsers?._id,
         fullname: anotherUsers.fullname,
         username: anotherUsers.username,
-        dp: process.env.URL + anotherUsers.profilepic,
+        dp: process.env.URL + anotherUsers?.profilepic,
         isverified: anotherUsers.isverified,
       };
       recentSearchesProsites.push(data);
@@ -629,9 +631,9 @@ exports.mobileSearch = async (req, res) => {
       const data = {
         id: anotherCommunity?._id,
         title: anotherCommunity?.title,
-        dp: process.env.URL + anotherCommunity.dp,
-        member: anotherCommunity.memberscount,
-        isverified: anotherCommunity.isverified,
+        dp: process.env.URL + anotherCommunity?.dp,
+        member: anotherCommunity?.memberscount,
+        isverified: anotherCommunity?.isverified,
       };
 
       recentSearchesCommunity.push(data);
