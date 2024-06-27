@@ -20,11 +20,10 @@ const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 const fs = require("fs");
 require("dotenv").config();
 const Subscriptions = require("../models/Subscriptions");
-<<<<<<< Updated upstream
+
 const { Types } = require("mongoose");
-=======
+
 const Membership = require("../models/membership");
->>>>>>> Stashed changes
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
 const POST_BUCKET = process.env.POST_BUCKET;
@@ -1692,7 +1691,7 @@ exports.blockpcom = async (req, res) => {
 };
 
 //vote in community poll
-<<<<<<< Updated upstream
+
 exports.votenowpoll = async (req, res) => {
   try {
     function calculateVoteStrengths(votedCount, totalVotes) {

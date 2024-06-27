@@ -1929,11 +1929,8 @@ exports.postanythings3 = async (req, res) => {
         post: pos,
         tags: tag,
         topicId: topicId,
-<<<<<<< Updated upstream
+
         peopletags: people,
-=======
-        peopletags: peoplee,
->>>>>>> Stashed changes
       });
       const savedpost = await post.save();
 
