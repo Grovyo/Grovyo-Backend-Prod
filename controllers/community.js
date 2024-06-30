@@ -21,8 +21,6 @@ const fs = require("fs");
 require("dotenv").config();
 const Subscriptions = require("../models/Subscriptions");
 
-const { Types } = require("mongoose");
-
 const Membership = require("../models/membership");
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
@@ -1712,34 +1710,37 @@ exports.votenowpoll = async (req, res) => {
           .json({ success: false, message: "Post not found" });
       }
 
-      const prevopid = post.options.find((option) =>
-        option._id.equals(Types.ObjectId(opId))
-      );
-
+      //remove prev. vote
       if (post.votedby.includes(id)) {
-        await Post.updateOne(
-          { _id: postId },
-          {
-            $inc: { totalvotes: -1 },
-            $pull: { votedby: user._id },
-          }
+        let prevoteindex = post.options.findIndex((option) =>
+          option.votedby.some((voterId) => voterId.equals(id))
         );
 
-        const index = prevopid.votedby.indexOf(user._id);
-        if (index !== -1) {
-          prevopid.votedby.splice(index, 1);
+        if (prevoteindex !== -1) {
+          post.options[prevoteindex].votedby.pull(id);
           await post.save();
+
+          await Post.updateOne(
+            { _id: postId },
+            {
+              $inc: { totalvotes: -1 },
+              $pull: { votedby: user._id },
+            }
+          );
         }
       }
 
+      //add vote
       await Post.updateOne(
         { _id: postId, "options._id": opId },
+
         {
-          $inc: { totalvotes: 1 },
           $addToSet: { "options.$.votedby": user._id, votedby: user._id },
+          $inc: { totalvotes: 1 },
         }
       );
 
+      //calculate strength
       const updatedPost = await Post.findById(postId);
       updatedPost.options.forEach((option) => {
         option.strength = calculateVoteStrengths(
@@ -1747,7 +1748,7 @@ exports.votenowpoll = async (req, res) => {
           updatedPost.totalvotes
         );
       });
-      console.log("removeed", updatedPost.options);
+
       await updatedPost.save();
 
       res.status(200).json({ success: true });

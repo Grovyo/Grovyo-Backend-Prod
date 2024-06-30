@@ -4029,12 +4029,14 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
     if (instant) {
       let coordinates = [];
       for (let storeid of storeids) {
-        const store = await User.findById(storeid);
+        const mainstore = await User.findById(storeid);
+        let store = mainstore.storeAddress || mainstore.storeAddress[0];
+
         coordinates.push({
-          latitude: store.storeAddress.coordinates.latitude,
-          longitude: store.storeAddress.coordinates.longitude,
-          address: store.storeAddress,
-          id: store._id,
+          latitude: store.coordinates.latitude,
+          longitude: store.coordinates.longitude,
+          address: store,
+          id: mainstore._id,
         });
       }
 
@@ -4176,10 +4178,15 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
       let coordinates = [];
       for (let storeid of storeids) {
         const store = await User.findById(storeid);
+
         coordinates.push({
-          latitude: store.storeAddress.coordinates.latitude,
-          longitude: store.storeAddress.coordinates.longitude,
-          address: store.storeAddress,
+          latitude:
+            store?.storeAddress?.coordinates?.latitude ||
+            store?.storeAddress[0]?.coordinates?.latitude,
+          longitude:
+            store?.storeAddress?.coordinates?.longitude ||
+            store?.storeAddress[0]?.coordinates?.longitude,
+          address: store,
           id: store._id,
         });
       }
@@ -4275,10 +4282,14 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
               done: true,
             },
             {
-              latitude: seller.storeAddress.coordinates.latitude,
-              longitude: seller.storeAddress.coordinates.longitude,
+              latitude:
+                seller.storeAddress.coordinates.latitude ||
+                seller.storeAddress[0].coordinates.latitude,
+              longitude:
+                seller.storeAddress.coordinates.longitude ||
+                seller.storeAddress[0].coordinates.longitude,
               done: false,
-              address: seller?.storeAddress,
+              address: seller?.storeAddress || seller?.storeAddress[0],
             },
             {
               latitude: neareststore.address.coordinates.latitude,
@@ -4294,8 +4305,12 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
               longitude: eligiblepartner.longitude,
             },
             {
-              latitude: seller.storeAddress.coordinates.latitude,
-              longitude: seller.storeAddress.coordinates.longitude,
+              latitude:
+                seller.storeAddress.coordinates.latitude ||
+                seller.storeAddress[0].coordinates.latitude,
+              longitude:
+                seller.storeAddress.coordinates.longitude ||
+                seller.storeAddress[0].coordinates.longitude,
             },
             {
               latitude: neareststore.address.coordinates.latitude,

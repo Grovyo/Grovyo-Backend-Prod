@@ -18,7 +18,7 @@ const {
   postanything,
   newfetchfeed,
   delenu,
-  //createpollcom,
+  createpollcom,
   joinedcomnew,
   datadownload2,
   newfetchfeeds3,
@@ -28,7 +28,7 @@ const {
   reseteverycart,
   fetchmoredata,
 } = require("../controllers/post");
-//const { votenowpoll, getvotes } = require("../controllers/community");
+const { votenowpoll } = require("../controllers/community");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage, limits: { fileSize: 1000000000 } });
@@ -49,11 +49,9 @@ router.post("/dislikepost/:userId/:postId", dislikepost);
 router.post("/test123", upload.single("video"), test);
 router.post("/updatesettings/:id", updatesettings);
 
-router.get("/getvotes/:id/:postId", getvotes);
+router.post("/createpollcom/:id/:comId/:topicId", upload.any(), createpollcom);
 
-//router.post("/createpollcom/:id/:comId/:topicId", upload.any(), createpollcom);
-
-//router.post("/votenowpoll/:id/:postId/:opId", votenowpoll);
+router.post("/votenowpoll/:id/:postId/:opId", votenowpoll);
 
 router.delete("/deletepost/:userId/:postId", deletepost);
 

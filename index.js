@@ -49,6 +49,35 @@ const { default: axios } = require("axios");
 
 require("dotenv").config();
 
+const createSubdomain = async (subdomainName, ipAddress) => {
+  const apiUrl = "https://api.cloudflare.com/client/v4";
+  const email = process.env.CLOUDFLARE_EMAIL;
+  const apiKey = process.env.CLOUDFLARE_API_KEY;
+  const zoneId = process.env.CLOUDFLARE_ZONE_ID;
+
+  try {
+    const url = `${apiUrl}/zones/${zoneId}/dns_records`;
+    const headers = {
+      "X-Auth-Email": email,
+      "X-Auth-Key": apiKey,
+      "Content-Type": "application/json",
+    };
+    const data = {
+      type: "A",
+      name: `${subdomainName}`,
+      content: ipAddress,
+      ttl: 1,
+      proxied: true,
+    };
+
+    const response = await axios.post(url, data, { headers });
+    console.log(`Subdomain ${subdomainName} created successfully.`);
+    console.log(response.data);
+  } catch (error) {
+    console.error(`Error creating subdomain ${subdomainName}:`, error.message);
+  }
+};
+
 //middlewares
 app.use(cors());
 app.use(bodyParser.json({ limit: "10mb" }));

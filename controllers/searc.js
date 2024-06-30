@@ -431,7 +431,7 @@ exports.fetchingprosite = async (req, res) => {
       useDefaultProsite: user.useDefaultProsite,
       isAbout: user.showAboutSection,
       isCommunity: user.showCommunitySection,
-      location: user.address,
+      location: user.address[0],
       temp: user.prositeweb_template,
       temp1: user.prositemob_template,
       email: user.email,
