@@ -213,11 +213,7 @@ exports.signupmobiledelivery = async (req, res) => {
       let dp = [];
       for (let i = 0; i < user.photos?.length; i++) {
         if (user?.photos[i].type === "dp") {
-          const d = await generatePresignedUrl(
-            "documents",
-            user.photos[i].content.toString(),
-            60 * 60
-          );
+          const d = process.env.URL + user.photos[i].content.toString();
           dp.push(d);
         }
       }

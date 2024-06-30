@@ -4180,12 +4180,8 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
         const store = await User.findById(storeid);
 
         coordinates.push({
-          latitude:
-            store?.storeAddress?.coordinates?.latitude ||
-            store?.storeAddress[0]?.coordinates?.latitude,
-          longitude:
-            store?.storeAddress?.coordinates?.longitude ||
-            store?.storeAddress[0]?.coordinates?.longitude,
+          latitude: store?.storeAddress[0]?.coordinates?.latitude,
+          longitude: store?.storeAddress[0]?.coordinates?.longitude,
           address: store,
           id: store._id,
         });
@@ -4266,8 +4262,8 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
           //finding delivery partner near seller
           let eligiblepartner = geolib.findNearest(
             {
-              latitude: seller.address.coordinates.latitude,
-              longitude: seller.address.coordinates.longitude,
+              latitude: seller.storeAddress[0].coordinates.latitude,
+              longitude: seller.storeAddress[0].coordinates.longitude,
             },
             partners
           );
@@ -4282,12 +4278,8 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
               done: true,
             },
             {
-              latitude:
-                seller.storeAddress.coordinates.latitude ||
-                seller.storeAddress[0].coordinates.latitude,
-              longitude:
-                seller.storeAddress.coordinates.longitude ||
-                seller.storeAddress[0].coordinates.longitude,
+              latitude: seller.storeAddress[0].coordinates.latitude,
+              longitude: seller.storeAddress[0].coordinates.longitude,
               done: false,
               address: seller?.storeAddress || seller?.storeAddress[0],
             },
@@ -4305,12 +4297,8 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
               longitude: eligiblepartner.longitude,
             },
             {
-              latitude:
-                seller.storeAddress.coordinates.latitude ||
-                seller.storeAddress[0].coordinates.latitude,
-              longitude:
-                seller.storeAddress.coordinates.longitude ||
-                seller.storeAddress[0].coordinates.longitude,
+              latitude: seller.storeAddress[0].coordinates.latitude,
+              longitude: seller.storeAddress[0].coordinates.longitude,
             },
             {
               latitude: neareststore.address.coordinates.latitude,
