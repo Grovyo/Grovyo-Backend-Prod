@@ -4001,10 +4001,10 @@ exports.cod = async (req, res) => {
         });
       }
 
-      // await User.updateOne(
-      //   { _id: user._id },
-      //   { $unset: { cart: [], cartproducts: [] } }
-      // );
+      await User.updateOne(
+        { _id: user._id },
+        { $unset: { cart: [], cartproducts: [] } }
+      );
 
       res.status(200).json({ success: true });
     } else {
