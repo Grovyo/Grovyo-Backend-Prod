@@ -1930,7 +1930,7 @@ exports.postanythings3 = async (req, res) => {
         tags: tag,
         topicId: topicId,
 
-        peopletags: people,
+        peopletags: peoplee,
       });
       const savedpost = await post.save();
 

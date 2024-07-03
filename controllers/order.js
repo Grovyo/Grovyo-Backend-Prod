@@ -4182,7 +4182,7 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
         coordinates.push({
           latitude: store?.storeAddress[0]?.coordinates?.latitude,
           longitude: store?.storeAddress[0]?.coordinates?.longitude,
-          address: store,
+          address: store?.storeAddress[0],
           id: store._id,
         });
       }
@@ -4451,6 +4451,7 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
               longitude: eligiblepartner.longitude,
             },
           ];
+
           //total distance travelled
           const totalDistance = calculateTotalDistance(finalcoordinates);
           //earning of driver
