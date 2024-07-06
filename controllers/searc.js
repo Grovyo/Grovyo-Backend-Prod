@@ -1,7 +1,6 @@
 const Post = require("../models/post");
 const Community = require("../models/community");
 const User = require("../models/userAuth");
-const Minio = require("minio");
 const Product = require("../models/product");
 const { default: mongoose } = require("mongoose");
 const Cancellation = require("../models/cancellation");
@@ -9,141 +8,215 @@ const aesjs = require("aes-js");
 
 require("dotenv").config();
 
-const minioClient = new Minio.Client({
-  endPoint: "minio.grovyo.xyz",
-
-  useSSL: true,
-  accessKey: "shreyansh379",
-  secretKey: "shreyansh379",
-});
-
-//function to generate a presignedurl of minio
-async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
-  try {
-    const presignedUrl = await minioClient.presignedGetObject(
-      bucketName,
-      objectName,
-      expiry
-    );
-    return presignedUrl;
-  } catch (err) {
-    console.error(err);
-    throw new Error("Failed to generate presigned URL");
-  }
-}
-
 //search all
+// exports.searchall = async (req, res) => {
+//   const { query } = req.query;
+//   const { id } = req.params;
+//   try {
+//     if (!query) {
+//       res.status(400).json({ success: false });
+//     } else {
+//       const processedQuery = query.trim().toLowerCase();
+
+//       //posts
+//       const posts = await Post.find({
+//         title: { $regex: `.*${processedQuery}.*`, $options: "i" },
+//         desc: { $regex: `.*${processedQuery}.*`, $options: "i" },
+//         status: "Unblock",
+//       })
+//         .select("title desc post topicId community sender")
+//         .limit(5)
+//         .populate("community", "dp title createdAt")
+//         .populate("sender", "fullname")
+//         .lean()
+//         .exec();
+
+//       let imgs = [];
+//       for (let i = 0; i < posts.length; i++) {
+//         if (posts[i].post[0].type === "image/jpg") {
+//           imgs.push(process.env.POST_URL + posts[i].post[0].content);
+//         } else {
+//           if (posts[i].post[0].thumbnail) {
+//             imgs.push(process.env.POST_URL + posts[i].post[0].thumbnail);
+//           } else {
+//             imgs.push(process.env.POST_URL + posts[i].post[0].content);
+//           }
+//         }
+//       }
+
+//       let dp = [];
+//       for (let i = 0; i < posts.length; i++) {
+//         if (posts[i].community) {
+//           dp.push(process.env.URL + posts[i].community.dp);
+//         } else {
+//           dp.push(process.env.URL + "default.png");
+//         }
+//       }
+
+//       const mergedposts = posts.map((p, i) => ({
+//         p,
+//         img: imgs[i],
+//         dps: dp[i],
+//       }));
+
+//       //coms
+//       const pics = [];
+//       const creatordps = [];
+//       const coms = await Community.find({
+//         title: { $regex: `.*${processedQuery}.*`, $options: "i" },
+//         type: "public",
+//         blocked: { $nin: id },
+//       })
+//         .populate("creator", "fullname username profilepic isverified")
+//         .select("title createdAt dp memberscount")
+//         .limit(5)
+//         .lean()
+//         .exec();
+//       for (let i = 0; i < coms.length; i++) {
+//         const a = process.env.URL + coms[i].dp;
+
+//         pics.push(a);
+//       }
+//       for (let i = 0; i < coms.length; i++) {
+//         const a = process.env.URL + coms[i].creator.profilepic;
+
+//         creatordps.push(a);
+//       }
+
+//       const mergedcoms = coms.map((p, i) => ({
+//         p,
+//         img: pics[i],
+//         dps: creatordps[i],
+//       }));
+
+//       //pros
+//       const dps = [];
+//       const pros = await User.find({
+//         $or: [
+//           { fullname: { $regex: `.*${processedQuery}.*`, $options: "i" } },
+//           { username: { $regex: `.*${processedQuery}.*`, $options: "i" } },
+//         ],
+//       })
+//         .select("fullname profilepic username isverified createdAt")
+//         .lean()
+//         .limit(5)
+//         .exec();
+
+//       for (let i = 0; i < pros.length; i++) {
+//         const a = process.env.URL + pros[i].profilepic;
+
+//         dps.push(a);
+//       }
+
+//       const mergedpros = pros.map((p, i) => ({
+//         p,
+
+//         dps: dps[i],
+//       }));
+//       res
+//         .status(200)
+//         .json({ success: true, mergedpros, mergedcoms, mergedposts });
+//     }
+//   } catch (e) {
+//     console.log(e);
+//     res.status(400).json({ success: false, message: e.message });
+//   }
+// };
 exports.searchall = async (req, res) => {
   const { query } = req.query;
   const { id } = req.params;
+
+  if (!query) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Query is required" });
+  }
+
+  const processedQuery = query.trim().toLowerCase();
+
   try {
-    if (!query) {
-      res.status(400).json({ success: false });
-    } else {
-      const processedQuery = query.trim().toLowerCase();
+    // Fetch public communities and their IDs
+    const publicCommunities = await Community.find({ type: "public" })
+      .select("_id")
+      .lean();
+    const publicCommunityIds = publicCommunities.map(
+      (community) => community._id
+    );
 
-      //posts
-      const posts = await Post.find({
-        title: { $regex: `.*${processedQuery}.*`, $options: "i" },
-        desc: { $regex: `.*${processedQuery}.*`, $options: "i" },
-        status: "Unblock",
-      })
-        .select("title desc post topicId community sender")
-        .limit(5)
-        .populate("community", "dp title createdAt")
-        .populate("sender", "fullname")
-        .lean()
-        .exec();
+    // Fetch posts from public communities
+    const posts = await Post.find({
+      $or: [
+        { title: { $regex: `.*${processedQuery}.*`, $options: "i" } },
+        { desc: { $regex: `.*${processedQuery}.*`, $options: "i" } },
+      ],
+      community: { $in: publicCommunityIds },
+      status: "Unblock",
+    })
+      .select("title desc post topicId community sender")
+      .limit(5)
+      .populate("community", "dp title createdAt")
+      .populate("sender", "fullname")
+      .lean();
 
-      let imgs = [];
-      for (let i = 0; i < posts.length; i++) {
-        if (posts[i].post[0].type === "image/jpg") {
-          imgs.push(process.env.POST_URL + posts[i].post[0].content);
-        } else {
-          if (posts[i].post[0].thumbnail) {
-            imgs.push(process.env.POST_URL + posts[i].post[0].thumbnail);
-          } else {
-            imgs.push(process.env.POST_URL + posts[i].post[0].content);
-          }
-        }
-      }
+    const mergedPosts = posts.map((post) => ({
+      ...post,
+      img:
+        process.env.POST_URL +
+        (post.post[0].type === "image/jpg"
+          ? post.post[0].content
+          : post.post[0].thumbnail || post.post[0].content),
+      dps: post.community
+        ? process.env.URL + post.community.dp
+        : process.env.URL + "default.png",
+    }));
 
-      let dp = [];
-      for (let i = 0; i < posts.length; i++) {
-        if (posts[i].community) {
-          dp.push(process.env.URL + posts[i].community.dp);
-        } else {
-          dp.push(process.env.URL + "default.png");
-        }
-      }
+    // Fetch public communities matching the query
+    const communities = await Community.find({
+      title: { $regex: `.*${processedQuery}.*`, $options: "i" },
+      type: "public",
+      blocked: { $nin: id },
+    })
+      .populate("creator", "fullname username profilepic isverified")
+      .select("title createdAt dp memberscount")
+      .limit(5)
+      .lean();
 
-      const mergedposts = posts.map((p, i) => ({
-        p,
-        img: imgs[i],
-        dps: dp[i],
-      }));
+    const mergedCommunities = communities.map((com) => ({
+      ...com,
+      img: process.env.URL + com.dp,
+      dps: process.env.URL + com.creator.profilepic,
+    }));
 
-      //coms
-      const pics = [];
-      const creatordps = [];
-      const coms = await Community.find({
-        title: { $regex: `.*${processedQuery}.*`, $options: "i" },
-        type: "public",
-        blocked: { $nin: id },
-      })
-        .populate("creator", "fullname username profilepic isverified")
-        .select("title createdAt dp memberscount")
-        .limit(5)
-        .lean()
-        .exec();
-      for (let i = 0; i < coms.length; i++) {
-        const a = process.env.URL + coms[i].dp;
+    // Fetch users matching the query
+    const users = await User.find({
+      $or: [
+        { fullname: { $regex: `.*${processedQuery}.*`, $options: "i" } },
+        { username: { $regex: `.*${processedQuery}.*`, $options: "i" } },
+      ],
+    })
+      .select("fullname profilepic username isverified createdAt")
+      .lean()
+      .limit(5);
 
-        pics.push(a);
-      }
-      for (let i = 0; i < coms.length; i++) {
-        const a = process.env.URL + coms[i].creator.profilepic;
+    const mergedUsers = users.map((user) => ({
+      ...user,
+      dps: process.env.URL + user.profilepic,
+    }));
 
-        creatordps.push(a);
-      }
+    // Logging for debugging
+    console.log(mergedUsers, "mergedUsers");
+    console.log(mergedCommunities, "mergedCommunities");
+    console.log(mergedPosts, "mergedPosts");
 
-      const mergedcoms = coms.map((p, i) => ({
-        p,
-        img: pics[i],
-        dps: creatordps[i],
-      }));
-
-      //pros
-      const dps = [];
-      const pros = await User.find({
-        $or: [
-          { fullname: { $regex: `.*${processedQuery}.*`, $options: "i" } },
-          { username: { $regex: `.*${processedQuery}.*`, $options: "i" } },
-        ],
-      })
-        .select("fullname profilepic username isverified createdAt")
-        .lean()
-        .limit(5)
-        .exec();
-
-      for (let i = 0; i < pros.length; i++) {
-        const a = process.env.URL + pros[i].profilepic;
-
-        dps.push(a);
-      }
-
-      const mergedpros = pros.map((p, i) => ({
-        p,
-
-        dps: dps[i],
-      }));
-      res
-        .status(200)
-        .json({ success: true, mergedpros, mergedcoms, mergedposts });
-    }
-  } catch (e) {
-    console.log(e);
-    res.status(400).json({ success: false, message: e.message });
+    return res.status(200).json({
+      success: true,
+      mergedpros: mergedUsers || [],
+      mergedcoms: mergedCommunities || [],
+      mergedposts: mergedPosts || [],
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
