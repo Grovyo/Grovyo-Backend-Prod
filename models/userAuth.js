@@ -220,6 +220,7 @@ const userSchema = new mongoose.Schema(
     storeAddress: [
       {
         buildingno: { type: String },
+        streetaddress: { type: String },
         city: { type: String },
         state: { type: String },
         postal: { type: Number },
