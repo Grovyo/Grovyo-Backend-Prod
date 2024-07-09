@@ -27,8 +27,11 @@ router.post("/searchnow/:id", searchnow);
 //search communities
 router.post("/searchcoms/:id", searchcoms);
 
-//search communities
+//search prosites
 router.post("/searchpros", searchpros);
+
+//search all
+router.post("/searchall/:id", searchall);
 
 router.get("/getprositedetails/:id", fetchingprosite);
 router.post("/web/recentSearch", recentSearch);
@@ -40,6 +43,5 @@ router.post("/removeRecentSearchCommunity/:id", removeRecentSearchCommunity);
 router.post("/removeRecentSearchProsite/:id", removeRecentSearchProsite);
 router.post("/removeRecentPost/:id", removeRecentPost);
 router.post("/cancellationrequest/:userid/:orderId", cancellationrequest);
-router.post("/searchall/:id", searchall);
 
 module.exports = router;

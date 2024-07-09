@@ -4056,6 +4056,7 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
         accounttype: "partner",
         primaryloc: user.address.city,
       });
+
       for (let deliverypartner of deliverypartners) {
         if (
           deliverypartner &&
@@ -4178,7 +4179,7 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
       let coordinates = [];
       for (let storeid of storeids) {
         const store = await User.findById(storeid);
-        console.log(store?.storeAddress[0]);
+
         coordinates.push({
           latitude: store?.storeAddress[0]?.coordinates?.latitude,
           longitude: store?.storeAddress[0]?.coordinates?.longitude,
@@ -4380,7 +4381,7 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
           },
           coordinates
         );
-        console.log(sortedCoordinates[0]);
+
         //finding the nearest driver from the last location
         let partners = [];
 
