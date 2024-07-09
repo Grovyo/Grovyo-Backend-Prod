@@ -24,6 +24,7 @@ const {
   fecthallprods,
   cancelprod,
   cod,
+  cancellationrequest,
 } = require("../controllers/order");
 
 router.post("/neworder/:userId/:productId", create);
@@ -55,7 +56,7 @@ router.post("/resenotpflash/:id/:delid", resenotpflash);
 router.post("/fetchanorder/:id/:ordid", fetchanorder);
 
 //cancel an order(whole bucket)
-router.post("/cancelao/:id/:ordid", cancelao);
+router.post("/cancelao/:id/:ordid", cancellationrequest);
 
 //buy again an order(whole bucket)
 router.post("/bao/:userId/:ordid", bao);
