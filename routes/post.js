@@ -28,10 +28,28 @@ const {
   reseteverycart,
   fetchmoredata,
 } = require("../controllers/post");
+const { pipeline } = require("stream/promises");
+const fs = require("fs");
+const path = require("path");
 const { votenowpoll } = require("../controllers/community");
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage, limits: { fileSize: 1000000000 } });
+// const storage = multer.memoryStorage();
+// const upload = multer({ storage: storage, limits: { fileSize: 1000000000 } });
+
+const CHUNKS_DIR = "./chunks";
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, CHUNKS_DIR);
+  },
+  filename: function (req, file, cb) {
+    const { index } = req.body;
+    console.log(file, req.body);
+    cb(null, `${file.originalname}.${index}`);
+  },
+});
+
+const upload = multer({ storage: storage });
 
 // router.post("/createphoto/:userId/:commId", upload.any(), createPhoto);
 router.post("/postanything/:userId/:comId", upload.any(), postanythings3);
@@ -80,5 +98,22 @@ router.get("/v1/fetchinterest", fetchinterest);
 
 //reseteverycart
 router.post("/v1/reseteverycart", reseteverycart);
+
+router.post("/testupload", upload.any(), (req, res) => {
+  console.log("hit", req.file);
+  if (req.filePart === 0) {
+    // ... Do something when file upload starts
+    console.log("uploading");
+  }
+  if (req.isLastPart) {
+    // ... Do something when file upload finishes
+    console.log("done");
+  }
+});
+
+router.post("/upload/chunk", upload.single("image"), (req, res) => {
+  console.log(req.body);
+  res.status(200).send("Chunk received");
+});
 
 module.exports = router;

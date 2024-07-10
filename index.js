@@ -79,6 +79,7 @@ const createSubdomain = async (subdomainName, ipAddress) => {
 };
 
 //middlewares
+app.use(require("express-status-monitor")());
 app.use(cors());
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
