@@ -2,7 +2,6 @@ const Post = require("../models/post");
 const Community = require("../models/community");
 const User = require("../models/userAuth");
 const Product = require("../models/product");
-const { default: mongoose } = require("mongoose");
 const Cancellation = require("../models/Cancellation");
 const aesjs = require("aes-js");
 
@@ -135,6 +134,7 @@ exports.searchall = async (req, res) => {
     res.status(400).json({ success: false, message: e.message });
   }
 };
+
 // exports.searchall = async (req, res) => {
 //   const { query } = req.query;
 //   const { id } = req.params;

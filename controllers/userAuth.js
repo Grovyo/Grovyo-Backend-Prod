@@ -83,6 +83,7 @@ const decryptaes = (data) => {
     }
 
     const decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
+
     return decryptedText;
   } catch (e) {
     console.error("Decryption error:", e);

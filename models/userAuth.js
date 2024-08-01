@@ -282,6 +282,7 @@ const userSchema = new mongoose.Schema(
       { type: ObjectId, ref: "Community", default: [] },
     ],
     recentPosts: [{ type: ObjectId, ref: "Posts", default: [] }],
+    activeinterests: [{ type: String }],
   },
   { timestamps: false, strict: false }
 );

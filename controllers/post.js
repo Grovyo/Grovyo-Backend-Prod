@@ -27,6 +27,8 @@ const admin = require("../fireb");
 const BUCKET_NAME = process.env.BUCKET_NAME;
 const POST_BUCKET = process.env.POST_BUCKET;
 
+const AWS = require("aws-sdk");
+
 const s3 = new S3Client({
   region: process.env.BUCKET_REGION,
   credentials: {
@@ -34,6 +36,13 @@ const s3 = new S3Client({
     secretAccessKey: process.env.AWS_SECRET_KEY,
   },
 });
+
+AWS.config.update({
+  accessKeyId: process.env.AWS_ACCESS_KEY,
+  secretAccessKey: process.env.AWS_SECRET_KEY,
+  region: process.env.BUCKET_REGION,
+});
+const s3multi = new AWS.S3();
 
 const { Queue, Worker } = require("bullmq");
 
@@ -1850,7 +1859,7 @@ exports.datadownload2 = async (req, res) => {
 //s3 bucket
 
 //post anything with thumbnail and video
-exports.postanythings3 = async (req, res) => {
+exports.postanythings3old = async (req, res) => {
   const { userId, comId, topicId } = req.params;
   try {
     const { title, desc, tags, category, type, people } = req.body;
@@ -2057,6 +2066,244 @@ exports.postanythings3 = async (req, res) => {
   }
 };
 
+exports.postanythings3 = async (req, res) => {
+  try {
+    const { parts, index, name } = req.body;
+    console.log(parts);
+    const formattedParts = parts.map((part, i) => ({
+      ETag: part.etag,
+      PartNumber: part.partNumber,
+    }));
+
+    const params = {
+      Bucket: "transcribtio9",
+      Key: name,
+      UploadId: index,
+      MultipartUpload: {
+        Parts: formattedParts,
+      },
+    };
+
+    const uploadId = await s3multi.createMultipartUpload(
+      params,
+      (err, data) => {
+        if (err) {
+          console.error("Error completing multipart upload:", err);
+          return res.status(500).json({
+            message: "Failed to complete multipart upload",
+            success: false,
+          });
+          console.log(data);
+        }
+
+        console.log("Multipart upload completed successfully:", data);
+        res.status(200).json({ success: true, data });
+      }
+    );
+  } catch (error) {
+    console.error("Error in postanythings3 handler:", error);
+    res.status(500).json({ message: "Something went wrong", success: false });
+  }
+};
+
+const getUserFeed = async (user, first) => {
+  try {
+    // Validate user and user interests
+    if (
+      !user ||
+      !user.interest ||
+      !Array.isArray(user.interest) ||
+      user.interest.length === 0
+    ) {
+      throw new Error("Invalid user or user interests.");
+    }
+
+    // Getting tags selected by the user
+    const userInterests = await Interest.find({ title: { $in: user.interest } })
+      .select("_id title")
+      .lean()
+      .limit(3);
+
+    if (userInterests.length === 0) {
+      throw new Error("No matching user interests found.");
+    }
+
+    // Extracting interest titles and IDs
+    const interestTitles = userInterests.map((interest) => interest.title);
+    const interestIds = userInterests.map((interest) => interest._id);
+
+    let posts = [];
+
+    if (first) {
+      // Fetching the most bidded and popular ad related to the user's selected interest
+      const bannerAds = await Ads.aggregate([
+        {
+          $match: {
+            cpa: true,
+            category: { $in: interestTitles },
+            kind: "banner",
+          },
+        },
+        { $sample: { size: 1 } },
+      ]);
+
+      const banner = bannerAds.length > 0 ? bannerAds[0] : null;
+
+      // Fetching all posts that match user interests
+      posts = await Post.aggregate([
+        {
+          $lookup: {
+            from: "communities",
+            localField: "community",
+            foreignField: "_id",
+            as: "community",
+          },
+        },
+        { $unwind: "$community" },
+        {
+          $lookup: {
+            from: "categories",
+            localField: "category",
+            foreignField: "_id",
+            as: "category",
+          },
+        },
+        { $unwind: "$category" },
+        {
+          $match: {
+            "category._id": { $in: interestIds },
+          },
+        },
+        {
+          $sort: { likes: -1 },
+        },
+        {
+          $project: {
+            title: 1,
+            content: 1,
+            likes: 1,
+            community: 1,
+            category: 1,
+          },
+        },
+        { $sample: { size: 9 } },
+      ]);
+
+      // Adding banner at the top if it exists
+      if (banner) {
+        posts.unshift(banner);
+      }
+    } else {
+      //more
+
+      // Fetching all posts that match user interests
+      const recentInterestIds = user.recentInterests.map(
+        (interest) => interest.category
+      );
+
+      const recentPosts = await Post.aggregate([
+        {
+          $lookup: {
+            from: "communities",
+            localField: "community",
+            foreignField: "_id",
+            as: "community",
+          },
+        },
+        { $unwind: "$community" },
+        {
+          $lookup: {
+            from: "categories",
+            localField: "category",
+            foreignField: "_id",
+            as: "category",
+          },
+        },
+        { $unwind: "$category" },
+        {
+          $match: {
+            "category._id": { $in: recentInterestIds },
+          },
+        },
+        {
+          $sort: { likes: -1 },
+        },
+        {
+          $project: {
+            title: 1,
+            content: 1,
+            likes: 1,
+            community: 1,
+            category: 1,
+          },
+        },
+        { $sample: { size: 4 } },
+      ]);
+
+      // Fetching 1 ad of type "infeed" related to the user's interests
+      const infeedAds = await Ads.aggregate([
+        { $match: { type: "infeed", category: { $in: interestTitles } } },
+        { $sample: { size: 1 } },
+      ]);
+
+      const infeedAd = infeedAds.length > 0 ? infeedAds[0] : null;
+
+      // // Combine recent posts and infeed ad
+      // posts = [...recentPosts];
+      // if (infeedAd) {
+      //   posts.push(infeedAd);
+      // }
+      // Fetching common tags from 2 selected interests
+      if (userInterests.length >= 2) {
+        const [interest1, interest2] = userInterests.slice(0, 2);
+        const commonTags = interestTagsMap[interest1._id].filter((tag) =>
+          interestTagsMap[interest2._id].includes(tag)
+        );
+
+        // Fetching 1 new post using common tags
+        const newPost = await Post.aggregate([
+          {
+            $match: {
+              tags: { $in: commonTags },
+            },
+          },
+          {
+            $sort: { likes: -1 },
+          },
+          {
+            $limit: 1,
+          },
+        ]);
+
+        // Combine recent posts and infeed ad
+        posts = [...recentPosts];
+        if (infeedAd) {
+          posts.push(infeedAd);
+        }
+        if (newPost.length > 0) {
+          posts.push(newPost[0]);
+        }
+
+        // Shuffle the combined result to mix the ad and new post randomly with existing posts
+        posts = posts.sort(() => Math.random() - 0.5);
+      } else {
+        // Handle case where less than 2 interests are available for common tag calculation
+        posts = [...recentPosts];
+        if (infeedAd) {
+          posts.push(infeedAd);
+        }
+        // Shuffle the combined result to mix the ad randomly with posts
+        posts = posts.sort(() => Math.random() - 0.5);
+      }
+    }
+
+    return posts;
+  } catch (error) {
+    console.error("Error fetching user feed:", error.message);
+    throw error;
+  }
+};
+
 //new for you
 exports.newfetchfeeds3 = async (req, res) => {
   try {
@@ -2088,6 +2335,65 @@ exports.newfetchfeeds3 = async (req, res) => {
       .populate("tags", "title")
       .lean()
       .limit(1);
+
+    //Algo
+    let first = true;
+
+    //getting tags selected by the user
+    const userinterests = await Interest.find({ title: { $in: user.interest } })
+      .select("title")
+      .lean()
+      .limit(3);
+
+    //checking if user opened the app for the first time
+
+    //true && then fetching the most bidded and popular ad in the first place related to the users selected interest
+    const banner = await Ads.findOne({ cpa, category });
+
+    //then all 9 posts top popular in respective niches
+    const popularPosts = await Post.aggregate([
+      {
+        $lookup: {
+          from: "communities",
+          localField: "community",
+          foreignField: "_id",
+          as: "community",
+        },
+      },
+      { $unwind: "$community" },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "category",
+        },
+      },
+      { $unwind: "$category" },
+      {
+        $match: {
+          "category._id": { $in: user.interest },
+        },
+      },
+
+      {
+        $sort: { likes: -1 },
+      },
+
+      {
+        $sample: { size: 10 },
+      },
+
+      {
+        $project: {
+          title: 1,
+          content: 1,
+          likes: 1,
+          community: 1,
+          category: 1,
+        },
+      },
+    ]);
 
     let alltags = [];
     for (let i = 0; i < intt.length; i++) {
@@ -2915,3 +3221,84 @@ async function compressVideo(filePath) {
 // };
 
 // postdemo();
+
+//start multipart
+exports.startmultipart = async (req, res) => {
+  // initialization
+  let fileName = req.body.fileName;
+  let contentType = req.body.contentType;
+
+  const params = {
+    Bucket: process.env.BUCKET_NAME,
+    Key: fileName,
+  };
+
+  // add extra params if content type is video
+  if (contentType == "VIDEO") {
+    params.ContentDisposition = "inline";
+    params.ContentType = "video/mp4";
+  }
+
+  try {
+    const multipart = await s3multi.createMultipartUpload(params).promise();
+    res.json({ uploadId: multipart.UploadId });
+  } catch (error) {
+    console.error("Error starting multipart upload:", error);
+    return res.status(500).json({ error: "Error starting multipart upload" });
+  }
+};
+
+//upload multipart
+exports.uploadmulti = async (req, res) => {
+  // get values from req body
+  const { fileName, uploadId, partNumbers } = req.body;
+  const totalParts = Array.from({ length: partNumbers }, (_, i) => i + 1);
+  try {
+    const presignedUrls = await Promise.all(
+      totalParts.map(async (partNumber) => {
+        const params = {
+          Bucket: process.env.BUCKET_NAME,
+          Key: fileName,
+          PartNumber: partNumber,
+          UploadId: uploadId,
+          Expires: 3600 * 3,
+        };
+
+        return s3multi.getSignedUrl("uploadPart", {
+          ...params,
+        });
+      })
+    );
+    res.json({ presignedUrls });
+  } catch (error) {
+    console.error("Error generating pre-signed URLs:", error);
+    return res.status(500).json({ error: "Error generating pre-signed URLs" });
+  }
+};
+
+exports.completemulti = async (req, res) => {
+  // Req body
+  let fileName = req.body.fileName;
+  let uploadId = req.body.uploadId;
+  let parts = req.body.parts;
+
+  const params = {
+    Bucket: process.env.BUCKET_NAME,
+    Key: fileName,
+    UploadId: uploadId,
+
+    MultipartUpload: {
+      Parts: parts.map((part, index) => ({
+        ETag: part.etag,
+        PartNumber: index + 1,
+      })),
+    },
+  };
+  try {
+    const data = await s3multi.completeMultipartUpload(params).promise();
+    res.status(200).json({ fileData: data });
+  } catch (error) {
+    console.error("Error completing multipart upload:", error);
+    return res.status(500).json({ error: "Error completing multipart upload" });
+  }
+};
