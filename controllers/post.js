@@ -2319,96 +2319,6 @@ exports.newfetchfeeds3 = async (req, res) => {
     const content = [];
     const addp = [];
 
-    //checking and removing posts with no communities
-    // const p = await Post.find();
-
-    // for (let i = 0; i < p.length; i++) {
-    //   const com = await Community.findById(p[i].community);
-    //   if (!com) {
-    //     p[i].remove();
-    //   }
-    // }
-
-    //getting all related tags
-    const intt = await Interest.find({ title: { $in: user.interest } })
-      .select("tags")
-      .populate("tags", "title")
-      .lean()
-      .limit(1);
-
-    //Algo
-    let first = true;
-
-    //getting tags selected by the user
-    const userinterests = await Interest.find({ title: { $in: user.interest } })
-      .select("title")
-      .lean()
-      .limit(3);
-
-    //checking if user opened the app for the first time
-
-    //true && then fetching the most bidded and popular ad in the first place related to the users selected interest
-    const banner = await Ads.findOne({ cpa, category });
-
-    //then all 9 posts top popular in respective niches
-    const popularPosts = await Post.aggregate([
-      {
-        $lookup: {
-          from: "communities",
-          localField: "community",
-          foreignField: "_id",
-          as: "community",
-        },
-      },
-      { $unwind: "$community" },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "category",
-        },
-      },
-      { $unwind: "$category" },
-      {
-        $match: {
-          "category._id": { $in: user.interest },
-        },
-      },
-
-      {
-        $sort: { likes: -1 },
-      },
-
-      {
-        $sample: { size: 10 },
-      },
-
-      {
-        $project: {
-          title: 1,
-          content: 1,
-          likes: 1,
-          community: 1,
-          category: 1,
-        },
-      },
-    ]);
-
-    let alltags = [];
-    for (let i = 0; i < intt.length; i++) {
-      const interest = intt[i];
-      if (interest.tags && interest.tags.length > 0) {
-        for (let j = 0; j < interest.tags.length; j++) {
-          const tag = interest.tags[j];
-          if (tag) {
-            const tagsArray = tag.title.split(" ").map((tag) => tag.slice(1));
-            alltags = [...alltags, ...tagsArray];
-          }
-        }
-      }
-    }
-
     //fetching post
     const post = await Post.aggregate([
       {
@@ -2421,15 +2331,10 @@ exports.newfetchfeeds3 = async (req, res) => {
       },
       {
         $match: {
-          $or: [
-            { "communityInfo.category": { $in: user.interest } }, // Match community categories
-            {
-              $or: [{ tags: { $in: alltags } }, { tags: { $exists: false } }],
-            },
-          ],
+          "communityInfo.category": { $in: user.interest },
         },
       },
-      { $sample: { size: 20 } },
+      { $sample: { size: 30 } },
       {
         $lookup: {
           from: "users",
@@ -2531,7 +2436,6 @@ exports.newfetchfeeds3 = async (req, res) => {
       status: "active",
       $or: [{ type: "banner" }],
     })
-      .sort({ cpa: -1 })
       .populate({
         path: "postid",
         select:
