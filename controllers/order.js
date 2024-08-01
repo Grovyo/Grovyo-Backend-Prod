@@ -1736,16 +1736,43 @@ exports.cancelao = async (req, res) => {
   }
 };
 
+// exports.cancellationrequest = async (req, res) => {
+//   try {
+//     const { id, ordid } = req.params;
+//     const { reason } = req.body;
+//     const updatedOrder = await Order.findByIdAndUpdate(
+//       ordid,
+//       { currentStatus: "cancelled", reason: reason },
+//       { new: true }
+//     );
+
+//     if (!updatedOrder) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Order not found!" });
+//     }
+//     const cancel = new Cancellation({
+//       userid: id,
+//       orderId: ordid,
+//       reason,
+//       status: "cancelled",
+//     });
+//     await cancel.save();
+//     res.status(200).json({ success: true, data: cancel });
+//   } catch (error) {
+//     res.status(400).json({ success: false, message: "Something Went Wrong!" });
+//   }
+// };
 exports.cancellationrequest = async (req, res) => {
   try {
-    const { id, ordid } = req.params;
+    const { id, oid } = req.params;
+
     const { reason } = req.body;
     const updatedOrder = await Order.findByIdAndUpdate(
-      ordid,
+      oid,
       { currentStatus: "cancelled", reason: reason },
       { new: true }
     );
-
     if (!updatedOrder) {
       return res
         .status(404)
@@ -1753,8 +1780,8 @@ exports.cancellationrequest = async (req, res) => {
     }
     const cancel = new Cancellation({
       userid: id,
-      orderId: ordid,
-      reason,
+      orderId: oid,
+      reason: reason,
       status: "cancelled",
     });
     await cancel.save();

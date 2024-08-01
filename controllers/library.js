@@ -349,6 +349,80 @@ exports.removecart = async (req, res) => {
 };
 
 //udpate address
+// exports.updateaddress = async (req, res) => {
+//   const { userId } = req.params;
+//   const {
+//     streetaddress,
+//     state,
+//     city,
+//     landmark,
+//     pincode,
+//     latitude,
+//     longitude,
+//     altitude,
+//     provider,
+//     accuracy,
+//     bearing,
+//     phone,
+//   } = req.body;
+
+//   try {
+//     let address;
+//     const user = await User.findById(userId);
+
+//     if (!user) {
+//       res.status(404).json({ message: "No user found", success: false });
+//     } else {
+//       const apiKey = process.env.GEOCODE;
+
+//       const endpoint = "https://maps.googleapis.com/maps/api/geocode/json";
+//       const params = {
+//         address: streetaddress + city + pincode + state,
+//         key: apiKey,
+//       };
+
+//       const response = await axios.get(endpoint, { params });
+//       const data = response.data;
+//       if (data.status === "OK") {
+//         const location = data.results[0].geometry.location;
+//         const latitude = location.lat;
+//         const longitude = location.lng;
+
+//         address = {
+//           streetaddress: streetaddress,
+//           state: state,
+//           city: city,
+//           landmark: landmark,
+//           pincode: pincode,
+//           coordinates: {
+//             latitude: latitude,
+//             longitude: longitude,
+//             altitude: altitude,
+//             provider: provider,
+//             accuracy: accuracy,
+//             bearing: bearing,
+//           },
+//         };
+//       } else {
+//         console.log("Geocoding API request failed");
+//       }
+//       if (phone) {
+//         await User.updateOne(
+//           { _id: userId },
+//           { $set: { address: address, phone: phone } }
+//         );
+//       } else {
+//         await User.updateOne({ _id: userId }, { $set: { address: address } });
+//       }
+
+//       res.status(200).json({ success: true });
+//     }
+//   } catch (e) {
+//     console.log(e);
+//     res.status(400).json({ message: e.message, success: false });
+//   }
+// };
+//udpate address
 exports.updateaddress = async (req, res) => {
   const { userId } = req.params;
   const {
@@ -364,6 +438,7 @@ exports.updateaddress = async (req, res) => {
     accuracy,
     bearing,
     phone,
+    currentaddress,
   } = req.body;
 
   try {
@@ -373,27 +448,28 @@ exports.updateaddress = async (req, res) => {
     if (!user) {
       res.status(404).json({ message: "No user found", success: false });
     } else {
-      const apiKey = process.env.GEOCODE;
+      if (currentaddress) {
+        const apiKey = process.env.GEOCODE;
 
-      const endpoint = "https://maps.googleapis.com/maps/api/geocode/json";
-      const params = {
-        address: streetaddress + city + pincode + state,
-        key: apiKey,
-      };
+        const endpoint = "https://maps.googleapis.com/maps/api/geocode/json";
+        const params = {
+          address: streetaddress + city + pincode + state,
+          key: apiKey,
+        };
 
-      const response = await axios.get(endpoint, { params });
-      const data = response.data;
-      if (data.status === "OK") {
-        const location = data.results[0].geometry.location;
-        const latitude = location.lat;
-        const longitude = location.lng;
+        const response = await axios.get(endpoint, { params });
+        const addressParts = currentaddress.split(",");
+        const stateAndPincode = addressParts[4].trim();
 
         address = {
-          streetaddress: streetaddress,
-          state: state,
-          city: city,
-          landmark: landmark,
-          pincode: pincode,
+          streetaddress: addressParts[0].trim() + ", " + addressParts[1].trim(),
+          state:
+            stateAndPincode.split(" ")[0].trim() +
+            " " +
+            stateAndPincode.split(" ")[1].trim(),
+          city: addressParts[2].trim() + ", " + addressParts[3].trim(),
+          landmark: "",
+          pincode: stateAndPincode.split(" ")[2].trim(),
           coordinates: {
             latitude: latitude,
             longitude: longitude,
@@ -403,16 +479,84 @@ exports.updateaddress = async (req, res) => {
             bearing: bearing,
           },
         };
-      } else {
-        console.log("Geocoding API request failed");
-      }
-      if (phone) {
-        await User.updateOne(
-          { _id: userId },
-          { $set: { address: address, phone: phone } }
-        );
-      } else {
         await User.updateOne({ _id: userId }, { $set: { address: address } });
+        const data = response.data;
+        if (data.status === "OK") {
+          const location = data.results[0].geometry.location;
+          const latitude = location.lat;
+          const longitude = location.lng;
+
+          const addressParts = currentaddress.split(",");
+          const stateAndPincode = addressParts[4].trim();
+          console.log(
+            "Street Address:",
+            addressParts[0].trim() + ", " + addressParts[1].trim()
+          ); // HFW3+956, Amrapali Dream Valley
+          console.log(
+            "City:",
+            addressParts[2].trim() + ", " + addressParts[3].trim()
+          ); // Greater Noida, Ithaira
+          console.log("State:", stateAndPincode.split(" ")[0].trim()); // Uttar Pradesh
+          console.log("Pincode:", stateAndPincode.split(" ")[1].trim());
+          address = {
+            streetaddress:
+              addressParts[0].trim() + ", " + addressParts[1].trim(),
+            state: stateAndPincode.split(" ")[0].trim(),
+            city: addressParts[2].trim() + ", " + addressParts[3].trim(),
+            landmark: landmark,
+            pincode: stateAndPincode.split(" ")[1].trim(),
+            coordinates: {
+              latitude: latitude,
+              longitude: longitude,
+              altitude: altitude,
+              provider: provider,
+              accuracy: accuracy,
+              bearing: bearing,
+            },
+          };
+          await User.updateOne({ _id: userId }, { $set: { address: address } });
+        } else {
+          console.log("Geocoding API request failed");
+        }
+      } else {
+        if (phone) {
+          address = {
+            streetaddress: streetaddress,
+            state: state,
+            city: city,
+            landmark: landmark,
+            pincode: pincode,
+            coordinates: {
+              latitude: latitude,
+              longitude: longitude,
+              altitude: altitude,
+              provider: provider,
+              accuracy: accuracy,
+              bearing: bearing,
+            },
+          };
+          await User.updateOne(
+            { _id: userId },
+            { $set: { address: address, phone: phone } }
+          );
+        } else {
+          address = {
+            streetaddress: streetaddress,
+            state: state,
+            city: city,
+            landmark: landmark,
+            pincode: pincode,
+            coordinates: {
+              latitude: latitude,
+              longitude: longitude,
+              altitude: altitude,
+              provider: provider,
+              accuracy: accuracy,
+              bearing: bearing,
+            },
+          };
+          await User.updateOne({ _id: userId }, { $set: { address: address } });
+        }
       }
 
       res.status(200).json({ success: true });

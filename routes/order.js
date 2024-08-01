@@ -67,4 +67,6 @@ router.post("/cancelpro/:userId/:ordid/:prodId", cancelprod);
 //fetch all products all
 router.get("/fetchallprods/:userId/:ordid", fecthallprods);
 
+router.post("/cancellationrequest/:id/:oid", cancellationrequest);
+
 module.exports = router;
