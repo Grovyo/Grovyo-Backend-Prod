@@ -2067,42 +2067,159 @@ exports.postanythings3old = async (req, res) => {
 };
 
 exports.postanythings3 = async (req, res) => {
-  try {
-    const { parts, index, name } = req.body;
-    console.log(parts);
-    const formattedParts = parts.map((part, i) => ({
-      ETag: part.etag,
-      PartNumber: part.partNumber,
-    }));
+  const { userId, comId, topicId } = req.params;
+  const { title, desc, tags, category, type, people } = req.body;
 
-    const params = {
-      Bucket: "transcribtio9",
-      Key: name,
-      UploadId: index,
-      MultipartUpload: {
-        Parts: formattedParts,
-      },
+  try {
+    const tagArray = tags.split(",");
+    const peopleArray = JSON.parse(people);
+
+    const [user, community, topic] = await Promise.all([
+      User.findById(userId),
+      Community.findById(comId),
+      Topic.findById(topicId),
+    ]);
+
+    if (!user || !community || !topic || req.files.length === 0) {
+      return res.status(404).json({
+        message:
+          "User or Community or Topic not found or no files were provided!",
+        success: false,
+      });
+    }
+
+    let postContents = [];
+
+    const uploadFilesToS3 = async (files) => {
+      for (let file of files) {
+        const uuidString = uuid();
+        const objectName = `${Date.now()}${uuidString}${file.originalname}`;
+        await s3.send(
+          new PutObjectCommand({
+            Bucket: POST_BUCKET,
+            Key: objectName,
+            Body: file.buffer,
+            ContentType: file.mimetype,
+          })
+        );
+
+        if (type === "video" && file.fieldname === "thumbnail") {
+          postContents.push({
+            content: objectName,
+            thumbnail: objectName,
+            type: "video/mp4",
+          });
+        } else {
+          postContents.push({ content: objectName, type: file.mimetype });
+        }
+      }
     };
 
-    const uploadId = await s3multi.createMultipartUpload(
-      params,
-      (err, data) => {
-        if (err) {
-          console.error("Error completing multipart upload:", err);
-          return res.status(500).json({
-            message: "Failed to complete multipart upload",
-            success: false,
+    await uploadFilesToS3(req.files);
+
+    const newPost = new Post({
+      title,
+      desc,
+      community: comId,
+      sender: userId,
+      post: postContents,
+      tags: tagArray,
+      topicId: topicId,
+      peopletags: peopleArray,
+    });
+
+    const savedPost = await newPost.save();
+
+    const updateTagsAndInterests = async () => {
+      const interest = await Interest.findOne({ title: category });
+
+      for (let tag of tagArray) {
+        const lowerCaseTag = tag.toLowerCase();
+        let existingTag = await Tag.findOne({ title: lowerCaseTag });
+
+        if (existingTag) {
+          await Tag.updateOne(
+            { _id: existingTag._id },
+            { $inc: { count: 1 }, $addToSet: { post: newPost._id } }
+          );
+        } else {
+          existingTag = new Tag({
+            title: lowerCaseTag,
+            post: newPost._id,
+            count: 1,
           });
-          console.log(data);
+          await existingTag.save();
         }
 
-        console.log("Multipart upload completed successfully:", data);
-        res.status(200).json({ success: true, data });
+        if (interest) {
+          await Interest.updateOne(
+            { _id: interest._id },
+            {
+              $inc: { count: 1 },
+              $addToSet: { post: newPost._id, tags: existingTag._id },
+            }
+          );
+        }
       }
-    );
-  } catch (error) {
-    console.error("Error in postanythings3 handler:", error);
-    res.status(500).json({ message: "Something went wrong", success: false });
+    };
+
+    await updateTagsAndInterests();
+
+    await Promise.all([
+      Community.updateOne(
+        { _id: comId },
+        { $push: { posts: savedPost._id }, $inc: { totalposts: 1 } }
+      ),
+      Topic.updateOne(
+        { _id: topicId },
+        { $push: { posts: savedPost._id }, $inc: { postcount: 1 } }
+      ),
+    ]);
+
+    let tokens = community.members
+      .filter(
+        (member) => member._id.toString() !== userId && member.notificationtoken
+      )
+      .map((member) => member.notificationtoken);
+
+    if (tokens.length > 0) {
+      const link = process.env.POST_URL + newPost.post[0].content;
+      const comdp = process.env.URL + community.dp;
+      const timestamp = new Date().toString();
+      const msg = {
+        notification: {
+          title: `${community.title} - Posted!`,
+          body: `${newPost.title}`,
+        },
+        data: {
+          screen: "CommunityChat",
+          sender_fullname: `${user.fullname}`,
+          sender_id: `${user._id}`,
+          text: `${newPost.title}`,
+          comId: `${community._id}`,
+          createdAt: timestamp,
+          type: "post",
+          link,
+          comdp,
+        },
+        tokens,
+      };
+
+      await admin
+        .messaging()
+        .sendMulticast(msg)
+        .then(() => {
+          console.log("Successfully sent message");
+        })
+        .catch((error) => {
+          console.error("Error sending message:", error);
+        });
+    }
+
+    res.status(200).json({ savedPost, success: true });
+  } catch (e) {
+    console.error("Error:", e);
+    res.status(400).json({ message: "Something went wrong", success: false });
   }
 };
 
@@ -2319,6 +2436,96 @@ exports.newfetchfeeds3 = async (req, res) => {
     const content = [];
     const addp = [];
 
+    //checking and removing posts with no communities
+    // const p = await Post.find();
+
+    // for (let i = 0; i < p.length; i++) {
+    //   const com = await Community.findById(p[i].community);
+    //   if (!com) {
+    //     p[i].remove();
+    //   }
+    // }
+
+    //getting all related tags
+    const intt = await Interest.find({ title: { $in: user.interest } })
+      .select("tags")
+      .populate("tags", "title")
+      .lean()
+      .limit(1);
+
+    //Algo
+    let first = true;
+
+    //getting tags selected by the user
+    const userinterests = await Interest.find({ title: { $in: user.interest } })
+      .select("title")
+      .lean()
+      .limit(3);
+
+    //checking if user opened the app for the first time
+
+    //true && then fetching the most bidded and popular ad in the first place related to the users selected interest
+    const banner = await Ads.findOne({ cpa, category });
+
+    //then all 9 posts top popular in respective niches
+    const popularPosts = await Post.aggregate([
+      {
+        $lookup: {
+          from: "communities",
+          localField: "community",
+          foreignField: "_id",
+          as: "community",
+        },
+      },
+      { $unwind: "$community" },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "category",
+        },
+      },
+      { $unwind: "$category" },
+      {
+        $match: {
+          "category._id": { $in: user.interest },
+        },
+      },
+
+      {
+        $sort: { likes: -1 },
+      },
+
+      {
+        $sample: { size: 10 },
+      },
+
+      {
+        $project: {
+          title: 1,
+          content: 1,
+          likes: 1,
+          community: 1,
+          category: 1,
+        },
+      },
+    ]);
+
+    let alltags = [];
+    for (let i = 0; i < intt.length; i++) {
+      const interest = intt[i];
+      if (interest.tags && interest.tags.length > 0) {
+        for (let j = 0; j < interest.tags.length; j++) {
+          const tag = interest.tags[j];
+          if (tag) {
+            const tagsArray = tag.title.split(" ").map((tag) => tag.slice(1));
+            alltags = [...alltags, ...tagsArray];
+          }
+        }
+      }
+    }
+
     //fetching post
     const post = await Post.aggregate([
       {
@@ -2331,10 +2538,15 @@ exports.newfetchfeeds3 = async (req, res) => {
       },
       {
         $match: {
-          "communityInfo.category": { $in: user.interest },
+          $or: [
+            { "communityInfo.category": { $in: user.interest } }, // Match community categories
+            {
+              $or: [{ tags: { $in: alltags } }, { tags: { $exists: false } }],
+            },
+          ],
         },
       },
-      { $sample: { size: 30 } },
+      { $sample: { size: 20 } },
       {
         $lookup: {
           from: "users",
@@ -2436,6 +2648,7 @@ exports.newfetchfeeds3 = async (req, res) => {
       status: "active",
       $or: [{ type: "banner" }],
     })
+      .sort({ cpa: -1 })
       .populate({
         path: "postid",
         select:
