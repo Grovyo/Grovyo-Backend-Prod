@@ -61,6 +61,9 @@ const {
   usl,
   getguide,
   postguide,
+  intrestcoms,
+  joinmasscoms,
+  fetchnoti,
 } = require("../controllers/userAuth");
 const { userbyId } = require("../controllers/user");
 
@@ -126,6 +129,7 @@ router.post("/v1/unhideconvmsg/:id", unhideconvmsg);
 router.post("/v1/magiccode", magiccode);
 router.post("/v1/changepass", changepass);
 router.post("/v1/readconvs/:id", readconvs);
+
 router.post("/v1/mute", muting); //for muting and unmusting chats
 
 router.post("/updatenotificationdelivery/:id", updatenotificationdel); //for delivery
@@ -170,6 +174,10 @@ router.get("/prompt/:text", async (req, res) => {
     console.log(error);
   }
 });
+
+router.get("/v1/intrestcoms/:id", intrestcoms);
+router.post("/v1/joinmasscoms", joinmasscoms);
+router.get("/v1/fetchnoti/:id", fetchnoti);
 
 router.param("userId", userbyId);
 

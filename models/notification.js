@@ -13,6 +13,8 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    type: String,
+    dp: String,
   },
   { timestamps: true }
 );

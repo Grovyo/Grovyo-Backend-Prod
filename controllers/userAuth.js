@@ -17,6 +17,7 @@ const Community = require("../models/community");
 const Tag = require("../models/Tags");
 const admin = require("../fireb");
 const Topic = require("../models/topic");
+const Notifications = require("../models/notification");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 const fs = require("fs");
@@ -3416,3 +3417,134 @@ const findComs = async () => {
 };
 
 // findComs();
+
+//fetch intrest based communities
+exports.intrestcoms = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (user) {
+      const coms = await Community.find({
+        category: { $in: user.interest },
+        memberscount: { $gte: 53 },
+      })
+        .limit(10)
+        .exec();
+
+      const communities = coms.map((c) => ({
+        name: c.title,
+        members: c.memberscount,
+        dp: process.env.URL + c.dp,
+        id: c.id,
+      }));
+
+      res.status(200).json({
+        success: true,
+        data: communities,
+      });
+    } else {
+      console.log("User not found");
+
+      res.status(404).json({ message: "User not found", success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res
+      .status(400)
+      .json({ message: "Something went wrong...", success: false });
+  }
+};
+
+exports.joinmasscoms = async (req, res) => {
+  try {
+    const { id, list } = req.body;
+    const user = await User.findById(id);
+    if (user) {
+      for (let i = 0; i < list.length; i++) {
+        const community = await Community.findById(list[i]);
+        if (!community) {
+          res.status(400).json({ message: "Community not found" });
+        } else {
+          let publictopic = [];
+          for (let i = 0; i < community.topics.length; i++) {
+            const topic = await Topic.findById({ _id: community.topics[i] });
+
+            if (topic.type === "free") {
+              publictopic.push(topic);
+            }
+          }
+
+          try {
+            if (community.type === "public") {
+              //other updations
+              let notif = { id: user._id, muted: false };
+
+              await Community.updateOne(
+                { _id: community._id },
+                {
+                  $push: { members: user._id, notifications: notif },
+                  $inc: { memberscount: 1 },
+                }
+              );
+              await User.updateOne(
+                { _id: user._id },
+                {
+                  $push: { communityjoined: community._id },
+                  $inc: { totalcom: 1 },
+                }
+              );
+
+              const topicIds = publictopic.map((topic) => topic._id);
+
+              await Topic.updateMany(
+                { _id: { $in: topicIds } },
+                {
+                  $push: { members: user._id, notifications: notif },
+                  $inc: { memberscount: 1 },
+                }
+              );
+
+              await User.updateMany(
+                { _id: user._id },
+                {
+                  $push: { topicsjoined: topicIds },
+                  $inc: { totaltopics: 2 },
+                }
+              );
+            }
+          } catch (e) {
+            console.log(e);
+          }
+        }
+      }
+      res.status(200).json({ success: true });
+    } else {
+      res.status(403).json({ success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};
+
+exports.fetchnoti = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const user = await User.findById(id);
+    if (user) {
+      const notifications = await Notifications.find({ recId: user._id }).limit(
+        50
+      );
+      const notis = notifications.map((n, i) => ({
+        n,
+        dp: process.env.URL + n.dp,
+      }));
+      res.status(200).json({ success: true, notis });
+    } else {
+      res.status(403).json({ success: false });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({ success: false });
+  }
+};

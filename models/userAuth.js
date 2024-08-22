@@ -201,6 +201,7 @@ const userSchema = new mongoose.Schema(
     ],
     muted: [{ type: ObjectId, ref: "Conversation" }],
     address: {
+      houseno: { type: String },
       streetaddress: { type: String },
       state: { type: String },
       city: { type: String },
@@ -239,7 +240,7 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
-
+    recentInterests: [{ type: String }],
     mesIds: [{ type: Number }],
     deliverypartners: [
       {

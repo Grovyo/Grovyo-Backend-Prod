@@ -439,6 +439,7 @@ exports.updateaddress = async (req, res) => {
     bearing,
     phone,
     currentaddress,
+    houseno,
   } = req.body;
 
   try {
@@ -462,7 +463,7 @@ exports.updateaddress = async (req, res) => {
         const stateAndPincode = addressParts[4].trim();
 
         address = {
-          streetaddress: addressParts[0].trim() + ", " + addressParts[1].trim(),
+          streetaddress: addressParts[0].trim(),
           state:
             stateAndPincode.split(" ")[0].trim() +
             " " +
@@ -488,17 +489,9 @@ exports.updateaddress = async (req, res) => {
 
           const addressParts = currentaddress.split(",");
           const stateAndPincode = addressParts[4].trim();
-          console.log(
-            "Street Address:",
-            addressParts[0].trim() + ", " + addressParts[1].trim()
-          ); // HFW3+956, Amrapali Dream Valley
-          console.log(
-            "City:",
-            addressParts[2].trim() + ", " + addressParts[3].trim()
-          ); // Greater Noida, Ithaira
-          console.log("State:", stateAndPincode.split(" ")[0].trim()); // Uttar Pradesh
-          console.log("Pincode:", stateAndPincode.split(" ")[1].trim());
+
           address = {
+            houseno: houseno,
             streetaddress:
               addressParts[0].trim() + ", " + addressParts[1].trim(),
             state: stateAndPincode.split(" ")[0].trim(),
@@ -541,6 +534,7 @@ exports.updateaddress = async (req, res) => {
           );
         } else {
           address = {
+            houseno: houseno,
             streetaddress: streetaddress,
             state: state,
             city: city,
