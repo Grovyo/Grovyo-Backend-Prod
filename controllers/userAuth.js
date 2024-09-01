@@ -3529,19 +3529,20 @@ exports.joinmasscoms = async (req, res) => {
 
 exports.fetchnoti = async (req, res) => {
   const { id } = req.params;
+
   try {
     const user = await User.findById(id);
     if (user) {
-      const notifications = await Notifications.find({ recId: user._id }).limit(
-        50
-      );
+      const notifications = await Notifications.find({ recId: id }).limit(50);
+
       const notis = notifications.map((n, i) => ({
         n,
         dp: process.env.URL + n.dp,
       }));
-      res.status(200).json({ success: true, notis });
+
+      res.status(200).json({ success: true, notis: notis });
     } else {
-      res.status(403).json({ success: false });
+      res.status(304).json({ success: false });
     }
   } catch (e) {
     console.log(e);
