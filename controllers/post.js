@@ -2465,7 +2465,7 @@ exports.newfetchfeeds3 = async (req, res) => {
     //checking if user opened the app for the first time
 
     //true && then fetching the most bidded and popular ad in the first place related to the users selected interest
-    const banner = await Ads.findOne({ cpa, category });
+    //const banner = await Ads.findOne({ cpa, category });
 
     //then all 9 posts top popular in respective niches
     const popularPosts = await Post.aggregate([
