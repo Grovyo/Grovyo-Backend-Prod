@@ -11,7 +11,8 @@ const Deliveries = new mongoose.Schema({
   status: { type: String, default: "Not started" },
   type: { type: String },
   mode: { type: String },
-
+  currentstatus: { type: String, default: "pick" },
+  proofs: [{ type: String }],
   reason: { type: String },
   pickupaddress: {
     streetaddress: { type: String },

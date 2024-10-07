@@ -58,8 +58,8 @@ const upload = multer({ storage: storage, limits: { fileSize: 1000000000 } });
 router.post("/postanything/:userId/:comId", upload.any(), postanythings3);
 // router.post("/createvideo/:userId/:commId", upload.any(), createVideo);
 // router.get("/getfeed/:userId", fetchfeed);
-router.get("/v1/getfeed/:userId", newfetchfeeds3);
-router.get("/v1/fetchmore/:userId", fetchmoredata);
+router.get("/v1/getfeed/:id", newfetchfeed);
+router.get("/v1/fetchmore/:id", fetchmoredata);
 router.get("/fetchonepost/:postId", fetchonepost);
 router.get("/getfollowingfeed/:userId", joinedcom);
 router.get("/v1/getfollowingfeed/:userId", joinedcomnews3);
@@ -84,13 +84,17 @@ router.post("/deletnull", delenu);
 //s3 routes
 
 //new for you
-router.get("/v2/getfeed/:userId", newfetchfeeds3);
+// router.get("/v2/getfeed/:userId", newfetchfeeds3);
 
 //get community feed
 router.get("/v2/getfollowingfeed/:userId", joinedcomnews3);
 
 //post anything
-router.post("/v1/postanything", upload.any(), postanythings3);
+router.post(
+  "/v1/postanything/:userId/:comId/:topicId",
+  upload.any(),
+  postanythings3
+);
 
 //fetchinterests
 router.get("/v1/fetchinterest", fetchinterest);
@@ -111,13 +115,13 @@ router.post("/testupload", upload.any(), (req, res) => {
 });
 
 //start multipart upload
-router.post("/start-multipart-upload", startmultipart);
+// router.post("/start-multipart-upload", startmultipart);
 
-//uploading multipart
-router.post("/generate-presigned-url", uploadmulti);
+// //uploading multipart
+// router.post("/generate-presigned-url", uploadmulti);
 
-//complete multipart upload
-router.post("/complete-multipart-upload", completemulti);
+// //complete multipart upload
+// router.post("/complete-multipart-upload", completemulti);
 
 router.post("/upload/chunk", upload.single("image"), (req, res) => {
   console.log(req.body);

@@ -13,6 +13,8 @@ const Tag = require("../models/Tags");
 const Interest = require("../models/Interest");
 const Message = require("../models/message");
 const stream = require("stream");
+const NodeCache = require("node-cache");
+const myCache = new NodeCache();
 const {
   S3Client,
   PutObjectCommand,
@@ -1419,7 +1421,7 @@ exports.postanything = async (req, res) => {
 };
 
 //fetch feed new according to user interest
-exports.newfetchfeed = async (req, res) => {
+exports.newfetchfeedss = async (req, res) => {
   try {
     const { userId } = req.params;
     const user = await User.findById(userId);
@@ -2422,112 +2424,68 @@ const getUserFeed = async (user, first) => {
 };
 
 //new for you
-exports.newfetchfeeds3 = async (req, res) => {
+exports.newfetchfeed = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const user = await User.findById(userId);
-    const dps = [];
-    let current = [];
-    const memdps = [];
-    const subs = [];
-    const liked = [];
-    const ads = [];
-    const urls = [];
-    const content = [];
-    const addp = [];
+    const { id } = req.params;
 
-    //checking and removing posts with no communities
-    // const p = await Post.find();
+    // Step 1: Check cache
+    let user = myCache.get(`user:${id}`);
 
-    // for (let i = 0; i < p.length; i++) {
-    //   const com = await Community.findById(p[i].community);
-    //   if (!com) {
-    //     p[i].remove();
-    //   }
-    // }
+    if (!user) {
+      console.log("Fetching from database...");
+      user = await User.findById(id)
+        .select(
+          "activeinterest interest fullname username profilepic isverified"
+        )
+        .lean();
+      myCache.set(`user:${id}`, user, 3600);
+    }
 
-    //getting all related tags
-    const intt = await Interest.find({ title: { $in: user.interest } })
+    const interestsWithTags = await Interest.find({
+      title: { $in: user.interest }, // Find interests that match user.interest
+    })
       .select("tags")
       .populate("tags", "title")
       .lean()
-      .limit(1);
-
-    //Algo
-    let first = true;
-
-    //getting tags selected by the user
-    const userinterests = await Interest.find({ title: { $in: user.interest } })
-      .select("title")
-      .lean()
       .limit(3);
 
-    //checking if user opened the app for the first time
+    const limitedInterests = interestsWithTags.map((interest) => ({
+      ...interest,
+      tags: interest.tags.slice(0, 3), // Limit tags to the first 3
+    }));
 
-    //true && then fetching the most bidded and popular ad in the first place related to the users selected interest
-    //const banner = await Ads.findOne({ cpa, category });
+    // Extract and log tag titles from the limited tags
+    const tags = limitedInterests.flatMap(
+      (interest) => interest.tags.map((tag) => tag.title) // Extract only the title
+    );
 
-    //then all 9 posts top popular in respective niches
-    const popularPosts = await Post.aggregate([
-      {
-        $lookup: {
-          from: "communities",
-          localField: "community",
-          foreignField: "_id",
-          as: "community",
-        },
-      },
-      { $unwind: "$community" },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "category",
-        },
-      },
-      { $unwind: "$category" },
-      {
-        $match: {
-          "category._id": { $in: user.interest },
-        },
-      },
+    const cleanedTags = cleanArray(tags);
 
-      {
-        $sort: { likes: -1 },
-      },
+    console.log("Cleaned Tags:", cleanedTags);
 
-      {
-        $sample: { size: 10 },
-      },
+    // Step 3: Fetch banner ad
+    const banner = await Ads.findOne({
+      status: "active",
+      $or: [{ type: "banner" }],
+    })
+      .sort({ cpa: -1 })
+      .populate({
+        path: "postid",
+        select:
+          "desc post title kind likes likedby comments members community cta ctalink sender totalcomments adtype date createdAt",
+        populate: [
+          {
+            path: "community",
+            select: "dp title isverified memberscount members",
+            populate: { path: "members", select: "profilepic" },
+          },
+          { path: "sender", select: "profilepic fullname" },
+        ],
+      })
+      .limit(1);
 
-      {
-        $project: {
-          title: 1,
-          content: 1,
-          likes: 1,
-          community: 1,
-          category: 1,
-        },
-      },
-    ]);
-
-    let alltags = [];
-    for (let i = 0; i < intt.length; i++) {
-      const interest = intt[i];
-      if (interest.tags && interest.tags.length > 0) {
-        for (let j = 0; j < interest.tags.length; j++) {
-          const tag = interest.tags[j];
-          if (tag) {
-            const tagsArray = tag.title.split(" ").map((tag) => tag.slice(1));
-            alltags = [...alltags, ...tagsArray];
-          }
-        }
-      }
-    }
-
-    //fetching post
-    const post = await Post.aggregate([
+    // Step 4: Aggregate posts with necessary lookups
+    const posts = await Post.aggregate([
       {
         $lookup: {
           from: "communities",
@@ -2541,12 +2499,15 @@ exports.newfetchfeeds3 = async (req, res) => {
           $or: [
             { "communityInfo.category": { $in: user.interest } }, // Match community categories
             {
-              $or: [{ tags: { $in: alltags } }, { tags: { $exists: false } }],
+              $or: [
+                { tags: { $in: cleanedTags } },
+                { tags: { $exists: false } },
+              ],
             },
           ],
         },
       },
-      { $sample: { size: 20 } },
+      { $sample: { size: 15 } },
       {
         $lookup: {
           from: "users",
@@ -2643,158 +2604,78 @@ exports.newfetchfeeds3 = async (req, res) => {
       },
     ]);
 
-    //fetching ads
-    const firstad = await Ads.findOne({
-      status: "active",
-      $or: [{ type: "banner" }],
-    })
-      .sort({ cpa: -1 })
-      .populate({
-        path: "postid",
-        select:
-          "desc post title kind likes likedby comments members community cta ctalink sender totalcomments adtype date createdAt",
-        populate: [
-          {
-            path: "community",
-            select: "dp title isverified memberscount members",
-            populate: { path: "members", select: "profilepic" },
-          },
-          { path: "sender", select: "profilepic fullname" },
-        ],
-      })
-      .limit(1);
-
-    const infeedad = await Ads.find({
-      status: "active",
-      $or: [{ type: "infeed" }],
-    }).populate({
-      path: "postid",
-      select:
-        "desc post title kind likes comments community cta ctalink likedby sender totalcomments adtype date createdAt",
-      populate: [
-        {
-          path: "community",
-          select: "dp title isverified memberscount members",
-          populate: { path: "members", select: "profilepic" },
-        },
-        { path: "sender", select: "profilepic fullname" },
-      ],
-    });
-
-    function getRandomIndex() {
-      const min = 6;
-      return min + Math.floor(Math.random() * (post.length - min));
-    }
-
-    let feedad = [];
-    for (let i = 0; i < infeedad.length; i++) {
-      feedad.push(infeedad[i].postid);
-    }
-
-    //merging ads
-    if (firstad) {
-      post.unshift(firstad.postid);
-    }
-
-    if (
-      feedad?.length > 0 &&
-      (!feedad.includes(null) || !feedad.includes("null"))
-    ) {
-      for (let i = 0; i < feedad.length; i++) {
-        const randomIndex = getRandomIndex();
-        post.splice(randomIndex, 0, feedad[i]);
-      }
-    }
-
-    for (let i = 0; i < post.length; i++) {
-      if (
-        post[i].likedby?.some((id) => id.toString() === user._id.toString())
-      ) {
-        liked.push(true);
-      } else {
-        liked.push(false);
-      }
-    }
-
-    for (let k = 0; k < post.length; k++) {
-      const coms = await Community.findById(post[k].community);
-
-      if (coms?.members?.includes(user._id)) {
-        subs.push("subscribed");
-      } else {
-        subs.push("unsubscribed");
-      }
-    }
-
-    if (!post) {
+    if (!posts) {
       res.status(201).json({ message: "No post found", success: false });
-    } else {
-      //post
-      for (let i = 0; i < post.length; i++) {
-        const a = process.env.URL + post[i].community.dp;
-        dps.push(a);
-      }
+      return;
+    }
 
-      let ur = [];
-      for (let i = 0; i < post?.length; i++) {
-        for (let j = 0; j < post[i]?.post?.length; j++) {
-          if (post[i].post[j].thumbnail) {
-            const a =
-              post[i].post[j].link === true
-                ? process.env.POST_URL + post[i].post[j].content + "640.mp4"
-                : process.env.POST_URL + post[i].post[j].content;
-            const t = process.env.POST_URL + post[i].post[j].thumbnail;
+    // Process posts
+    const mergedData = posts.map((post) => {
+      const liked = post.likedby?.some(
+        (id) => id.toString() === user._id.toString()
+      );
+      const subscribed = post.community.members.includes(user._id)
+        ? "subscribed"
+        : "unsubscribed";
 
-            ur.push({ content: a, thumbnail: t, type: post[i].post[j]?.type });
-          } else {
-            const a = process.env.POST_URL + post[i].post[j].content;
-            ur.push({ content: a, type: post[i].post[j]?.type });
-          }
-        }
-        urls.push(ur);
-        ur = [];
-      }
+      const dps = process.env.URL + post.community.dp;
 
-      for (let i = 0; i < post.length; i++) {
-        for (
-          let j = 0;
-          j < Math.min(4, post[i].community.members.length);
-          j++
-        ) {
-          const a =
-            process.env.URL + post[i]?.community?.members[j]?.profilepic;
-          current.push(a);
-        }
-
-        memdps.push(current);
-        current = [];
-      }
-
-      //post data
-      const dpData = dps;
-      const memdpData = memdps;
-      const urlData = urls;
-      const postData = post;
-      const subData = subs;
-      const likeData = liked;
-
-      const mergedData = urlData.map((u, i) => ({
-        dps: dpData[i],
-        memdps: memdpData[i],
-        urls: u,
-        liked: likeData[i],
-        subs: subData[i],
-        posts: postData[i],
+      const urls = post.post.map((p) => ({
+        content: p.link
+          ? process.env.POST_URL + p.content + "640.mp4"
+          : process.env.POST_URL + p.content,
+        thumbnail: p.thumbnail ? process.env.POST_URL + p.thumbnail : undefined,
+        type: p.type,
       }));
 
-      res.status(200).json({
-        mergedData,
-        success: true,
+      const memdps = post.community.members
+        .slice(0, 4)
+        .map((member) => process.env.URL + member.profilepic);
+
+      return {
+        dps,
+        memdps,
+        urls,
+        liked,
+        subs: subscribed,
+        posts: post,
+      };
+    });
+
+    if (banner) {
+      mergedData.unshift({
+        dps: process.env.URL + banner.postid.community.dp,
+        memdps: banner.postid.community.members
+          .slice(0, 4)
+          .map((member) => process.env.URL + member.profilepic),
+        urls: banner.postid.post.map((p) => ({
+          content: p.link
+            ? process.env.POST_URL + p.content + "640.mp4"
+            : process.env.POST_URL + p.content,
+          thumbnail: p.thumbnail
+            ? process.env.POST_URL + p.thumbnail
+            : undefined,
+          type: p.type,
+        })),
+        liked: banner.postid.likedby?.some(
+          (id) => id.toString() === user._id.toString()
+        ),
+        subs: banner.postid.community.members.includes(user._id)
+          ? "subscribed"
+          : "unsubscribed",
+        posts: banner.postid,
       });
     }
+
+    res.status(200).json({
+      mergedData,
+      success: true,
+    });
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: err, success: false });
+    console.log("Error:", err);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch user data", success: false });
   }
 };
 
@@ -2991,291 +2872,468 @@ exports.reseteverycart = async (req, res) => {
 //fetch more data
 exports.fetchmoredata = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const user = await User.findById(userId);
-    const dps = [];
-    let current = [];
-    const memdps = [];
-    const subs = [];
-    const liked = [];
-    const ads = [];
-    const urls = [];
-    const content = [];
-    const addp = [];
+    const { id } = req.params;
+    let user = myCache.get(`user:${id}`);
 
-    //checking and removing posts with no communities
-    // const p = await Post.find();
+    if (!user) {
+      console.log("Fetching from database...");
+      user = await User.findById(id)
+        .select(
+          "activeinterest interest fullname username profilepic isverified"
+        )
+        .lean();
+      myCache.set(`user:${id}`, user, 3600);
+    } else {
+      console.log("cached");
+    }
 
-    // for (let i = 0; i < p.length; i++) {
-    //   const com = await Community.findById(p[i].community);
-    //   if (!com) {
-    //     p[i].remove();
-    //   }
-    // }
+    if (user?.activeinterest?.length > 0) {
+      const interestsWithTags = await Interest.find({
+        title: { $in: user?.activeinterest }, // Find interests that match user.interest
+      })
+        .select("tags")
+        .populate("tags", "title")
+        .lean()
+        .limit(3);
 
-    //fetching post
-    const post = await Post.aggregate([
-      {
-        $lookup: {
-          from: "communities",
-          localField: "community",
-          foreignField: "_id",
-          as: "communityInfo",
+      const limitedInterests = interestsWithTags.map((interest) => ({
+        ...interest,
+        tags: interest.tags.slice(0, 3), // Limit tags to the first 3
+      }));
+
+      // Extract and log tag titles from the limited tags
+      const tags = limitedInterests.flatMap(
+        (interest) => interest.tags.map((tag) => tag.title) // Extract only the title
+      );
+
+      const cleanedTags = cleanArray(tags);
+
+      console.log("Cleaned Tags:", cleanedTags);
+
+      // const infeedad = await Ads.findOne({
+      //   status: "active",
+      //   $or: [{ type: "infeed" }],
+      // }).populate({
+      //   path: "postid",
+      //   select:
+      //     "desc post title kind likes comments community cta ctalink likedby sender totalcomments adtype date createdAt",
+      //   populate: [
+      //     {
+      //       path: "community",
+      //       select: "dp title isverified memberscount members",
+      //       populate: { path: "members", select: "profilepic" },
+      //     },
+      //     { path: "sender", select: "profilepic fullname" },
+      //   ],
+      // });
+
+      const posts = await Post.aggregate([
+        {
+          $lookup: {
+            from: "communities",
+            localField: "community",
+            foreignField: "_id",
+            as: "communityInfo",
+          },
         },
-      },
-      {
-        $match: {
-          "communityInfo.category": { $in: user.interest },
+        {
+          $match: {
+            $or: [
+              { "communityInfo.category": { $in: user.interest } }, // Match community categories
+              {
+                $or: [
+                  { tags: { $in: cleanedTags } },
+                  { tags: { $exists: false } },
+                ],
+              },
+            ],
+          },
         },
-      },
-      { $sample: { size: 10 } },
-      {
-        $lookup: {
-          from: "users",
-          localField: "sender",
-          foreignField: "_id",
-          as: "sender",
+        { $sample: { size: 7 } },
+        {
+          $lookup: {
+            from: "users",
+            localField: "sender",
+            foreignField: "_id",
+            as: "sender",
+          },
         },
-      },
-      {
-        $lookup: {
-          from: "communities",
-          localField: "community",
-          foreignField: "_id",
-          as: "community",
+        {
+          $lookup: {
+            from: "communities",
+            localField: "community",
+            foreignField: "_id",
+            as: "community",
+          },
         },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "community.members",
-          foreignField: "_id",
-          as: "members",
+        {
+          $lookup: {
+            from: "users",
+            localField: "community.members",
+            foreignField: "_id",
+            as: "members",
+          },
         },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "community.type",
-          foreignField: "_id",
-          as: "type",
+        {
+          $lookup: {
+            from: "users",
+            localField: "community.type",
+            foreignField: "_id",
+            as: "type",
+          },
         },
-      },
-      {
-        $addFields: {
-          sender: { $arrayElemAt: ["$sender", 0] },
-          community: { $arrayElemAt: ["$community", 0] },
+        {
+          $addFields: {
+            sender: { $arrayElemAt: ["$sender", 0] },
+            community: { $arrayElemAt: ["$community", 0] },
+          },
         },
-      },
-      {
-        $addFields: {
-          "community.members": {
-            $map: {
-              input: { $slice: ["$members", 0, 4] },
-              as: "member",
-              in: {
-                _id: "$$member._id",
-                fullname: "$$member.fullname",
-                profilepic: "$$member.profilepic",
+        {
+          $addFields: {
+            "community.members": {
+              $map: {
+                input: { $slice: ["$members", 0, 4] },
+                as: "member",
+                in: {
+                  _id: "$$member._id",
+                  fullname: "$$member.fullname",
+                  profilepic: "$$member.profilepic",
+                },
               },
             },
           },
         },
-      },
-      {
-        $match: {
-          "community.type": { $eq: "public" }, // Excluding posts with community type other than "public"
-        },
-      },
-      {
-        $project: {
-          _id: 1,
-          title: 1,
-          createdAt: 1,
-          status: 1,
-          likedby: 1,
-          likes: 1,
-          dislike: 1,
-          comments: 1,
-          totalcomments: 1,
-          tags: 1,
-          view: 1,
-          desc: 1,
-          isverified: 1,
-          post: 1,
-          contenttype: 1,
-          date: 1,
-          sharescount: 1,
-          sender: {
-            _id: 1,
-            fullname: 1,
-            profilepic: 1,
+        {
+          $match: {
+            "community.type": { $eq: "public" }, // Excluding posts with community type other than "public"
           },
-          community: {
+        },
+        {
+          $project: {
             _id: 1,
             title: 1,
-            dp: 1,
-            members: 1,
-            memberscount: 1,
+            createdAt: 1,
+            status: 1,
+            likedby: 1,
+            likes: 1,
+            dislike: 1,
+            comments: 1,
+            totalcomments: 1,
+            tags: 1,
+            view: 1,
+            desc: 1,
             isverified: 1,
-            type: 1,
+            post: 1,
+            contenttype: 1,
+            date: 1,
+            sharescount: 1,
+            sender: {
+              _id: 1,
+              fullname: 1,
+              profilepic: 1,
+            },
+            community: {
+              _id: 1,
+              title: 1,
+              dp: 1,
+              members: 1,
+              memberscount: 1,
+              isverified: 1,
+              type: 1,
+            },
+            topicId: 1,
           },
-          topicId: 1,
         },
-      },
-    ]);
+      ]);
 
-    //fetching ads
-    const firstad = await Ads.findOne({
-      status: "active",
-      $or: [{ type: "banner" }],
-    })
-      .populate({
-        path: "postid",
-        select:
-          "desc post title kind likes likedby comments members community cta ctalink sender totalcomments adtype date createdAt",
-        populate: [
-          {
-            path: "community",
-            select: "dp title isverified memberscount members",
-            populate: { path: "members", select: "profilepic" },
-          },
-          { path: "sender", select: "profilepic fullname" },
-        ],
-      })
-      .limit(1);
+      // if (infeedad) {
+      //   posts.push(infeedad)
+      // }
 
-    const infeedad = await Ads.find({
-      status: "active",
-      $or: [{ type: "infeed" }],
-    }).populate({
-      path: "postid",
-      select:
-        "desc post title kind likes comments community cta ctalink likedby sender totalcomments adtype date createdAt",
-      populate: [
-        {
-          path: "community",
-          select: "dp title isverified memberscount members",
-          populate: { path: "members", select: "profilepic" },
-        },
-        { path: "sender", select: "profilepic fullname" },
-      ],
-    });
-
-    function getRandomIndex() {
-      const min = 6;
-      return min + Math.floor(Math.random() * (post.length - min));
-    }
-
-    let feedad = [];
-    for (let i = 0; i < infeedad.length; i++) {
-      feedad.push(infeedad[i].postid);
-    }
-
-    //merging ads
-    if (firstad) {
-      post.unshift(firstad.postid);
-    }
-
-    if (
-      feedad?.length > 0 &&
-      (!feedad.includes(null) || !feedad.includes("null"))
-    ) {
-      for (let i = 0; i < feedad.length; i++) {
-        const randomIndex = getRandomIndex();
-        post.splice(randomIndex, 0, feedad[i]);
+      if (!posts) {
+        res.status(201).json({ message: "No post found", success: false });
+        return;
       }
-    }
 
-    for (let i = 0; i < post.length; i++) {
-      if (
-        post[i].likedby?.some((id) => id.toString() === user._id.toString())
-      ) {
-        liked.push(true);
-      } else {
-        liked.push(false);
-      }
-    }
+      // Process posts
+      const mergedData = posts.map((post) => {
+        const liked = post.likedby?.some(
+          (id) => id.toString() === user._id.toString()
+        );
+        const subscribed = post.community?.members?.includes(user._id)
+          ? "subscribed"
+          : "unsubscribed";
 
-    for (let k = 0; k < post.length; k++) {
-      const coms = await Community.findById(post[k].community);
+        const dps = process.env.URL + post?.community?.dp;
 
-      if (coms?.members?.includes(user._id)) {
-        subs.push("subscribed");
-      } else {
-        subs.push("unsubscribed");
-      }
-    }
+        const urls = post.post?.map((p) => ({
+          content: p.link
+            ? process.env.POST_URL + p?.content + "640.mp4"
+            : process.env.POST_URL + p?.content,
+          thumbnail: p?.thumbnail
+            ? process.env.POST_URL + p?.thumbnail
+            : undefined,
+          type: p.type,
+        }));
 
-    if (!post) {
-      res.status(201).json({ message: "No post found", success: false });
+        const memdps = post?.community?.members
+          .slice(0, 4)
+          .map((member) => process.env.URL + member?.profilepic);
+
+        return {
+          dps,
+          memdps,
+          urls,
+          liked,
+          subs: subscribed,
+          posts: post,
+        };
+      });
+
+      // if (infeedad) {
+      //   mergedData.push({
+      //     dps: process.env.URL + infeedad?.postid?.community.dp,
+      //     memdps: infeedad.postid?.community?.members?.slice(0, 4).map(member =>
+      //       process.env.URL + member.profilepic
+      //     ),
+      //     urls: infeedad.postid.post.map(p => ({
+      //       content: p?.link ? process.env.POST_URL + p?.content + "640.mp4" : process.env.POST_URL + p?.content,
+      //       thumbnail: p?.thumbnail ? process.env.POST_URL + p?.thumbnail : undefined,
+      //       type: p.type
+      //     })),
+      //     liked: infeedad?.postid?.likedby?.some(id => id.toString() === user._id.toString()),
+      //     subs: infeedad?.postid?.community?.members?.includes(user._id) ? "subscribed" : "unsubscribed",
+      //     posts: infeedad.postid
+      //   });
+      // }
+      res.status(200).json({
+        mergedData,
+        success: true,
+      });
     } else {
-      //post
-      for (let i = 0; i < post.length; i++) {
-        const a = process.env.URL + post[i].community.dp;
-        dps.push(a);
-      }
+      const interestsWithTags = await Interest.find({
+        title: { $in: user?.interest }, // Find interests that match user.interest
+      })
+        .select("tags")
+        .populate("tags", "title")
+        .lean()
+        .limit(3);
 
-      let ur = [];
-      for (let i = 0; i < post?.length; i++) {
-        for (let j = 0; j < post[i]?.post?.length; j++) {
-          if (post[i].post[j].thumbnail) {
-            const a =
-              post[i].post[j].link === true
-                ? process.env.POST_URL + post[i].post[j].content + "640.mp4"
-                : process.env.POST_URL + post[i].post[j].content;
-            const t = process.env.POST_URL + post[i].post[j].thumbnail;
-
-            ur.push({ content: a, thumbnail: t, type: post[i].post[j]?.type });
-          } else {
-            const a = process.env.POST_URL + post[i].post[j].content;
-            ur.push({ content: a, type: post[i].post[j]?.type });
-          }
-        }
-        urls.push(ur);
-        ur = [];
-      }
-
-      for (let i = 0; i < post.length; i++) {
-        for (
-          let j = 0;
-          j < Math.min(4, post[i].community.members.length);
-          j++
-        ) {
-          const a =
-            process.env.URL + post[i]?.community?.members[j]?.profilepic;
-          current.push(a);
-        }
-
-        memdps.push(current);
-        current = [];
-      }
-
-      //post data
-      const dpData = dps;
-      const memdpData = memdps;
-      const urlData = urls;
-      const postData = post;
-      const subData = subs;
-      const likeData = liked;
-
-      const mergedData = urlData.map((u, i) => ({
-        dps: dpData[i],
-        memdps: memdpData[i],
-        urls: u,
-        liked: likeData[i],
-        subs: subData[i],
-        posts: postData[i],
+      const limitedInterests = interestsWithTags.map((interest) => ({
+        ...interest,
+        tags: interest.tags.slice(0, 3), // Limit tags to the first 3
       }));
 
+      // Extract and log tag titles from the limited tags
+      const tags = limitedInterests.flatMap(
+        (interest) => interest.tags.map((tag) => tag.title) // Extract only the title
+      );
+
+      const cleanedTags = cleanArray(tags);
+
+      // const infeedad = await Ads.findOne({
+      //   status: "active",
+      //   $or: [{ type: "infeed" }],
+      // }).populate({
+      //   path: "postid",
+      //   select:
+      //     "desc post title kind likes comments community cta ctalink likedby sender totalcomments adtype date createdAt",
+      //   populate: [
+      //     {
+      //       path: "community",
+      //       select: "dp title isverified memberscount members",
+      //       populate: { path: "members", select: "profilepic" },
+      //     },
+      //     { path: "sender", select: "profilepic fullname" },
+      //   ],
+      // });
+
+      const posts = await Post.aggregate([
+        {
+          $lookup: {
+            from: "communities",
+            localField: "community",
+            foreignField: "_id",
+            as: "communityInfo",
+          },
+        },
+        {
+          $match: {
+            $or: [
+              { "communityInfo.category": { $in: user.interest } }, // Match community categories
+              {
+                $or: [
+                  { tags: { $in: cleanedTags } },
+                  { tags: { $exists: false } },
+                ],
+              },
+            ],
+          },
+        },
+        { $sample: { size: 7 } },
+        {
+          $lookup: {
+            from: "users",
+            localField: "sender",
+            foreignField: "_id",
+            as: "sender",
+          },
+        },
+        {
+          $lookup: {
+            from: "communities",
+            localField: "community",
+            foreignField: "_id",
+            as: "community",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "community.members",
+            foreignField: "_id",
+            as: "members",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "community.type",
+            foreignField: "_id",
+            as: "type",
+          },
+        },
+        {
+          $addFields: {
+            sender: { $arrayElemAt: ["$sender", 0] },
+            community: { $arrayElemAt: ["$community", 0] },
+          },
+        },
+        {
+          $addFields: {
+            "community.members": {
+              $map: {
+                input: { $slice: ["$members", 0, 4] },
+                as: "member",
+                in: {
+                  _id: "$$member._id",
+                  fullname: "$$member.fullname",
+                  profilepic: "$$member.profilepic",
+                },
+              },
+            },
+          },
+        },
+        {
+          $match: {
+            "community.type": { $eq: "public" }, // Excluding posts with community type other than "public"
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            createdAt: 1,
+            status: 1,
+            likedby: 1,
+            likes: 1,
+            dislike: 1,
+            comments: 1,
+            totalcomments: 1,
+            tags: 1,
+            view: 1,
+            desc: 1,
+            isverified: 1,
+            post: 1,
+            contenttype: 1,
+            date: 1,
+            sharescount: 1,
+            sender: {
+              _id: 1,
+              fullname: 1,
+              profilepic: 1,
+            },
+            community: {
+              _id: 1,
+              title: 1,
+              dp: 1,
+              members: 1,
+              memberscount: 1,
+              isverified: 1,
+              type: 1,
+            },
+            topicId: 1,
+          },
+        },
+      ]);
+
+      // if (infeedad) {
+      //   posts.push(infeedad)
+      // }
+
+      if (!posts) {
+        res.status(201).json({ message: "No post found", success: false });
+        return;
+      }
+
+      // Process posts
+      const mergedData = posts.map((post) => {
+        const liked = post.likedby?.some(
+          (id) => id.toString() === user._id.toString()
+        );
+        const subscribed = post?.community?.members?.includes(user._id)
+          ? "subscribed"
+          : "unsubscribed";
+
+        const dps = process.env.URL + post.community?.dp;
+
+        const urls = post?.post?.map((p) => ({
+          content: p.link
+            ? process.env.POST_URL + p?.content + "640.mp4"
+            : process.env.POST_URL + p?.content,
+          thumbnail: p?.thumbnail
+            ? process.env.POST_URL + p?.thumbnail
+            : undefined,
+          type: p?.type,
+        }));
+
+        const memdps = post?.community?.members
+          ?.slice(0, 4)
+          .map((member) => process.env.URL + member?.profilepic);
+
+        return {
+          dps,
+          memdps,
+          urls,
+          liked,
+          subs: subscribed,
+          posts: post,
+        };
+      });
+
+      // if (infeedad) {
+      //   mergedData.push({
+      //     dps: process.env.URL + infeedad.postid.community.dp,
+      //     memdps: infeedad.postid.community.members.slice(0, 4).map(member =>
+      //       process.env.URL + member.profilepic
+      //     ),
+      //     urls: infeedad.postid.post.map(p => ({
+      //       content: p.link ? process.env.POST_URL + p.content + "640.mp4" : process.env.POST_URL + p.content,
+      //       thumbnail: p.thumbnail ? process.env.POST_URL + p.thumbnail : undefined,
+      //       type: p.type
+      //     })),
+      //     liked: infeedad.postid.likedby?.some(id => id.toString() === user._id.toString()),
+      //     subs: infeedad.postid.community.members.includes(user._id) ? "subscribed" : "unsubscribed",
+      //     posts: infeedad.postid
+      //   });
+      // }
       res.status(200).json({
         mergedData,
         success: true,
       });
     }
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: err, success: false });
+  } catch (error) {
+    console.log(error);
   }
 };
 
@@ -3418,4 +3476,11 @@ exports.completemulti = async (req, res) => {
     console.error("Error completing multipart upload:", error);
     return res.status(500).json({ error: "Error completing multipart upload" });
   }
+};
+
+const cleanArray = (arr) => {
+  return arr.filter(
+    (item) =>
+      item !== null && item !== undefined && item !== "" && item.trim() !== ""
+  );
 };
