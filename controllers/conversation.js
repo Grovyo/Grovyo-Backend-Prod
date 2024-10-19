@@ -780,24 +780,33 @@ exports.createmessagereqnew = async (req, res) => {
 exports.fetchallchatsnew = async (req, res) => {
   try {
     const { id } = req.params;
+    const { convids } = req.body;
     const user = await User.findById(id);
+
     if (user) {
       let reqcount = user?.messagerequests?.length;
       let conv = [];
-      for (let i = 0; i < user.conversations.length; i++) {
-        const convs = await Conversation.findById(
-          user.conversations[i]
-        ).populate(
+      let ids;
+      if (convids?.length > 0) {
+        ids = getUniqueObjectIds(convids, user.conversations);
+      } else {
+        ids = user.conversations;
+      }
+
+      for (let i = 0; i < ids.length; i++) {
+        const convs = await Conversation.findById(ids[i]).populate(
           "members",
           "fullname username profilepic isverified blockedpeople"
         );
+
         //if convs is null then remove it
         if (!convs) {
           await User.updateOne(
             { _id: user._id },
-            { $pull: { conversations: user.conversations[i] } }
+            { $pull: { conversations: ids[i] } }
           );
         }
+
         const msg = await Message.find({
           conversationId: convs?._id,
           //status: "active",
@@ -1026,4 +1035,20 @@ exports.resethidden = async (req, res) => {
     console.log(e);
     res.status(400).json({ success: false });
   }
+};
+
+//getting non similar elements our of two arrays
+const getUniqueObjectIds = (a, b) => {
+  // Create Sets to store unique ObjectIds
+  const setA = new Set(a.map((id) => id.toString())); // Convert ObjectId to string for unique comparison
+  const setB = new Set(b.map((id) => id.toString()));
+
+  // Get unique ObjectIds from array A that are not in B
+  const uniqueToA = a.filter((id) => !setB.has(id.toString()));
+
+  // Get unique ObjectIds from array B that are not in A
+  const uniqueToB = b.filter((id) => !setA.has(id.toString()));
+
+  // Combine the unique results
+  return [...uniqueToA, ...uniqueToB];
 };

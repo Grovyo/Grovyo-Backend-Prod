@@ -4104,34 +4104,11 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
       coordinates
     );
 
-    //finding the nearest driver from the last location
-    let partners = [];
-
     const deliverypartners = await Deluser.findOne({
       accounttype: "partner",
-      primaryloc: user.address.city,
+      // primaryloc: user.address.city,
     });
 
-    // for (let deliverypartner of deliverypartners) {
-    //   if (
-    //     deliverypartner &&
-    //     deliverypartner.accstatus !== "banned" &&
-    //     deliverypartner.accstatus !== "review" &&
-    //     deliverypartner.deliveries?.length < 21 &&
-    //     deliverypartner.totalbalance < 3000
-    //   ) {
-    //     let driverloc = {
-    //       latitude: deliverypartner.currentlocation?.latitude,
-    //       longitude: deliverypartner.currentlocation?.longitude,
-    //       id: deliverypartner?._id,
-    //     };
-    //     partners.push(driverloc);
-    //   }
-    // }
-
-    // const driver = await Deluser?.findById(eligiblepartner?.id);
-
-    console.log(user?.address);
     let drop = "ad";
     const newDeliveries = new Delivery({
       title: user?.fullname,
@@ -4147,6 +4124,7 @@ const credeli = async ({ id, storeids, oid, total, instant }) => {
       data: order.data,
       currentstatus: "pick",
     });
+
     await newDeliveries.save();
 
     //pushing delivery for driver
